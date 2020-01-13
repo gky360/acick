@@ -12,3 +12,4 @@ keywords = ["windows", "cli"]
 categories = ["command-line-utilities"]
 
 [dependencies]
+failure = "0.1.6"
