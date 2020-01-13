@@ -180,7 +180,7 @@ jobs:
           fi
           BIN_TARGET=acick
           EXECUTABLE="./target/${{ matrix.target_triple }}/release/$BIN_TARGET$EXE"
-          ASSET_STEM="BIN_TARGET-${GITHUB_REF#refs/tags/}-${{ matrix.target_triple }}"
+          ASSET_STEM="$BIN_TARGET-${GITHUB_REF#refs/tags/}-${{ matrix.target_triple }}"
           git archive -o "./$ASSET_STEM.tar" --prefix "$ASSET_STEM/" HEAD
           tar -xf "./$ASSET_STEM.tar"
           mv "$EXECUTABLE" ./Cargo.lock "./$ASSET_STEM/"
