@@ -1,9 +1,14 @@
 [package]
 name = "acick"
-version = "0.0.1"
+version = "0.0.1-pre"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "Tools for programming contests"
+repository = "https://github.com/gky360/acick"
+documentation = "https://docs.rs/acick"
+readme = "README.md"
+keywords = ["windows", "cli"]
+categories = ["command-line-utilities"]
 
 [dependencies]
