@@ -6,6 +6,8 @@ use strum::VariantNames;
 
 mod config;
 
+use config::Config;
+
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
@@ -54,7 +56,7 @@ enum Cmd {
 
 pub fn run(opt: &Opt) -> Result<()> {
     eprintln!("{:?}", opt);
-    let conf = config::Config::default();
+    let conf = Config::load();
     eprintln!("{}", toml::to_string(&conf)?);
     println!("Hello, world!");
     Ok(())

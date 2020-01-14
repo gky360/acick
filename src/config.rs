@@ -13,6 +13,13 @@ pub struct Config {
     services: ServicesConfig,
 }
 
+impl Config {
+    pub fn load() -> Self {
+        // TODO: load from file
+        Config::default()
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
