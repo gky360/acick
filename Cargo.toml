@@ -12,7 +12,7 @@ keywords = ["windows", "cli"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-failure = "0.1.6"
+anyhow = "1.0.26"
 structopt = "0.3.7"
 strum = "0.17.1"
 strum_macros = "0.17.1"
