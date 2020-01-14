@@ -4,12 +4,13 @@ use std::io::Write;
 use std::{io, process};
 
 use failure::Fallible;
+use structopt::StructOpt;
 
 use acick::Opt;
 
 fn main() -> Fallible<()> {
     let code = {
-        let opt = Opt {};
+        let opt = Opt::from_args();
         match acick::run(&opt) {
             Ok(_) => 0,
             Err(err) => {
