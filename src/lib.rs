@@ -1,5 +1,5 @@
 #[macro_use]
-extern crate strum_macros;
+extern crate strum;
 
 use structopt::StructOpt;
 use strum::VariantNames;
