@@ -4,6 +4,8 @@ extern crate strum;
 use structopt::StructOpt;
 use strum::VariantNames;
 
+mod config;
+
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
@@ -52,6 +54,8 @@ enum Cmd {
 
 pub fn run(opt: &Opt) -> Result<()> {
     eprintln!("{:?}", opt);
+    let conf = config::Config::default();
+    eprintln!("{}", toml::to_string(&conf)?);
     println!("Hello, world!");
     Ok(())
 }
