@@ -57,3 +57,15 @@ impl Default for AtcoderConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deserialize_default() -> anyhow::Result<()> {
+        let conf: Config = toml::from_str("")?;
+        assert_eq!(conf, Config::default());
+        Ok(())
+    }
+}
