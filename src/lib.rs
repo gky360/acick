@@ -47,17 +47,23 @@ pub struct Opt {
     cmd: Cmd,
 }
 
+impl Opt {
+    pub fn new() -> Self {
+        Opt::from_args()
+    }
+
+    pub fn run(&self) -> Result<()> {
+        eprintln!("{:?}", self);
+        let conf = Config::load();
+        eprintln!("{}", toml::to_string(&conf)?);
+        println!("Hello, world!");
+        Ok(())
+    }
+}
+
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 enum Cmd {
     /// Shows current config
     Show,
-}
-
-pub fn run(opt: &Opt) -> Result<()> {
-    eprintln!("{:?}", opt);
-    let conf = Config::load();
-    eprintln!("{}", toml::to_string(&conf)?);
-    println!("Hello, world!");
-    Ok(())
 }
