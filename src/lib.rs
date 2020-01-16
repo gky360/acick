@@ -55,7 +55,7 @@ impl Opt {
     pub fn run(&self) -> Result<()> {
         eprintln!("{:?}", self);
         let conf = Config::load();
-        eprintln!("{}", toml::to_string(&conf)?);
+        eprintln!("{}", serde_yaml::to_string(&conf)?);
         println!("Hello, world!");
         Ok(())
     }

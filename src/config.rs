@@ -70,8 +70,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn deserialize_default() -> anyhow::Result<()> {
-        let conf: Config = toml::from_str("")?;
+    fn deserialize_default_succeeds() -> anyhow::Result<()> {
+        let conf: Config = serde_yaml::from_str("")?;
         assert_eq!(conf, Config::default());
         Ok(())
     }
