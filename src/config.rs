@@ -1,16 +1,73 @@
+use std::collections::hash_map::DefaultHasher;
 use std::fmt;
+use std::hash::{Hash, Hasher as _};
 use std::process::{Command, Output};
+use std::sync::Mutex;
 
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, Context as _};
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use tera::{Context, Tera};
 
 use crate::Result;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ShellCmd(Vec<String>);
+lazy_static! {
+    static ref RENDERER: Mutex<Tera> = Mutex::new(Tera::default());
+}
 
-impl ShellCmd {
-    pub fn exec(&self) -> Result<Output> {
+fn calc_hash<H: Hash>(h: H) -> String {
+    let mut hasher = DefaultHasher::new();
+    h.hash(&mut hasher);
+    format!("{:x}", hasher.finish())
+}
+
+trait Expand<C: Serialize> {
+    fn get_template(&self) -> &str;
+
+    fn expand(&self, context: C) -> Result<String> {
+        let template = self.get_template();
+        let template_hash = calc_hash(template);
+
+        let ctx = Context::from_serialize(context).context("Could not create template context")?;
+
+        let mut renderer = RENDERER.lock().unwrap();
+        if let Err(err) = renderer.get_template(&template_hash) {
+            if let tera::ErrorKind::TemplateNotFound(_) = err.kind {
+                // need to register template because this is the first time to use it
+                renderer
+                    .add_raw_template(&template_hash, template)
+                    .context("Could not build template inheritance chain")?;
+            } else {
+                return Err(err).context("Could not expand template")?;
+            }
+        };
+        renderer.render(&template_hash, &ctx).context(format!(
+            "Could not expand template with context.\ntemplate: {}\ncontext: {}",
+            template,
+            serde_json::to_string(&context).expect("Failed to serialize context")
+        ))
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CmdTempl(String);
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CmdContext {
+    command: String,
+}
+
+impl Expand<CmdContext> for CmdTempl {
+    fn get_template(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ShellCmd<T: Expand<C>, C: Serialize>(Vec<T>);
+
+impl<T: Expand<C>, C: Serialize> ShellCmd<T, C> {
+    pub fn exec(&self, context: C) -> Result<Output> {
         if self.0.is_empty() {
             return Err(anyhow!("Empty command"));
         }
