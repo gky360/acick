@@ -57,6 +57,14 @@ pub struct CmdContext {
     command: String,
 }
 
+impl CmdContext {
+    pub fn new<T: ToString>(command: T) -> Self {
+        Self {
+            command: command.to_string(),
+        }
+    }
+}
+
 impl Expand<CmdContext> for CmdTempl {
     fn get_template(&self) -> &str {
         &self.0
@@ -158,17 +166,6 @@ impl Config {
 
 impl Default for Config {
     fn default() -> Self {
-        /*
-        let shell: ShellTemplArray<CmdTempl> = (&["/bin/bash", "-c", "{{ command }}"]).into();
-        let cmd_context = CmdContext {
-            command: "echo hello".to_string(),
-        };
-        let output = shell
-            .expand_all(&cmd_context)
-            .expect("Failed to expand command template");
-        let output = output.exec().expect("Failed to echo");
-        eprintln!("{:?}", output);
-        */
         Self {
             shell: (&["/bin/bash", "-c", "{{ command }}"]).into(),
             services: ServicesConfig::default(),
@@ -217,9 +214,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn deserialize_default_succeeds() -> anyhow::Result<()> {
-        let conf: Config = serde_yaml::from_str("")?;
-        assert_eq!(conf, Config::default());
+    fn expand_cmd_template() -> anyhow::Result<()> {
+        let shell: ShellTemplArray<CmdTempl> = (&["/bin/bash", "-c", "{{ command }}"]).into();
+        let cmd_context = CmdContext::new("echo hello");
+        shell.expand_all(&cmd_context)?;
+        Ok(())
+    }
+
+    #[test]
+    fn expand_cmd_template_failure() -> anyhow::Result<()> {
+        let shell: ShellTemplArray<CmdTempl> =
+            (&["/bin/bash", "-c", "{{ some_undefined_variable }}"]).into();
+        let cmd_context = CmdContext::new("echo hello");
+        assert!(shell.expand_all(&cmd_context).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn exec_command() -> anyhow::Result<()> {
+        let shell = ShellArray(
+            (&["/bin/bash", "-c", "echo hello"])
+                .iter()
+                .map(|c| c.to_string())
+                .collect(),
+        );
+        let output = shell.exec()?;
+        println!("{:?}", output);
+        assert!(output.status.success());
         Ok(())
     }
 }
