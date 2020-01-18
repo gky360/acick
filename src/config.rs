@@ -50,9 +50,6 @@ pub trait Expand<C: Serialize> {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CmdTempl(String);
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CmdContext {
     command: String,
 }
@@ -65,6 +62,9 @@ impl CmdContext {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CmdTempl(String);
+
 impl Expand<CmdContext> for CmdTempl {
     fn get_template(&self) -> &str {
         &self.0
@@ -72,6 +72,43 @@ impl Expand<CmdContext> for CmdTempl {
 }
 
 impl From<String> for CmdTempl {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Service {
+    id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Contest {
+    id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Problem {
+    id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ProblemContext {
+    service: Service,
+    contest: Contest,
+    problem: Problem,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ProblemTempl(String);
+
+impl Expand<ProblemContext> for ProblemTempl {
+    fn get_template(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for ProblemTempl {
     fn from(value: String) -> Self {
         Self(value)
     }
@@ -193,8 +230,8 @@ pub struct AtcoderConfig {
     language: String,
     working_directory: String,
     src: String,
-    compile: ShellTemplArray<CmdTempl>,
-    run: ShellTemplArray<CmdTempl>,
+    compile: ShellTemplArray<ProblemTempl>,
+    run: ShellTemplArray<ProblemTempl>,
 }
 
 impl Default for AtcoderConfig {
