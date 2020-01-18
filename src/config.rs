@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tera::{Context, Tera};
 
-use crate::Result;
+use crate::{Result, ServiceKind};
 
 lazy_static! {
     static ref RENDERER: Mutex<Tera> = Mutex::new(Tera::default());
@@ -50,6 +50,15 @@ pub trait Expand<C: Serialize> {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+struct Templ(String);
+
+impl<T: ToString> From<T> for Templ {
+    fn from(value: T) -> Self {
+        Self(value.to_string())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CmdContext {
     command: String,
 }
@@ -62,8 +71,7 @@ impl CmdContext {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CmdTempl(String);
+type CmdTempl = Templ;
 
 impl Expand<CmdContext> for CmdTempl {
     fn get_template(&self) -> &str {
@@ -71,15 +79,16 @@ impl Expand<CmdContext> for CmdTempl {
     }
 }
 
-impl From<String> for CmdTempl {
-    fn from(value: String) -> Self {
-        Self(value)
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
-    id: String,
+    id: ServiceKind,
+}
+
+impl Service {
+    #[cfg(test)] // TODO: not only test
+    pub fn new(id: ServiceKind) -> Self {
+        Self { id }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -87,9 +96,23 @@ pub struct Contest {
     id: String,
 }
 
+impl Contest {
+    #[cfg(test)] // TODO: not only test
+    pub fn new<T: ToString>(id: T) -> Self {
+        Self { id: id.to_string() }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Problem {
     id: String,
+}
+
+impl Problem {
+    #[cfg(test)] // TODO: not only test
+    pub fn new<T: ToString>(id: T) -> Self {
+        Self { id: id.to_string() }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -99,18 +122,11 @@ pub struct ProblemContext {
     problem: Problem,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ProblemTempl(String);
+type ProblemTempl = Templ;
 
 impl Expand<ProblemContext> for ProblemTempl {
     fn get_template(&self) -> &str {
         &self.0
-    }
-}
-
-impl From<String> for ProblemTempl {
-    fn from(value: String) -> Self {
-        Self(value)
     }
 }
 
@@ -228,8 +244,8 @@ impl Default for ServicesConfig {
 #[serde(default)]
 pub struct AtcoderConfig {
     language: String,
-    working_directory: String,
-    src: String,
+    working_directory: ProblemTempl,
+    src: ProblemTempl,
     compile: ShellTemplArray<ProblemTempl>,
     run: ShellTemplArray<ProblemTempl>,
 }
@@ -251,24 +267,51 @@ mod tests {
     use super::*;
 
     #[test]
-    fn expand_cmd_template() -> anyhow::Result<()> {
-        let shell: ShellTemplArray<CmdTempl> = (&["/bin/bash", "-c", "{{ command }}"]).into();
+    fn expand_cmd_templ() -> anyhow::Result<()> {
+        let templ = CmdTempl::from("some/{{ command }}.out");
+        let cmd_context = CmdContext::new("echo hello");
+        templ.expand(&cmd_context)?;
+        Ok(())
+    }
+
+    #[test]
+    fn expand_cmd_templ_arr() -> anyhow::Result<()> {
+        let shell = ShellTemplArray::<CmdTempl>::from(&["/bin/bash", "-c", "{{ command }}"]);
         let cmd_context = CmdContext::new("echo hello");
         shell.expand_all(&cmd_context)?;
         Ok(())
     }
 
     #[test]
-    fn expand_cmd_template_failure() -> anyhow::Result<()> {
-        let shell: ShellTemplArray<CmdTempl> =
-            (&["/bin/bash", "-c", "{{ some_undefined_variable }}"]).into();
+    fn expand_problem_templ() -> anyhow::Result<()> {
+        // let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
+        let templ = ProblemTempl::from("{{ service.id }}");
+        let service = Service::new(ServiceKind::Atcoder);
+        let contest = Contest::new("arc100");
+        let problem = Problem::new("a");
+        let problem_context = ProblemContext {
+            service,
+            contest,
+            problem,
+        };
+        templ.expand(&problem_context)?;
+        Ok(())
+    }
+
+    #[test]
+    fn expand_cmd_template_arr_failure() -> anyhow::Result<()> {
+        let shell = ShellTemplArray::<CmdTempl>::from(&[
+            "/bin/bash",
+            "-c",
+            "{{ some_undefined_variable }}",
+        ]);
         let cmd_context = CmdContext::new("echo hello");
         assert!(shell.expand_all(&cmd_context).is_err());
         Ok(())
     }
 
     #[test]
-    fn exec_command() -> anyhow::Result<()> {
+    fn exec_shell() -> anyhow::Result<()> {
         let shell = ShellArray(
             (&["/bin/bash", "-c", "echo hello"])
                 .iter()

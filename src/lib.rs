@@ -3,6 +3,7 @@
 #[macro_use]
 extern crate strum;
 
+use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 use strum::VariantNames;
 
@@ -13,8 +14,20 @@ use config::Config;
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
-#[derive(EnumString, EnumVariantNames, IntoStaticStr, Debug, Clone, PartialEq, Eq, Hash)]
-#[strum(serialize_all = "kebab_case")]
+#[derive(
+    Serialize,
+    Deserialize,
+    EnumString,
+    EnumVariantNames,
+    IntoStaticStr,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+)]
+#[serde(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab-case")]
 pub enum ServiceKind {
     Atcoder,
 }
