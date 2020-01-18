@@ -235,7 +235,7 @@ mod tests {
         let shell = ShellArray(
             (&["/bin/bash", "-c", "echo hello"])
                 .iter()
-                .map(|c| c.to_string())
+                .map(|c| (*c).to_string())
                 .collect(),
         );
         let output = shell.exec()?;

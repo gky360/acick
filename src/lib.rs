@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 #[macro_use]
 extern crate strum;
 
@@ -48,10 +50,6 @@ pub struct Opt {
 }
 
 impl Opt {
-    pub fn new() -> Self {
-        Opt::from_args()
-    }
-
     pub fn run(&self) -> Result<()> {
         eprintln!("{:?}", self);
         let conf = Config::load();
