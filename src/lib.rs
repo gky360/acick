@@ -10,8 +10,7 @@ mod cmd;
 mod config;
 mod model;
 
-use cmd::Cmd;
-use config::Config;
+use cmd::{Cmd, Run as _};
 use model::ServiceKind;
 
 pub type Error = anyhow::Error;
@@ -44,9 +43,8 @@ pub struct Opt {
 impl Opt {
     pub fn run(&self) -> Result<()> {
         eprintln!("{:?}", self);
-        let conf = Config::load();
-        eprintln!("{}", serde_yaml::to_string(&conf)?);
-        println!("Hello, world!");
+        let outcome = self.cmd.run()?;
+        println!("{}", outcome);
         Ok(())
     }
 }

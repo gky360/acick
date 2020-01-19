@@ -211,9 +211,9 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load() -> Self {
+    pub fn load() -> Result<Self> {
         // TODO: load from file
-        Config::default()
+        Ok(Config::default())
     }
 }
 
@@ -223,6 +223,13 @@ impl Default for Config {
             shell: Shell::default(),
             services: ServicesConfig::default(),
         }
+    }
+}
+
+impl fmt::Display for Config {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let yaml_str = serde_yaml::to_string(self).map_err(|_| fmt::Error)?;
+        write!(f, "{}", yaml_str)
     }
 }
 
