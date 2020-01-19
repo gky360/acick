@@ -35,6 +35,8 @@ pub struct Opt {
         default_value = "abc100"
     )]
     contest_id: String,
+    #[structopt(long, global = true)]
+    debug: bool,
 
     #[structopt(subcommand)]
     cmd: Cmd,
@@ -44,7 +46,11 @@ impl Opt {
     pub fn run(&self) -> Result<()> {
         eprintln!("{:?}", self);
         let outcome = self.cmd.run()?;
-        println!("{}", outcome);
+        if self.debug {
+            println!("{:#?}", outcome.as_ref());
+        } else {
+            println!("{}", outcome.as_ref());
+        }
         Ok(())
     }
 }

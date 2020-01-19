@@ -7,11 +7,11 @@ use structopt::StructOpt;
 use crate::config::Config;
 use crate::Result;
 
-pub trait Outcome: fmt::Display {
+pub trait Outcome: fmt::Display + fmt::Debug {
     fn to_yaml(&self) -> Result<String>;
 }
 
-impl<T: fmt::Display + Serialize> Outcome for T {
+impl<T: fmt::Display + fmt::Debug + Serialize> Outcome for T {
     fn to_yaml(&self) -> Result<String> {
         serde_yaml::to_string(self).context("Could not serialize outcome to yaml")
     }
