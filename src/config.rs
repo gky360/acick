@@ -1,5 +1,3 @@
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher as _};
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::Mutex;
@@ -16,34 +14,28 @@ lazy_static! {
     static ref RENDERER: Mutex<Tera> = Mutex::new(Tera::default());
 }
 
-fn calc_hash<H: Hash>(h: H) -> String {
-    let mut hasher = DefaultHasher::new();
-    h.hash(&mut hasher);
-    format!("{:x}", hasher.finish())
-}
-
 pub trait Expand<C: Serialize> {
     fn get_template(&self) -> &str;
 
     fn expand(&self, context: &C) -> Result<String> {
         let template = self.get_template();
-        let template_hash = calc_hash(template);
+        let template_name = template;
 
         let ctx = Context::from_serialize(context).context("Could not create template context")?;
 
         let mut renderer = RENDERER.lock().unwrap();
-        if let Err(err) = renderer.get_template(&template_hash) {
+        if let Err(err) = renderer.get_template(template_name) {
             if let tera::ErrorKind::TemplateNotFound(_) = err.kind {
                 // need to register template because this is the first time to use it
                 renderer
-                    .add_raw_template(&template_hash, template)
+                    .add_raw_template(template_name, template)
                     .context("Could not build template inheritance chain")?;
             } else {
                 return Err(err).context("Could not expand template")?;
             }
         };
-        renderer.render(&template_hash, &ctx).context(format!(
-            "Could not expand template with context.\ntemplate: {}\ncontext: {}",
+        renderer.render(template_name, &ctx).context(format!(
+            "Could not expand template with context\n    template: {}\n    context: {}",
             template,
             serde_json::to_string(context).expect("Failed to serialize context")
         ))
@@ -290,8 +282,7 @@ mod tests {
 
     #[test]
     fn expand_problem_templ() -> anyhow::Result<()> {
-        // let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
-        let templ = ProblemTempl::from("{{ service.id }}");
+        let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
         let service = Service::new(ServiceKind::Atcoder);
         let contest = Contest::new("arc100");
         let problem = Problem::new("a");
