@@ -10,7 +10,8 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tera::{Context, Tera};
 
-use crate::{Result, ServiceKind};
+use crate::model::{Contest, Problem, Service};
+use crate::Result;
 
 macro_rules! register_case_conversion {
     ($renderer:ident, $case_name:expr, $func:ident) => {
@@ -98,42 +99,6 @@ type CmdTempl = Templ;
 impl Expand<CmdContext> for CmdTempl {
     fn get_template(&self) -> &str {
         &self.0
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Service {
-    id: ServiceKind,
-}
-
-impl Service {
-    #[cfg(test)] // TODO: not only test
-    pub fn new(id: ServiceKind) -> Self {
-        Self { id }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Contest {
-    id: String,
-}
-
-impl Contest {
-    #[cfg(test)] // TODO: not only test
-    pub fn new<T: ToString>(id: T) -> Self {
-        Self { id: id.to_string() }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Problem {
-    id: String,
-}
-
-impl Problem {
-    #[cfg(test)] // TODO: not only test
-    pub fn new<T: ToString>(id: T) -> Self {
-        Self { id: id.to_string() }
     }
 }
 
@@ -311,6 +276,8 @@ mod tests {
 
     #[test]
     fn expand_problem_templ() -> anyhow::Result<()> {
+        use crate::model::ServiceKind;
+
         let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
         let service = Service::new(ServiceKind::Atcoder);
         let contest = Contest::new("arc100");
