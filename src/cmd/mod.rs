@@ -4,8 +4,11 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::config::Config;
 use crate::Result;
+
+mod show;
+
+use show::ShowOpt;
 
 pub trait Outcome: fmt::Display + fmt::Debug {
     fn to_yaml(&self) -> Result<String>;
@@ -33,16 +36,5 @@ impl Run for Cmd {
         match self {
             Self::Show(opt) => opt.run(),
         }
-    }
-}
-
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
-#[structopt(rename_all = "kebab")]
-pub struct ShowOpt {}
-
-impl Run for ShowOpt {
-    fn run(&self) -> Result<Box<dyn Outcome>> {
-        let outcome = Config::load().context("Could not load config")?;
-        Ok(Box::new(outcome))
     }
 }
