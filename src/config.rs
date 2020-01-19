@@ -1,17 +1,46 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::Mutex;
 use std::{env, fmt};
 
 use anyhow::Context as _;
+use heck::{CamelCase as _, KebabCase as _, MixedCase as _, SnakeCase as _};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tera::{Context, Tera};
 
 use crate::{Result, ServiceKind};
 
+macro_rules! register_case_conversion {
+    ($renderer:ident, $case_name:expr, $func:ident) => {
+        let filter_name = format!("{}_case", $case_name);
+        $renderer.register_filter(
+            &filter_name,
+            |value: &tera::Value, _: &HashMap<String, tera::Value>| {
+                let s =
+                    tera::try_get_value!(format!("{}_case", $case_name), "value", String, value);
+                tera::to_value(s.$func()).map_err(|e| {
+                    tera::Error::chain(
+                        format!("Could not convert \"{}\" to {} case", s, $case_name),
+                        e,
+                    )
+                })
+            },
+        )
+    };
+}
+
 lazy_static! {
-    static ref RENDERER: Mutex<Tera> = Mutex::new(Tera::default());
+    static ref RENDERER: Mutex<Tera> = {
+        let mut renderer = Tera::default();
+        register_case_conversion!(renderer, "pascal", to_camel_case);
+        register_case_conversion!(renderer, "kebab", to_kebab_case);
+        register_case_conversion!(renderer, "camel", to_mixed_case);
+        register_case_conversion!(renderer, "snake", to_snake_case);
+
+        Mutex::new(renderer)
+    };
 }
 
 pub trait Expand<C: Serialize> {
