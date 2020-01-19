@@ -3,6 +3,7 @@
 #[macro_use]
 extern crate strum;
 
+use anyhow::Context as _;
 use structopt::StructOpt;
 use strum::VariantNames;
 
@@ -11,6 +12,7 @@ mod config;
 mod model;
 
 use cmd::{Cmd, Run as _};
+use config::Config;
 use model::ServiceKind;
 
 pub type Error = anyhow::Error;
@@ -18,6 +20,14 @@ pub type Result<T> = anyhow::Result<T>;
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Opt {
+    #[structopt(flatten)]
+    global_opt: GlobalOpt,
+    #[structopt(subcommand)]
+    cmd: Cmd,
+}
+
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct GlobalOpt {
     #[structopt(
         name = "service",
         long,
@@ -37,16 +47,13 @@ pub struct Opt {
     contest_id: String,
     #[structopt(long, global = true)]
     debug: bool,
-
-    #[structopt(subcommand)]
-    cmd: Cmd,
 }
 
 impl Opt {
     pub fn run(&self) -> Result<()> {
-        eprintln!("{:?}", self);
-        let outcome = self.cmd.run()?;
-        if self.debug {
+        let conf = Config::load().context("Could not load config")?;
+        let outcome = self.cmd.run(&self.global_opt, &conf)?;
+        if self.global_opt.debug {
             println!("{:#?}", outcome.as_ref());
         } else {
             println!("{}", outcome.as_ref());

@@ -4,7 +4,8 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::Result;
+use crate::config::Config;
+use crate::{GlobalOpt, Result};
 
 mod show;
 
@@ -21,7 +22,7 @@ impl<T: fmt::Display + fmt::Debug + Serialize> Outcome for T {
 }
 
 pub trait Run {
-    fn run(&self) -> Result<Box<dyn Outcome>>;
+    fn run(&self, global_opt: &GlobalOpt, conf: &Config) -> Result<Box<dyn Outcome>>;
 }
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -29,12 +30,18 @@ pub trait Run {
 pub enum Cmd {
     /// Shows current config
     Show(ShowOpt),
+    // Login(LoginOpt),
+    // Participate(ParticipateOpt),
+    // New(NewOpt),
+    // Get(GetOpt),
+    // Judge(JudgeOpt),
+    // Submit(SubmitOpt),
 }
 
 impl Run for Cmd {
-    fn run(&self) -> Result<Box<dyn Outcome>> {
+    fn run(&self, global_opt: &GlobalOpt, conf: &Config) -> Result<Box<dyn Outcome>> {
         match self {
-            Self::Show(opt) => opt.run(),
+            Self::Show(opt) => opt.run(global_opt, conf),
         }
     }
 }
