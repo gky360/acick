@@ -87,7 +87,7 @@ pub struct CmdContext {
 }
 
 impl CmdContext {
-    pub fn new<T: ToString>(command: T) -> Self {
+    pub fn new(command: impl ToString) -> Self {
         Self {
             command: command.to_string(),
         }
@@ -159,7 +159,7 @@ impl<T: fmt::Display> fmt::Display for TemplArray<T> {
 pub type Shell = TemplArray<CmdTempl>;
 
 impl Shell {
-    pub fn exec<T: ToString>(&self, command: T) -> Result<Output> {
+    pub fn exec(&self, command: impl ToString) -> Result<Output> {
         let cmd_context = CmdContext::new(command);
         let command = self
             .expand_all(&cmd_context)

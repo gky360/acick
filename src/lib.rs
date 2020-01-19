@@ -6,9 +6,11 @@ extern crate strum;
 use structopt::StructOpt;
 use strum::VariantNames;
 
+mod cmd;
 mod config;
 mod model;
 
+use cmd::Cmd;
 use config::Config;
 use model::ServiceKind;
 
@@ -47,11 +49,4 @@ impl Opt {
         println!("Hello, world!");
         Ok(())
     }
-}
-
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
-#[structopt(rename_all = "kebab")]
-enum Cmd {
-    /// Shows current config
-    Show,
 }

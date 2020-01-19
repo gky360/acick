@@ -37,7 +37,7 @@ pub struct Contest {
 
 impl Contest {
     #[cfg(test)] // TODO: not only test
-    pub fn new<T: ToString>(id: T) -> Self {
+    pub fn new(id: impl ToString) -> Self {
         Self { id: id.to_string() }
     }
 }
@@ -49,7 +49,7 @@ pub struct Problem {
 
 impl Problem {
     #[cfg(test)] // TODO: not only test
-    pub fn new<T: ToString>(id: T) -> Self {
+    pub fn new(id: impl ToString) -> Self {
         Self { id: id.to_string() }
     }
 }
