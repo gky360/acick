@@ -1,5 +1,8 @@
 use std::fmt;
 
+use reqwest::blocking::Client;
+use reqwest::Url;
+use scraper::Html;
 use serde::{Deserialize, Serialize};
 
 use crate::model::ServiceKind;
@@ -8,6 +11,12 @@ use crate::Result;
 mod atcoder;
 
 pub use atcoder::AtcoderService;
+
+pub trait Scrape {
+    fn url() -> Url;
+
+    fn fetch(client: &Client) -> Result<Html>;
+}
 
 pub trait Serve {
     fn login(&mut self, user: &str, pass: &str) -> Result<LoginOutcome>;
