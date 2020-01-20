@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::service::{AtcoderService, Serve};
-use crate::{Context, Input, Output};
+use crate::{Config, Context, GlobalOpt, Input, Output};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
@@ -36,10 +36,12 @@ pub enum ServiceKind {
 impl ServiceKind {
     pub fn serve<'a, I: Input, O: Output, E: Output>(
         &self,
+        global_opt: &'a GlobalOpt,
+        conf: &'a Config,
         ctx: &'a mut Context<I, O, E>,
     ) -> Box<dyn Serve + 'a> {
         match self {
-            Self::Atcoder => Box::new(AtcoderService::new(ctx)),
+            Self::Atcoder => Box::new(AtcoderService::new(global_opt, conf, ctx)),
         }
     }
 

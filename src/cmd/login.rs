@@ -13,7 +13,7 @@ impl Run for LoginOpt {
     fn run<I: Input, O: Output, E: Output>(
         &self,
         global_opt: &GlobalOpt,
-        _conf: &Config,
+        conf: &Config,
         ctx: &mut Context<I, O, E>,
     ) -> Result<Box<dyn Outcome>> {
         let GlobalOpt { service_id, .. } = global_opt;
@@ -25,11 +25,10 @@ impl Run for LoginOpt {
             .get_env_or_prompt_stderr(pass_env, "password: ", true)
             .context("Could not read password")?;
 
-        let mut service = service_id.serve(ctx);
-        service.login(&user, &pass)?;
+        let mut service = service_id.serve(global_opt, conf, ctx);
+        let outcome = service.login(&user, &pass)?;
 
-        // TODO: return outcome
-        Ok(Box::new("Successfully logged in"))
+        Ok(Box::new(outcome))
     }
 }
 
