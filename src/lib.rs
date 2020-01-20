@@ -19,14 +19,6 @@ pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Opt {
-    #[structopt(flatten)]
-    global_opt: GlobalOpt,
-    #[structopt(subcommand)]
-    cmd: Cmd,
-}
-
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GlobalOpt {
     #[structopt(
         name = "service",
@@ -47,6 +39,14 @@ pub struct GlobalOpt {
     contest_id: String,
     #[structopt(long, global = true)]
     debug: bool,
+}
+
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Opt {
+    #[structopt(flatten)]
+    global_opt: GlobalOpt,
+    #[structopt(subcommand)]
+    cmd: Cmd,
 }
 
 impl Opt {

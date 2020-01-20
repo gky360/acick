@@ -7,8 +7,10 @@ use structopt::StructOpt;
 use crate::config::Config;
 use crate::{GlobalOpt, Result};
 
+mod login;
 mod show;
 
+use login::LoginOpt;
 use show::ShowOpt;
 
 pub trait Outcome: fmt::Display + fmt::Debug {
@@ -30,7 +32,8 @@ pub trait Run {
 pub enum Cmd {
     /// Shows current config
     Show(ShowOpt),
-    // Login(LoginOpt),
+    /// Log in to service
+    Login(LoginOpt),
     // Participate(ParticipateOpt),
     // New(NewOpt),
     // Get(GetOpt),
@@ -42,6 +45,7 @@ impl Run for Cmd {
     fn run(&self, global_opt: &GlobalOpt, conf: &Config) -> Result<Box<dyn Outcome>> {
         match self {
             Self::Show(opt) => opt.run(global_opt, conf),
+            Self::Login(opt) => opt.run(global_opt, conf),
         }
     }
 }
