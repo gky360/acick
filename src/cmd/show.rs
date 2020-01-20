@@ -18,3 +18,21 @@ impl Run for ShowOpt {
         Ok(Box::new(conf.clone()))
     }
 }
+
+impl Default for ShowOpt {
+    fn default() -> Self {
+        Self {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cmd::tests::run_default;
+
+    #[test]
+    fn run_default() -> anyhow::Result<()> {
+        run_default!(ShowOpt)?;
+        Ok(())
+    }
+}

@@ -45,6 +45,13 @@ pub struct GlobalOpt {
     debug: bool,
 }
 
+impl Default for GlobalOpt {
+    fn default() -> Self {
+        let args = [""];
+        GlobalOpt::from_iter(&args)
+    }
+}
+
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Opt {
     #[structopt(flatten)]
@@ -124,5 +131,21 @@ impl<I: Input, O: Output, E: Output> Context<I, O, E> {
             return Ok(val);
         };
         self.prompt_stderr(prompt, is_password)
+    }
+}
+
+impl<'a>
+    Context<io::StdinLock<'a>, io::BufWriter<io::StdoutLock<'a>>, io::BufWriter<io::StderrLock<'a>>>
+{
+    pub fn from_stdio(
+        stdin: &'a io::Stdin,
+        stdout: &'a io::Stdout,
+        stderr: &'a io::Stderr,
+    ) -> Self {
+        Self {
+            stdin: stdin.lock(),
+            stdout: io::BufWriter::new(stdout.lock()),
+            stderr: io::BufWriter::new(stderr.lock()),
+        }
     }
 }

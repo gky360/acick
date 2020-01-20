@@ -10,8 +10,8 @@ macro_rules! assert_match {
 }
 
 #[test]
-fn run_with_no_arags() {
+fn run_with_no_args() {
     let args = [""];
-    let res = acick::Opt::from_iter_safe(args.iter());
+    let res = acick::Opt::from_iter_safe(&args);
     assert_match!(res => Err(_));
 }

@@ -30,3 +30,26 @@ impl Run for LoginOpt {
         Ok(Box::new("Successfully logged in"))
     }
 }
+
+impl Default for LoginOpt {
+    fn default() -> Self {
+        Self {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use super::*;
+    use crate::cmd::tests::run_default;
+
+    #[test]
+    fn run_default() -> anyhow::Result<()> {
+        env::set_var("ACICK_ATCODER_USERNAME", "test_user");
+        env::set_var("ACICK_ATCODER_PASSWORD", "test_pass");
+
+        run_default!(LoginOpt)?;
+        Ok(())
+    }
+}

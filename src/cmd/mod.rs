@@ -59,3 +59,20 @@ impl Run for Cmd {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    macro_rules! run_default {
+        ($opt:ident) => {{
+            let opt = $opt::default();
+            let global_opt = GlobalOpt::default();
+            let conf = Config::load()?;
+            let (stdin, stdout, stderr) =
+                (::std::io::stdin(), ::std::io::stdout(), ::std::io::stderr());
+            let mut ctx = Context::from_stdio(&stdin, &stdout, &stderr);
+
+            opt.run(&global_opt, &conf, &mut ctx)
+        }};
+    }
+    pub(crate) use run_default;
+}
