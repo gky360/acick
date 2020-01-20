@@ -14,6 +14,7 @@ use strum::VariantNames;
 mod cmd;
 mod config;
 mod model;
+mod service;
 
 use cmd::{Cmd, Run as _};
 use config::Config;
@@ -64,6 +65,9 @@ impl Opt {
     pub fn run<I: Input, O: Output, E: Output>(&self, ctx: &mut Context<I, O, E>) -> Result<()> {
         let conf = Config::load().context("Could not load config")?;
         let outcome = self.cmd.run(&self.global_opt, &conf, ctx)?;
+
+        ctx.stdout.flush()?;
+        ctx.stderr.flush()?;
         if self.global_opt.debug {
             writeln!(ctx.stdout, "\n{:#?}", outcome.as_ref())
         } else {

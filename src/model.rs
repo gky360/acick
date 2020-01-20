@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use crate::service::{AtcoderService, Serve};
+use crate::{Context, Input, Output};
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
     id: ServiceKind,
@@ -31,6 +34,15 @@ pub enum ServiceKind {
 }
 
 impl ServiceKind {
+    pub fn serve<'a, I: Input, O: Output, E: Output>(
+        &self,
+        ctx: &'a mut Context<I, O, E>,
+    ) -> Box<dyn Serve + 'a> {
+        match self {
+            Self::Atcoder => Box::new(AtcoderService::new(ctx)),
+        }
+    }
+
     pub fn to_user_pass_env_names(&self) -> (&'static str, &'static str) {
         match self {
             Self::Atcoder => ("ACICK_ATCODER_USERNAME", "ACICK_ATCODER_PASSWORD"),

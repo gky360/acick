@@ -18,13 +18,15 @@ impl Run for LoginOpt {
     ) -> Result<Box<dyn Outcome>> {
         let GlobalOpt { service_id, .. } = global_opt;
         let (user_env, pass_env) = service_id.to_user_pass_env_names();
-        let username = ctx
+        let user = ctx
             .get_env_or_prompt_stderr(user_env, "username: ", false)
             .context("Could not read username")?;
-        let password = ctx
+        let pass = ctx
             .get_env_or_prompt_stderr(pass_env, "password: ", true)
             .context("Could not read password")?;
-        eprintln!("{:?}", (username, password));
+
+        let mut service = service_id.serve(ctx);
+        service.login(&user, &pass)?;
 
         // TODO: return outcome
         Ok(Box::new("Successfully logged in"))
