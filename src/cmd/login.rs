@@ -1,3 +1,4 @@
+use anyhow::Context as _;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
@@ -13,9 +14,18 @@ impl Run for LoginOpt {
         &self,
         _global_opt: &GlobalOpt,
         _conf: &Config,
-        _ctx: &mut Context<I, O, E>,
+        ctx: &mut Context<I, O, E>,
     ) -> Result<Box<dyn Outcome>> {
-        // TODO: impl
-        Ok(Box::new(""))
+        let username = ctx
+            .prompt_stderr("username: ", false)
+            .context("Could not read username")?;
+        let password = ctx
+            .prompt_stderr("password: ", true)
+            .context("Could not read password")?;
+        eprintln!("{}", username);
+        eprintln!("{}", password);
+
+        // TODO: return outcome
+        Ok(Box::new("Successfully logged in"))
     }
 }

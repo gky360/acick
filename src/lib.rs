@@ -6,6 +6,7 @@ extern crate strum;
 use std::io;
 
 use anyhow::Context as _;
+use rpassword::read_password_from_tty;
 use structopt::StructOpt;
 use strum::VariantNames;
 
@@ -56,19 +57,34 @@ impl Opt {
         let conf = Config::load().context("Could not load config")?;
         let outcome = self.cmd.run(&self.global_opt, &conf, ctx)?;
         if self.global_opt.debug {
-            writeln!(ctx.stdout, "{:#?}", outcome.as_ref())
+            writeln!(ctx.stdout, "\n{:#?}", outcome.as_ref())
         } else {
-            writeln!(ctx.stdout, "{}", outcome.as_ref())
+            writeln!(ctx.stdout, "\n{}", outcome.as_ref())
         }?;
         Ok(())
     }
 }
 
-pub trait Input: io::BufRead {}
+pub trait Input: io::BufRead {
+    fn read_input(&mut self, is_password: bool) -> Result<String> {
+        let raw = if is_password {
+            read_password_from_tty(None)?
+        } else {
+            let mut buf = String::new();
+            self.read_line(&mut buf)?;
+            buf
+        };
+        Ok(raw.trim().to_string())
+    }
+}
 
 impl<T: io::BufRead> Input for T {}
 
-pub trait Output: io::Write {}
+pub trait Output: io::Write {
+    fn write_str(&mut self, msg: &str) -> Result<()> {
+        Ok(self.write_all(msg.as_bytes())?)
+    }
+}
 
 impl<T: io::Write> Output for io::BufWriter<T> {}
 
@@ -86,5 +102,11 @@ impl<I: Input, O: Output, E: Output> Context<I, O, E> {
             stdout,
             stderr,
         }
+    }
+
+    fn prompt_stderr(&mut self, prompt: &str, is_password: bool) -> Result<String> {
+        self.stderr.write_str(prompt)?;
+        self.stderr.flush()?;
+        self.stdin.read_input(is_password)
     }
 }
