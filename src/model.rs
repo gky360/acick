@@ -30,6 +30,14 @@ pub enum ServiceKind {
     Atcoder,
 }
 
+impl ServiceKind {
+    pub fn to_user_pass_env_names(&self) -> (&'static str, &'static str) {
+        match self {
+            Self::Atcoder => ("ACICK_ATCODER_USERNAME", "ACICK_ATCODER_PASSWORD"),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Contest {
     id: String,

@@ -12,18 +12,19 @@ pub struct LoginOpt {}
 impl Run for LoginOpt {
     fn run<I: Input, O: Output, E: Output>(
         &self,
-        _global_opt: &GlobalOpt,
+        global_opt: &GlobalOpt,
         _conf: &Config,
         ctx: &mut Context<I, O, E>,
     ) -> Result<Box<dyn Outcome>> {
+        let GlobalOpt { service_id, .. } = global_opt;
+        let (user_env, pass_env) = service_id.to_user_pass_env_names();
         let username = ctx
-            .prompt_stderr("username: ", false)
+            .get_env_or_prompt_stderr(user_env, "username: ", false)
             .context("Could not read username")?;
         let password = ctx
-            .prompt_stderr("password: ", true)
+            .get_env_or_prompt_stderr(pass_env, "password: ", true)
             .context("Could not read password")?;
-        eprintln!("{}", username);
-        eprintln!("{}", password);
+        eprintln!("{:?}", (username, password));
 
         // TODO: return outcome
         Ok(Box::new("Successfully logged in"))

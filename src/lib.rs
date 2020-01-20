@@ -3,6 +3,7 @@
 #[macro_use]
 extern crate strum;
 
+use std::env;
 use std::io;
 
 use anyhow::Context as _;
@@ -80,11 +81,7 @@ pub trait Input: io::BufRead {
 
 impl<T: io::BufRead> Input for T {}
 
-pub trait Output: io::Write {
-    fn write_str(&mut self, msg: &str) -> Result<()> {
-        Ok(self.write_all(msg.as_bytes())?)
-    }
-}
+pub trait Output: io::Write {}
 
 impl<T: io::Write> Output for io::BufWriter<T> {}
 
@@ -105,8 +102,27 @@ impl<I: Input, O: Output, E: Output> Context<I, O, E> {
     }
 
     fn prompt_stderr(&mut self, prompt: &str, is_password: bool) -> Result<String> {
-        self.stderr.write_str(prompt)?;
+        write!(self.stderr, "{}", prompt)?;
         self.stderr.flush()?;
         self.stdin.read_input(is_password)
+    }
+
+    fn get_env_or_prompt_stderr(
+        &mut self,
+        env_name: &str,
+        prompt: &str,
+        is_password: bool,
+    ) -> Result<String> {
+        if let Ok(val) = env::var(env_name) {
+            writeln!(
+                self.stderr,
+                "{}{:16} (read from env {})",
+                prompt,
+                if is_password { "********" } else { &val },
+                env_name
+            )?;
+            return Ok(val);
+        };
+        self.prompt_stderr(prompt, is_password)
     }
 }
