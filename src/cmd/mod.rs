@@ -5,7 +5,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::config::Config;
-use crate::{GlobalOpt, Result};
+use crate::{Context, GlobalOpt, Input, Output, Result};
 
 mod login;
 mod show;
@@ -24,7 +24,12 @@ impl<T: fmt::Display + fmt::Debug + Serialize> Outcome for T {
 }
 
 pub trait Run {
-    fn run(&self, global_opt: &GlobalOpt, conf: &Config) -> Result<Box<dyn Outcome>>;
+    fn run<I: Input, O: Output, E: Output>(
+        &self,
+        global_opt: &GlobalOpt,
+        conf: &Config,
+        ctx: &mut Context<I, O, E>,
+    ) -> Result<Box<dyn Outcome>>;
 }
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -42,10 +47,15 @@ pub enum Cmd {
 }
 
 impl Run for Cmd {
-    fn run(&self, global_opt: &GlobalOpt, conf: &Config) -> Result<Box<dyn Outcome>> {
+    fn run<I: Input, O: Output, E: Output>(
+        &self,
+        global_opt: &GlobalOpt,
+        conf: &Config,
+        ctx: &mut Context<I, O, E>,
+    ) -> Result<Box<dyn Outcome>> {
         match self {
-            Self::Show(opt) => opt.run(global_opt, conf),
-            Self::Login(opt) => opt.run(global_opt, conf),
+            Self::Show(opt) => opt.run(global_opt, conf, ctx),
+            Self::Login(opt) => opt.run(global_opt, conf, ctx),
         }
     }
 }

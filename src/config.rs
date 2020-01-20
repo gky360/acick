@@ -8,7 +8,7 @@ use anyhow::Context as _;
 use heck::{CamelCase as _, KebabCase as _, MixedCase as _, SnakeCase as _};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use tera::{Context, Tera};
+use tera::Tera;
 
 use crate::model::{Contest, Problem, Service};
 use crate::Result;
@@ -51,7 +51,8 @@ pub trait Expand<C: Serialize> {
         let template = self.get_template();
         let template_name = template;
 
-        let ctx = Context::from_serialize(context).context("Could not create template context")?;
+        let ctx =
+            tera::Context::from_serialize(context).context("Could not create template context")?;
 
         let mut renderer = RENDERER.lock().unwrap();
         if let Err(err) = renderer.get_template(template_name) {
