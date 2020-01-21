@@ -58,12 +58,13 @@ mod tests {
             let opt = $opt::default();
             let global_opt = GlobalOpt::default();
             let conf = Config::load()?;
-            let (stdin, stderr) = (::std::io::stdin(), ::std::io::stderr());
+            let mut stdin_buf = ::std::io::BufReader::new(&b""[..]);
+            let mut stderr_buf = Vec::new();
             let mut ctx = Context {
                 global_opt: &global_opt,
                 conf: &conf,
-                stdin: &mut stdin.lock(),
-                stderr: &mut stderr.lock(),
+                stdin: &mut stdin_buf,
+                stderr: &mut stderr_buf,
             };
 
             opt.run(&mut ctx)
