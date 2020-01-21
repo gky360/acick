@@ -1,22 +1,24 @@
-use reqwest::blocking::Response;
+use reqwest::blocking::{Client, Response};
 
 use crate::service::{Accept, LoginOutcome, Scrape, Serve};
 use crate::{Context, Result};
 
 #[derive(Debug)]
 pub struct AtcoderService<'a, 'b> {
+    client: Client,
     ctx: &'a mut Context<'b>,
 }
 
 impl<'a, 'b> AtcoderService<'a, 'b> {
-    pub fn new(ctx: &'a mut Context<'b>) -> Self {
-        Self { ctx }
+    pub fn new(client: Client, ctx: &'a mut Context<'b>) -> Self {
+        Self { client, ctx }
     }
 }
 
 impl Serve for AtcoderService<'_, '_> {
     fn login(&mut self, user: &str, _pass: &str) -> Result<LoginOutcome> {
-        // TODO: login
+        let mut login_page = LoginPage;
+        let _html = login_page.scrape(&self.client, &mut self.ctx)?;
 
         let outcome = LoginOutcome {
             service_id: self.ctx.global_opt.service_id.clone(),
@@ -27,7 +29,7 @@ impl Serve for AtcoderService<'_, '_> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct LoginPage {}
+struct LoginPage;
 
 impl Accept<Response> for LoginPage {
     fn is_acceptable(&self, res: &Response) -> bool {

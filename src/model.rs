@@ -1,6 +1,9 @@
+use std::time::Duration;
+
+use reqwest::blocking::{Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
 
-use crate::service::{AtcoderService, Serve};
+use crate::service::{AtcoderService, Serve, USER_AGENT};
 use crate::Context;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -35,8 +38,13 @@ pub enum ServiceKind {
 
 impl ServiceKind {
     pub fn serve<'a>(&self, ctx: &'a mut Context<'_>) -> Box<dyn Serve + 'a> {
+        let client = self
+            .get_client_builder(ctx)
+            .build()
+            .expect("Could not setup client. \
+                TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
         match self {
-            Self::Atcoder => Box::new(AtcoderService::new(ctx)),
+            Self::Atcoder => Box::new(AtcoderService::new(client, ctx)),
         }
     }
 
@@ -44,6 +52,14 @@ impl ServiceKind {
         match self {
             Self::Atcoder => ("ACICK_ATCODER_USERNAME", "ACICK_ATCODER_PASSWORD"),
         }
+    }
+
+    fn get_client_builder(&self, _ctx: &mut Context) -> ClientBuilder {
+        Client::builder()
+            .referer(false)
+            // .redirect(RedirectPolicy::none()) // redirects manually
+            .user_agent(USER_AGENT) // TODO: use config
+            .timeout(Some(Duration::from_secs(30))) // TODO: use config
     }
 }
 
