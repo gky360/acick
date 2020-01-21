@@ -1,21 +1,64 @@
 use std::fmt;
 
-use reqwest::blocking::Client;
+use anyhow::Context as _;
+use reqwest::blocking::{Client, RequestBuilder, Response};
 use reqwest::Url;
+use retry::{delay, retry, OperationResult};
 use scraper::Html;
 use serde::{Deserialize, Serialize};
 
 use crate::model::ServiceKind;
-use crate::Result;
+use crate::{Error, Result};
 
 mod atcoder;
 
 pub use atcoder::AtcoderService;
 
-pub trait Scrape {
-    fn url() -> Url;
+trait Accept<T> {
+    fn is_acceptable(&self, data: &T) -> bool;
+}
 
-    fn fetch(client: &Client) -> Result<Html>;
+trait Scrape: Accept<Response> {
+    const HOST: &'static str;
+    const PATH: &'static str;
+
+    fn url(&self) -> Url {
+        Url::parse(Self::HOST).unwrap().join(Self::PATH).unwrap()
+    }
+
+    fn scrape(&mut self, client: &Client) -> Result<Html> {
+        // TODO: use config
+        let durations = delay::Fixed::from_millis(2000).take(3);
+        let html = retry(durations, || {
+            let url = self.url();
+            let req = client.get(url);
+            self.retry_get(req)
+        })
+        .map_err(|err| match err {
+            retry::Error::Operation { error, .. } => error,
+            retry::Error::Internal(msg) => Error::msg(msg),
+        })
+        .context("Could not get page from service")?;
+        Ok(html)
+    }
+
+    fn retry_get(&self, req: RequestBuilder) -> OperationResult<Html, Error> {
+        let result = req
+            .send()
+            .map_err(|err| err.into())
+            .and_then(|res| {
+                if self.is_acceptable(&res) {
+                    res.text().map_err(|err| err.into())
+                } else {
+                    Err(Error::msg("Unacceptable response"))
+                }
+            })
+            .and_then(|text| Ok(Html::parse_document(&text)));
+        match result {
+            Ok(html) => OperationResult::Ok(html),
+            Err(err) => OperationResult::Retry(err),
+        }
+    }
 }
 
 pub trait Serve {

@@ -1,4 +1,6 @@
-use crate::service::{LoginOutcome, Serve};
+use reqwest::blocking::Response;
+
+use crate::service::{Accept, LoginOutcome, Scrape, Serve};
 use crate::{Config, Context, GlobalOpt, Input, Output, Result};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -28,4 +30,18 @@ impl<'a, I: Input, O: Output, E: Output> Serve for AtcoderService<'a, I, O, E> {
         };
         Ok(outcome)
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LoginPage {}
+
+impl Accept<Response> for LoginPage {
+    fn is_acceptable(&self, res: &Response) -> bool {
+        res.status().is_success()
+    }
+}
+
+impl Scrape for LoginPage {
+    const HOST: &'static str = "https://atcoder.jp";
+    const PATH: &'static str = "/login";
 }
