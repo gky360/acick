@@ -3,11 +3,9 @@
 #[macro_use]
 extern crate strum;
 
-use std::env;
-use std::io;
-
 use anyhow::Context as _;
 use rpassword::read_password_from_tty;
+use std::{env, fmt, io};
 use structopt::StructOpt;
 use strum::VariantNames;
 
@@ -62,22 +60,34 @@ pub struct Opt {
 }
 
 impl Opt {
-    pub fn run<I: Input, O: Output, E: Output>(&self, ctx: &mut Context<I, O, E>) -> Result<()> {
+    pub fn run(
+        &self,
+        mut stdin: impl io::BufRead + fmt::Debug,
+        mut stdout: impl io::Write,
+        mut stderr: impl io::Write + fmt::Debug,
+    ) -> Result<()> {
         let conf = Config::load().context("Could not load config")?;
-        let outcome = self.cmd.run(&self.global_opt, &conf, ctx)?;
+        let mut ctx = Context {
+            global_opt: &self.global_opt,
+            conf: &conf,
+            stdin: &mut stdin,
+            stderr: &mut stderr,
+        };
+        let outcome = self.cmd.run(&mut ctx)?;
 
-        ctx.stdout.flush()?;
         ctx.stderr.flush()?;
+        writeln!(stdout)?;
+
         if self.global_opt.debug {
-            writeln!(ctx.stdout, "\n{:#?}", outcome.as_ref())
+            writeln!(stdout, "{:#?}", outcome.as_ref())
         } else {
-            writeln!(ctx.stdout, "\n{}", outcome.as_ref())
+            writeln!(stdout, "{}", outcome.as_ref())
         }?;
         Ok(())
     }
 }
 
-pub trait Input: io::BufRead {
+pub trait Input: io::BufRead + fmt::Debug {
     fn read_input(&mut self, is_password: bool) -> Result<String> {
         let raw = if is_password {
             read_password_from_tty(None)?
@@ -90,35 +100,35 @@ pub trait Input: io::BufRead {
     }
 }
 
-impl<T: io::BufRead> Input for T {}
+impl<T: io::BufRead + fmt::Debug> Input for T {}
 
-pub trait Output: io::Write {}
-
-impl<T: io::Write> Output for io::BufWriter<T> {}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Context<I: Input, O: Output, E: Output> {
-    stdin: I,
-    stdout: O,
-    stderr: E,
+pub trait Output: io::Write + fmt::Debug {
+    fn prompt(&mut self, prompt: &str) -> Result<()> {
+        write!(self, "{}", prompt)?;
+        self.flush()?;
+        Ok(())
+    }
 }
 
-impl<I: Input, O: Output, E: Output> Context<I, O, E> {
-    pub fn new(stdin: I, stdout: O, stderr: E) -> Self {
-        Self {
-            stdin,
-            stdout,
-            stderr,
-        }
-    }
+impl<T: io::Write + fmt::Debug> Output for T {}
 
-    fn prompt_stderr(&mut self, prompt: &str, is_password: bool) -> Result<String> {
-        write!(self.stderr, "{}", prompt)?;
-        self.stderr.flush()?;
+#[derive(Debug)]
+pub struct Context<'a> {
+    global_opt: &'a GlobalOpt,
+    conf: &'a Config,
+    stdin: &'a mut dyn Input,
+    stderr: &'a mut dyn Output,
+}
+
+impl Context<'_> {
+    fn prompt_read(&mut self, prompt: &str, is_password: bool) -> Result<String> {
+        self.stderr
+            .prompt(prompt)
+            .context("Could not output prompt message")?;
         self.stdin.read_input(is_password)
     }
 
-    fn get_env_or_prompt_stderr(
+    fn get_env_or_prompt_read(
         &mut self,
         env_name: &str,
         prompt: &str,
@@ -134,22 +144,6 @@ impl<I: Input, O: Output, E: Output> Context<I, O, E> {
             )?;
             return Ok(val);
         };
-        self.prompt_stderr(prompt, is_password)
-    }
-}
-
-impl<'a>
-    Context<io::StdinLock<'a>, io::BufWriter<io::StdoutLock<'a>>, io::BufWriter<io::StderrLock<'a>>>
-{
-    pub fn from_stdio(
-        stdin: &'a io::Stdin,
-        stdout: &'a io::Stdout,
-        stderr: &'a io::Stderr,
-    ) -> Self {
-        Self {
-            stdin: stdin.lock(),
-            stdout: io::BufWriter::new(stdout.lock()),
-            stderr: io::BufWriter::new(stderr.lock()),
-        }
+        self.prompt_read(prompt, is_password)
     }
 }

@@ -4,8 +4,7 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::config::Config;
-use crate::{Context, GlobalOpt, Input, Output, Result};
+use crate::{Context, Result};
 
 mod login;
 mod show;
@@ -24,12 +23,7 @@ impl<T: fmt::Display + fmt::Debug + Serialize> Outcome for T {
 }
 
 pub trait Run {
-    fn run<I: Input, O: Output, E: Output>(
-        &self,
-        global_opt: &GlobalOpt,
-        conf: &Config,
-        ctx: &mut Context<I, O, E>,
-    ) -> Result<Box<dyn Outcome>>;
+    fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>>;
 }
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -47,15 +41,10 @@ pub enum Cmd {
 }
 
 impl Run for Cmd {
-    fn run<I: Input, O: Output, E: Output>(
-        &self,
-        global_opt: &GlobalOpt,
-        conf: &Config,
-        ctx: &mut Context<I, O, E>,
-    ) -> Result<Box<dyn Outcome>> {
+    fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
         match self {
-            Self::Show(opt) => opt.run(global_opt, conf, ctx),
-            Self::Login(opt) => opt.run(global_opt, conf, ctx),
+            Self::Show(opt) => opt.run(ctx),
+            Self::Login(opt) => opt.run(ctx),
         }
     }
 }
@@ -64,14 +53,20 @@ impl Run for Cmd {
 mod tests {
     macro_rules! run_default {
         ($opt:ident) => {{
+            use crate::{Config, GlobalOpt};
+
             let opt = $opt::default();
             let global_opt = GlobalOpt::default();
             let conf = Config::load()?;
-            let (stdin, stdout, stderr) =
-                (::std::io::stdin(), ::std::io::stdout(), ::std::io::stderr());
-            let mut ctx = Context::from_stdio(&stdin, &stdout, &stderr);
+            let (stdin, stderr) = (::std::io::stdin(), ::std::io::stderr());
+            let mut ctx = Context {
+                global_opt: &global_opt,
+                conf: &conf,
+                stdin: &mut stdin.lock(),
+                stderr: &mut stderr.lock(),
+            };
 
-            opt.run(&global_opt, &conf, &mut ctx)
+            opt.run(&mut ctx)
         }};
     }
     pub(crate) use run_default;
