@@ -204,7 +204,7 @@ impl Default for Shell {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
 pub struct Config {
     shell: Shell,
@@ -218,15 +218,6 @@ impl Config {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            shell: Shell::default(),
-            services: ServicesConfig::default(),
-        }
-    }
-}
-
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let yaml_str = serde_yaml::to_string(self).map_err(|_| fmt::Error)?;
@@ -234,18 +225,10 @@ impl fmt::Display for Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
 pub struct ServicesConfig {
     atcoder: AtcoderConfig,
-}
-
-impl Default for ServicesConfig {
-    fn default() -> Self {
-        Self {
-            atcoder: AtcoderConfig::default(),
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]

@@ -4,7 +4,7 @@ use structopt::StructOpt;
 use crate::cmd::{Outcome, Run};
 use crate::{Context, GlobalOpt, Result};
 
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct LoginOpt {}
 
@@ -23,12 +23,6 @@ impl Run for LoginOpt {
         let outcome = service.login(&user, &pass)?;
 
         Ok(Box::new(outcome))
-    }
-}
-
-impl Default for LoginOpt {
-    fn default() -> Self {
-        Self {}
     }
 }
 
