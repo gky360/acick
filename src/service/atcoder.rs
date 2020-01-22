@@ -1,11 +1,9 @@
 use maplit::hashmap;
-use once_cell::sync::OnceCell;
-use reqwest::blocking::{Client, Response};
-use scraper::Html;
+use reqwest::blocking::Client;
 
-use crate::service::{
-    Accept, Extract as _, LoginOutcome, Scrape, ScrapeOnce as _, SendPretty as _, Serve,
-};
+use crate::service::atcoder_page::LoginPage;
+use crate::service::scrape::{Extract as _, Scrape as _, ScrapeOnce as _};
+use crate::service::serve::{LoginOutcome, SendPretty as _, Serve};
 use crate::{Context, Result};
 
 #[derive(Debug)]
@@ -38,35 +36,5 @@ impl Serve for AtcoderService<'_, '_> {
             username: user,
         };
         Ok(outcome)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct LoginPage {
-    content_cell: OnceCell<Html>,
-}
-
-impl LoginPage {
-    fn new() -> Self {
-        Self {
-            content_cell: OnceCell::new(),
-        }
-    }
-}
-
-impl Accept<Response> for LoginPage {
-    fn is_acceptable(&self, res: &Response) -> bool {
-        res.status().is_success()
-    }
-}
-
-impl Scrape for LoginPage {
-    const HOST: &'static str = "https://atcoder.jp";
-    const PATH: &'static str = "/login";
-}
-
-impl AsRef<OnceCell<Html>> for LoginPage {
-    fn as_ref(&self) -> &OnceCell<Html> {
-        &self.content_cell
     }
 }
