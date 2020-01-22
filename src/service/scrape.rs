@@ -24,7 +24,13 @@ macro_rules! select {
 use select;
 
 pub trait Accept<T> {
-    fn is_acceptable(&self, data: &T) -> bool;
+    fn is_acceptable(&self, res: &Response) -> bool {
+        res.status().is_success()
+    }
+
+    fn should_reject(&self, _res: &Response) -> bool {
+        false
+    }
 }
 
 pub trait Scrape: Accept<Response> {
@@ -51,17 +57,22 @@ pub trait Scrape: Accept<Response> {
         let result = client
             .get(self.url())
             .send_pretty(client, ctx)
+            .map_err(OperationResult::Retry)
             .and_then(|res| {
-                if self.is_acceptable(&res) {
-                    res.text().map_err(|err| err.into())
+                if self.should_reject(&res) {
+                    Err(OperationResult::Err(Error::msg(
+                        "Received invalid response",
+                    )))
+                } else if self.is_acceptable(&res) {
+                    res.text().map_err(|err| OperationResult::Retry(err.into()))
                 } else {
-                    Err(Error::msg("Unacceptable response"))
+                    Err(OperationResult::Retry(Error::msg("Unacceptable response")))
                 }
             })
             .and_then(|text| Ok(Html::parse_document(&text)));
         match result {
             Ok(html) => OperationResult::Ok(html),
-            Err(err) => OperationResult::Retry(err),
+            Err(err) => err,
         }
     }
 }

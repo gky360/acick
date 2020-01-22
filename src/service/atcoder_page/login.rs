@@ -4,11 +4,7 @@ use crate::service::scrape::{Accept, PageBase, Scrape};
 
 pub type LoginPage = PageBase;
 
-impl Accept<Response> for LoginPage {
-    fn is_acceptable(&self, res: &Response) -> bool {
-        res.status().is_success()
-    }
-}
+impl Accept<Response> for LoginPage {}
 
 impl Scrape for LoginPage {
     const HOST: &'static str = "https://atcoder.jp";
