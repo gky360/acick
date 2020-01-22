@@ -20,7 +20,7 @@ impl Run for LoginOpt {
             .context("Could not read password")?;
 
         let mut service = service_id.serve(ctx);
-        let outcome = service.login(&user, &pass)?;
+        let outcome = service.login(user, pass)?;
 
         Ok(Box::new(outcome))
     }

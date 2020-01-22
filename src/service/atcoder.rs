@@ -1,9 +1,9 @@
 use maplit::hashmap;
 use once_cell::sync::OnceCell;
 use reqwest::blocking::{Client, Response};
-use scraper::{ElementRef, Html};
+use scraper::Html;
 
-use crate::service::{select, Accept, Extract as _, LoginOutcome, Scrape, ScrapeOnce as _, Serve};
+use crate::service::{Accept, Extract as _, LoginOutcome, Scrape, ScrapeOnce as _, Serve};
 use crate::{Context, Result};
 
 #[derive(Debug)]
@@ -19,14 +19,18 @@ impl<'a, 'b> AtcoderService<'a, 'b> {
 }
 
 impl Serve for AtcoderService<'_, '_> {
-    fn login(&mut self, user: &str, _pass: &str) -> Result<LoginOutcome> {
+    fn login(&mut self, user: String, pass: String) -> Result<LoginOutcome> {
         let login_page = LoginPage::new();
-        let elem = login_page.select_username_input(&self.client, self.ctx)?;
-        eprintln!("{:?}", elem);
+        let payload = hashmap!(
+            "csrf_token" => login_page.content(&self.client, self.ctx)?.extract_csrf_token()?,
+            "username" => user.to_owned(),
+            "password" => pass,
+        );
+        self.client.post(login_page.url()).form(&payload).send()?;
 
         let outcome = LoginOutcome {
             service_id: self.ctx.global_opt.service_id.clone(),
-            username: user.to_string(),
+            username: user,
         };
         Ok(outcome)
     }
@@ -42,10 +46,6 @@ impl LoginPage {
         Self {
             content_cell: OnceCell::new(),
         }
-    }
-
-    fn select_username_input(&self, client: &Client, ctx: &mut Context) -> Result<ElementRef> {
-        self.content(client, ctx)?.find_first(select!("#username"))
     }
 }
 

@@ -2,7 +2,7 @@ use std::fmt;
 
 use anyhow::Context as _;
 use once_cell::sync::OnceCell;
-use reqwest::blocking::{Client, Response};
+use reqwest::blocking::{Client, RequestBuilder, Response};
 use reqwest::Url;
 use retry::{delay, retry, OperationResult};
 use scraper::{ElementRef, Html, Selector};
@@ -57,17 +57,9 @@ trait Scrape: Accept<Response> {
     }
 
     fn retry_get(&self, client: &Client, ctx: &mut Context) -> OperationResult<Html, Error> {
-        let url = self.url();
-        write!(ctx.stderr, "{:6} {} ... ", "GET", url.as_str()).unwrap_or(());
-        let req = client.get(url);
-        let result = req.send();
-        match &result {
-            Ok(res) => writeln!(ctx.stderr, "{}", res.status()),
-            Err(_) => writeln!(ctx.stderr, "failed"),
-        }
-        .unwrap_or(());
-        let result = result
-            .map_err(|err| err.into())
+        let result = client
+            .get(self.url())
+            .send_pretty(client, ctx)
             .and_then(|res| {
                 if self.is_acceptable(&res) {
                     res.text().map_err(|err| err.into())
@@ -96,7 +88,7 @@ trait ScrapeOnce: Scrape + AsRef<OnceCell<Html>> {
 impl<T: Scrape + AsRef<OnceCell<Html>>> ScrapeOnce for T {}
 
 pub trait Serve {
-    fn login(&mut self, user: &str, pass: &str) -> Result<LoginOutcome>;
+    fn login(&mut self, user: String, pass: String) -> Result<LoginOutcome>;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -113,6 +105,24 @@ impl fmt::Display for LoginOutcome {
             Into::<&'static str>::into(&self.service_id),
             &self.username
         )
+    }
+}
+
+trait SendPretty {
+    fn send_pretty(self, client: &Client, ctx: &mut Context) -> Result<Response>;
+}
+
+impl SendPretty for RequestBuilder {
+    fn send_pretty(self, client: &Client, ctx: &mut Context) -> Result<Response> {
+        let req = self.build()?;
+        write!(ctx.stderr, "{:6} {} ... ", req.method(), req.url()).unwrap_or(());
+        let result = client.execute(req).context("Could not send request");
+        match &result {
+            Ok(res) => writeln!(ctx.stderr, "{}", res.status()),
+            Err(_) => writeln!(ctx.stderr, "failed"),
+        }
+        .unwrap_or(());
+        result
     }
 }
 
