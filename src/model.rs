@@ -58,6 +58,7 @@ impl ServiceKind {
         Client::builder()
             .referer(false)
             // .redirect(RedirectPolicy::none()) // redirects manually
+            .cookie_store(true) // TODO: use own cookie store
             .user_agent(USER_AGENT) // TODO: use config
             .timeout(Some(Duration::from_secs(30))) // TODO: use config
     }

@@ -46,7 +46,7 @@ trait Scrape: Accept<Response> {
 
     fn scrape(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
         // TODO: use config
-        let durations = delay::Fixed::from_millis(2000).take(3);
+        let durations = delay::Fixed::from_millis(1000).take(4);
         let html = retry(durations, || self.retry_get(client, ctx))
             .map_err(|err| match err {
                 retry::Error::Operation { error, .. } => error,
@@ -115,7 +115,7 @@ trait SendPretty {
 impl SendPretty for RequestBuilder {
     fn send_pretty(self, client: &Client, ctx: &mut Context) -> Result<Response> {
         let req = self.build()?;
-        write!(ctx.stderr, "{:6} {} ... ", req.method(), req.url()).unwrap_or(());
+        write!(ctx.stderr, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
         let result = client.execute(req).context("Could not send request");
         match &result {
             Ok(res) => writeln!(ctx.stderr, "{}", res.status()),

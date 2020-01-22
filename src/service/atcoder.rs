@@ -3,7 +3,9 @@ use once_cell::sync::OnceCell;
 use reqwest::blocking::{Client, Response};
 use scraper::Html;
 
-use crate::service::{Accept, Extract as _, LoginOutcome, Scrape, ScrapeOnce as _, Serve};
+use crate::service::{
+    Accept, Extract as _, LoginOutcome, Scrape, ScrapeOnce as _, SendPretty as _, Serve,
+};
 use crate::{Context, Result};
 
 #[derive(Debug)]
@@ -26,7 +28,10 @@ impl Serve for AtcoderService<'_, '_> {
             "username" => user.to_owned(),
             "password" => pass,
         );
-        self.client.post(login_page.url()).form(&payload).send()?;
+        self.client
+            .post(login_page.url())
+            .form(&payload)
+            .send_pretty(&self.client, self.ctx)?;
 
         let outcome = LoginOutcome {
             service_id: self.ctx.global_opt.service_id.clone(),
