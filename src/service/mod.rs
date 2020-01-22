@@ -1,6 +1,7 @@
 use std::fmt;
 
 use anyhow::Context as _;
+use once_cell::sync::OnceCell;
 use reqwest::blocking::{Client, Response};
 use reqwest::Url;
 use retry::{delay, retry, OperationResult};
@@ -28,7 +29,7 @@ trait Scrape: Accept<Response> {
         Url::parse(Self::HOST).unwrap().join(Self::PATH).unwrap()
     }
 
-    fn scrape(&mut self, client: &Client, ctx: &mut Context) -> Result<Html> {
+    fn scrape(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
         // TODO: use config
         let durations = delay::Fixed::from_millis(2000).take(3);
         let html = retry(durations, || self.retry_get(client, ctx))
@@ -66,6 +67,18 @@ trait Scrape: Accept<Response> {
         }
     }
 }
+
+trait ScrapeOnce: Scrape + AsRef<OnceCell<Html>> {
+    fn content(&self, client: &Client, ctx: &mut Context) -> Result<&Html> {
+        let html = self
+            .as_ref()
+            .get_or_try_init(|| self.scrape(client, ctx))
+            .context("Could not get page content from service")?;
+        Ok(html)
+    }
+}
+
+impl<T: Scrape + AsRef<OnceCell<Html>>> ScrapeOnce for T {}
 
 pub trait Serve {
     fn login(&mut self, user: &str, pass: &str) -> Result<LoginOutcome>;
