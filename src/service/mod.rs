@@ -5,7 +5,7 @@ use once_cell::sync::OnceCell;
 use reqwest::blocking::{Client, Response};
 use reqwest::Url;
 use retry::{delay, retry, OperationResult};
-use scraper::Html;
+use scraper::{ElementRef, Html, Selector};
 use serde::{Deserialize, Serialize};
 
 use crate::model::ServiceKind;
@@ -14,6 +14,21 @@ use crate::{Context, Error, Result};
 mod atcoder;
 
 pub use atcoder::AtcoderService;
+
+#[macro_export]
+macro_rules! select {
+    ($selectors:literal) => {{
+        static SELECTOR: ::once_cell::sync::Lazy<::scraper::selector::Selector> =
+            ::once_cell::sync::Lazy::new(|| {
+                ::scraper::selector::Selector::parse($selectors).unwrap()
+            });
+        &SELECTOR
+    }};
+    ($selectors:literal,) => {
+        selector!($selectors)
+    };
+}
+use select;
 
 pub static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
@@ -98,5 +113,32 @@ impl fmt::Display for LoginOutcome {
             Into::<&'static str>::into(&self.service_id),
             &self.username
         )
+    }
+}
+
+trait Extract {
+    fn find_first(&self, selector: &Selector) -> Result<ElementRef>;
+    fn extract_csrf_token(&self) -> Result<String>;
+}
+
+impl Extract for Html {
+    fn find_first(&self, selector: &Selector) -> Result<ElementRef> {
+        self.select(selector)
+            .next()
+            .context("Could not find element")
+    }
+
+    fn extract_csrf_token(&self) -> Result<String> {
+        let token = self
+            .find_first(select!("[name=\"csrf_token\"]"))?
+            .value()
+            .attr("value")
+            .context("Could not find csrf_token value attr")?
+            .to_owned();
+        if token.is_empty() {
+            Err(Error::msg("Found empty csrf token"))
+        } else {
+            Ok(token)
+        }
     }
 }

@@ -1,8 +1,9 @@
+use maplit::hashmap;
 use once_cell::sync::OnceCell;
 use reqwest::blocking::{Client, Response};
-use scraper::Html;
+use scraper::{ElementRef, Html};
 
-use crate::service::{Accept, LoginOutcome, Scrape, ScrapeOnce as _, Serve};
+use crate::service::{select, Accept, Extract as _, LoginOutcome, Scrape, ScrapeOnce as _, Serve};
 use crate::{Context, Result};
 
 #[derive(Debug)]
@@ -20,7 +21,8 @@ impl<'a, 'b> AtcoderService<'a, 'b> {
 impl Serve for AtcoderService<'_, '_> {
     fn login(&mut self, user: &str, _pass: &str) -> Result<LoginOutcome> {
         let login_page = LoginPage::new();
-        let _html = login_page.content(&self.client, &mut self.ctx)?;
+        let elem = login_page.select_username_input(&self.client, self.ctx)?;
+        eprintln!("{:?}", elem);
 
         let outcome = LoginOutcome {
             service_id: self.ctx.global_opt.service_id.clone(),
@@ -40,6 +42,10 @@ impl LoginPage {
         Self {
             content_cell: OnceCell::new(),
         }
+    }
+
+    fn select_username_input(&self, client: &Client, ctx: &mut Context) -> Result<ElementRef> {
+        self.content(client, ctx)?.find_first(select!("#username"))
     }
 }
 
