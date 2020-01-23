@@ -1,5 +1,6 @@
 use maplit::hashmap;
 use reqwest::blocking::Client;
+use reqwest::StatusCode;
 
 use crate::service::atcoder_page::{HasHeader, LoginPageBuilder, SettingsPageBuilder};
 use crate::service::request::WithRetry as _;
@@ -33,7 +34,9 @@ impl Serve for AtcoderService<'_, '_> {
             .post(login_page.url())
             .form(&payload)
             .with_retry(client, ctx)
-            .retry_send()?;
+            .accept(|status| status == StatusCode::FOUND)
+            .retry_send()?
+            .ok_or_else(|| Error::msg("Received invalid response"))?;
 
         let settings_page = SettingsPageBuilder::new()
             .build(client, ctx)?

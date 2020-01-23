@@ -18,6 +18,7 @@ impl Run for LoginOpt {
         let pass = ctx
             .get_env_or_prompt_read(pass_env, "password: ", true)
             .context("Could not read password")?;
+        writeln!(ctx.stderr)?;
 
         let mut service = service_id.serve(ctx);
         let outcome = service.login(user, pass)?;
@@ -33,11 +34,15 @@ mod tests {
     use super::*;
     use crate::cmd::tests::run_default;
 
+    fn check_envs_for_user_and_pass() -> anyhow::Result<()> {
+        assert!(!env::var("ACICK_ATCODER_USERNAME")?.is_empty());
+        assert!(!env::var("ACICK_ATCODER_PASSWORD")?.is_empty());
+        Ok(())
+    }
+
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        env::set_var("ACICK_ATCODER_USERNAME", "test_user");
-        env::set_var("ACICK_ATCODER_PASSWORD", "test_pass");
-
+        check_envs_for_user_and_pass()?;
         run_default!(LoginOpt)?;
         Ok(())
     }
