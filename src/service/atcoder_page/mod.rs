@@ -4,7 +4,7 @@ use reqwest::Url;
 mod login;
 mod settings;
 
-pub use login::LoginPage;
+pub use login::{LoginPage, LoginPageBuilder};
 pub use settings::SettingsPage;
 
 lazy_static! {

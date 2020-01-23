@@ -1,9 +1,9 @@
 use maplit::hashmap;
 use reqwest::blocking::Client;
 
-use crate::service::atcoder_page::{LoginPage, SettingsPage};
+use crate::service::atcoder_page::{LoginPageBuilder, SettingsPage};
 use crate::service::request::WithRetry as _;
-use crate::service::scrape::{Extract as _, Scrape as _, ScrapeOnce as _};
+use crate::service::scrape::{HasUrl as _, Scrape as _};
 use crate::service::serve::{LoginOutcome, Serve};
 use crate::{Context, Result};
 
@@ -21,22 +21,23 @@ impl<'a, 'b> AtcoderService<'a, 'b> {
 
 impl Serve for AtcoderService<'_, '_> {
     fn login(&mut self, user: String, pass: String) -> Result<LoginOutcome> {
-        let login_page = LoginPage::new();
+        let Self { client, ctx } = self;
+        let login_page = LoginPageBuilder::new().build(client, ctx)?;
         let payload = hashmap!(
-            "csrf_token" => login_page.content(&self.client, self.ctx)?.extract_csrf_token()?,
+            "csrf_token" => login_page.extract_csrf_token()?,
             "username" => user.to_owned(),
             "password" => pass,
         );
-        self.client
+        client
             .post(login_page.url())
             .form(&payload)
-            .with_retry(&self.client, self.ctx)
+            .with_retry(client, ctx)
             .retry_send()?;
 
         let _settings_page = SettingsPage::new();
 
         let outcome = LoginOutcome {
-            service_id: self.ctx.global_opt.service_id.clone(),
+            service_id: ctx.global_opt.service_id.clone(),
             username: user,
         };
         Ok(outcome)

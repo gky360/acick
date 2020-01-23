@@ -1,34 +1,53 @@
-use once_cell::sync::OnceCell;
+use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::Html;
 
 use crate::service::atcoder_page::BASE_URL;
-use crate::service::scrape::{CheckStatus, Scrape};
+use crate::service::scrape::{CheckStatus, Fetch as _, HasUrl};
+use crate::{Context, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginPage {
-    content_cell: OnceCell<Html>,
+    builder: LoginPageBuilder,
+    content: Html,
 }
 
-impl LoginPage {
+impl HasUrl for LoginPage {
+    fn url(&self) -> Url {
+        self.builder.url()
+    }
+}
+
+impl AsRef<Html> for LoginPage {
+    fn as_ref(&self) -> &Html {
+        &self.content
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoginPageBuilder {}
+
+impl LoginPageBuilder {
     const PATH: &'static str = "/login";
 
     pub fn new() -> Self {
-        Self {
-            content_cell: OnceCell::new(),
-        }
+        Self {}
+    }
+
+    pub fn build(self, client: &Client, ctx: &mut Context) -> Result<LoginPage> {
+        let html = self
+            .fetch(client, ctx)?
+            .ok_or_else(|| Error::msg("Received invalid page"))?;
+        Ok(LoginPage {
+            builder: self,
+            content: html,
+        })
     }
 }
 
-impl AsRef<OnceCell<Html>> for LoginPage {
-    fn as_ref(&self) -> &OnceCell<Html> {
-        &self.content_cell
-    }
-}
+impl CheckStatus for LoginPageBuilder {}
 
-impl CheckStatus for LoginPage {}
-
-impl Scrape for LoginPage {
+impl HasUrl for LoginPageBuilder {
     fn url(&self) -> Url {
         BASE_URL.join(Self::PATH).unwrap()
     }

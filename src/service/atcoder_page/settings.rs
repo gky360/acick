@@ -3,7 +3,7 @@ use reqwest::{StatusCode, Url};
 use scraper::Html;
 
 use crate::service::atcoder_page::BASE_URL;
-use crate::service::scrape::{CheckStatus, Scrape};
+use crate::service::scrape::{CheckStatus, HasUrl};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SettingsPage {
@@ -32,7 +32,7 @@ impl CheckStatus for SettingsPage {
     }
 }
 
-impl Scrape for SettingsPage {
+impl HasUrl for SettingsPage {
     fn url(&self) -> Url {
         BASE_URL.join(Self::PATH).unwrap()
     }

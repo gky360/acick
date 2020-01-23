@@ -1,5 +1,4 @@
 use anyhow::Context as _;
-use once_cell::sync::OnceCell;
 use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
@@ -22,6 +21,10 @@ macro_rules! select {
 }
 use select;
 
+pub trait HasUrl {
+    fn url(&self) -> Url;
+}
+
 pub trait CheckStatus {
     fn is_accept(&self, status: StatusCode) -> bool {
         status.is_success()
@@ -32,42 +35,27 @@ pub trait CheckStatus {
     }
 }
 
-pub trait Scrape: CheckStatus {
-    fn url(&self) -> Url;
-
-    fn scrape(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
-        let res = client
+pub trait Fetch: HasUrl + CheckStatus {
+    fn fetch(&self, client: &Client, ctx: &mut Context) -> Result<Option<Html>> {
+        let html = client
             .get(self.url())
             .with_retry(client, ctx)
             .accept(|status| self.is_accept(status))
             .reject(|status| self.is_reject(status))
             .retry_send()?
-            .unwrap(); // TODO: fix
-        let html = Html::parse_document(&res.text()?);
+            .map(|res| res.text())
+            .transpose()?
+            .map(|text| Html::parse_document(&text));
         Ok(html)
     }
 }
 
-pub trait ScrapeOnce: Scrape + AsRef<OnceCell<Html>> {
-    fn content(&self, client: &Client, ctx: &mut Context) -> Result<&Html> {
-        let html = self
-            .as_ref()
-            .get_or_try_init(|| self.scrape(client, ctx))
-            .context("Could not get page content from service")?;
-        Ok(html)
-    }
-}
+impl<T: HasUrl + CheckStatus> Fetch for T {}
 
-impl<T: Scrape + AsRef<OnceCell<Html>>> ScrapeOnce for T {}
-
-pub trait Extract {
-    fn find_first(&self, selector: &Selector) -> Result<ElementRef>;
-    fn extract_csrf_token(&self) -> Result<String>;
-}
-
-impl Extract for Html {
+pub trait Scrape: AsRef<Html> {
     fn find_first(&self, selector: &Selector) -> Result<ElementRef> {
-        self.select(selector)
+        self.as_ref()
+            .select(selector)
             .next()
             .context("Could not find element")
     }
@@ -86,3 +74,5 @@ impl Extract for Html {
         }
     }
 }
+
+impl<T: AsRef<Html>> Scrape for T {}
