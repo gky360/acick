@@ -1,5 +1,4 @@
 use once_cell::sync::OnceCell;
-use reqwest::blocking::Response;
 use reqwest::Url;
 use scraper::Html;
 
@@ -27,7 +26,7 @@ impl AsRef<OnceCell<Html>> for LoginPage {
     }
 }
 
-impl Accept<Response> for LoginPage {}
+impl Accept for LoginPage {}
 
 impl Scrape for LoginPage {
     fn url(&self) -> Url {

@@ -28,7 +28,7 @@ impl AsRef<OnceCell<Html>> for SettingsPage {
     }
 }
 
-impl Accept<Response> for SettingsPage {
+impl Accept for SettingsPage {
     fn should_reject(&self, res: &Response) -> Result<()> {
         if res.status() == StatusCode::FOUND {
             Ok(())

@@ -23,7 +23,7 @@ macro_rules! select {
 }
 use select;
 
-pub trait Accept<T> {
+pub trait Accept {
     fn is_acceptable(&self, res: &Response) -> bool {
         res.status().is_success()
     }
@@ -33,7 +33,7 @@ pub trait Accept<T> {
     }
 }
 
-pub trait Scrape: Accept<Response> {
+pub trait Scrape: Accept {
     fn url(&self) -> Url;
 
     fn scrape(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
