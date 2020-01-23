@@ -3,7 +3,7 @@ use reqwest::Url;
 use scraper::Html;
 
 use crate::service::atcoder_page::BASE_URL;
-use crate::service::scrape::{Accept, Scrape};
+use crate::service::scrape::{CheckStatus, Scrape};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginPage {
@@ -26,7 +26,7 @@ impl AsRef<OnceCell<Html>> for LoginPage {
     }
 }
 
-impl Accept for LoginPage {}
+impl CheckStatus for LoginPage {}
 
 impl Scrape for LoginPage {
     fn url(&self) -> Url {

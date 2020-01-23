@@ -1,11 +1,10 @@
 use anyhow::Context as _;
 use once_cell::sync::OnceCell;
-use reqwest::blocking::{Client, Response};
-use reqwest::Url;
-use retry::{delay, retry, OperationResult};
+use reqwest::blocking::Client;
+use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
-use crate::service::serve::SendPretty as _;
+use crate::utils::WithRetry as _;
 use crate::{Context, Error, Result};
 
 #[macro_export]
@@ -23,50 +22,29 @@ macro_rules! select {
 }
 use select;
 
-pub trait Accept {
-    fn is_acceptable(&self, res: &Response) -> bool {
-        res.status().is_success()
+pub trait CheckStatus {
+    fn is_accept(&self, status: StatusCode) -> bool {
+        status.is_success()
     }
 
-    fn should_reject(&self, _res: &Response) -> Result<()> {
-        Ok(())
+    fn is_reject(&self, status: StatusCode) -> bool {
+        status.is_redirection() || status.is_client_error()
     }
 }
 
-pub trait Scrape: Accept {
+pub trait Scrape: CheckStatus {
     fn url(&self) -> Url;
 
     fn scrape(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
-        // TODO: use config
-        let durations = delay::Fixed::from_millis(1000).take(4);
-        let html = retry(durations, || self.retry_get(client, ctx))
-            .map_err(|err| match err {
-                retry::Error::Operation { error, .. } => error,
-                retry::Error::Internal(msg) => Error::msg(msg),
-            })
-            .context("Could not get page from service")?;
-        Ok(html)
-    }
-
-    fn retry_get(&self, client: &Client, ctx: &mut Context) -> OperationResult<Html, Error> {
-        let result = client
+        let res = client
             .get(self.url())
-            .send_pretty(client, ctx)
-            .map_err(OperationResult::Retry)
-            .and_then(|res| {
-                if self.is_acceptable(&res) {
-                    res.text().map_err(|err| OperationResult::Retry(err.into()))
-                } else if let Err(err) = self.should_reject(&res) {
-                    Err(OperationResult::Err(err))
-                } else {
-                    Err(OperationResult::Retry(Error::msg("Unacceptable response")))
-                }
-            })
-            .and_then(|text| Ok(Html::parse_document(&text)));
-        match result {
-            Ok(html) => OperationResult::Ok(html),
-            Err(err) => err,
-        }
+            .with_retry(client, ctx)
+            .accept(|status| self.is_accept(status))
+            .reject(|status| self.is_reject(status))
+            .retry_send()?
+            .unwrap(); // TODO: fix
+        let html = Html::parse_document(&res.text()?);
+        Ok(html)
     }
 }
 

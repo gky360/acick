@@ -1,11 +1,9 @@
 use once_cell::sync::OnceCell;
-use reqwest::blocking::Response;
 use reqwest::{StatusCode, Url};
 use scraper::Html;
 
 use crate::service::atcoder_page::BASE_URL;
-use crate::service::scrape::{Accept, Scrape};
-use crate::{Error, Result};
+use crate::service::scrape::{CheckStatus, Scrape};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SettingsPage {
@@ -28,13 +26,9 @@ impl AsRef<OnceCell<Html>> for SettingsPage {
     }
 }
 
-impl Accept for SettingsPage {
-    fn should_reject(&self, res: &Response) -> Result<()> {
-        if res.status() == StatusCode::FOUND {
-            Ok(())
-        } else {
-            Err(Error::msg("User not logged in"))
-        }
+impl CheckStatus for SettingsPage {
+    fn is_reject(&self, status: StatusCode) -> bool {
+        status.is_redirection() || status.is_client_error() || status == StatusCode::FOUND
     }
 }
 

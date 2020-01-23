@@ -85,8 +85,10 @@ impl WithRetry for RequestBuilder {
     ) -> RetryRequestBuilder<'a, 'b> {
         RetryRequestBuilder {
             inner: self,
-            is_accept: Box::new(|s: StatusCode| s.is_success()),
-            is_reject: Box::new(|s: StatusCode| s.is_redirection() || s.is_client_error()),
+            is_accept: Box::new(|status: StatusCode| status.is_success()),
+            is_reject: Box::new(|status: StatusCode| {
+                status.is_redirection() || status.is_client_error()
+            }),
             client,
             ctx,
         }
