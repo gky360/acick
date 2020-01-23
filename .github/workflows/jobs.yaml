@@ -118,6 +118,8 @@ jobs:
           args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }}
         env:
           RUST_BACKTRACE: full
+          ACICK_ATCODER_USERNAME: ${{ secrets.ACICK_ATCODER_USERNAME }}
+          ACICK_ATCODER_PASSWORD: ${{ secrets.ACICK_ATCODER_PASSWORD }}
 
   release:
     strategy:
