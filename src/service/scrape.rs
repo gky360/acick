@@ -28,18 +28,13 @@ pub trait Accept<T> {
         res.status().is_success()
     }
 
-    fn should_reject(&self, _res: &Response) -> bool {
-        false
+    fn should_reject(&self, _res: &Response) -> Result<()> {
+        Ok(())
     }
 }
 
 pub trait Scrape: Accept<Response> {
-    const HOST: &'static str;
-    const PATH: &'static str;
-
-    fn url(&self) -> Url {
-        Url::parse(Self::HOST).unwrap().join(Self::PATH).unwrap()
-    }
+    fn url(&self) -> Url;
 
     fn scrape(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
         // TODO: use config
@@ -59,12 +54,10 @@ pub trait Scrape: Accept<Response> {
             .send_pretty(client, ctx)
             .map_err(OperationResult::Retry)
             .and_then(|res| {
-                if self.should_reject(&res) {
-                    Err(OperationResult::Err(Error::msg(
-                        "Received invalid response",
-                    )))
-                } else if self.is_acceptable(&res) {
+                if self.is_acceptable(&res) {
                     res.text().map_err(|err| OperationResult::Retry(err.into()))
+                } else if let Err(err) = self.should_reject(&res) {
+                    Err(OperationResult::Err(err))
                 } else {
                     Err(OperationResult::Retry(Error::msg("Unacceptable response")))
                 }
@@ -88,25 +81,6 @@ pub trait ScrapeOnce: Scrape + AsRef<OnceCell<Html>> {
 }
 
 impl<T: Scrape + AsRef<OnceCell<Html>>> ScrapeOnce for T {}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PageBase {
-    content_cell: OnceCell<Html>,
-}
-
-impl PageBase {
-    pub fn new() -> Self {
-        Self {
-            content_cell: OnceCell::new(),
-        }
-    }
-}
-
-impl AsRef<OnceCell<Html>> for PageBase {
-    fn as_ref(&self) -> &OnceCell<Html> {
-        &self.content_cell
-    }
-}
 
 pub trait Extract {
     fn find_first(&self, selector: &Selector) -> Result<ElementRef>;

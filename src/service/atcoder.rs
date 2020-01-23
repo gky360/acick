@@ -1,7 +1,7 @@
 use maplit::hashmap;
 use reqwest::blocking::Client;
 
-use crate::service::atcoder_page::LoginPage;
+use crate::service::atcoder_page::{LoginPage, SettingsPage};
 use crate::service::scrape::{Extract as _, Scrape as _, ScrapeOnce as _};
 use crate::service::serve::{LoginOutcome, SendPretty as _, Serve};
 use crate::{Context, Result};
@@ -30,6 +30,8 @@ impl Serve for AtcoderService<'_, '_> {
             .post(login_page.url())
             .form(&payload)
             .send_pretty(&self.client, self.ctx)?;
+
+        let _settings_page = SettingsPage::new();
 
         let outcome = LoginOutcome {
             service_id: self.ctx.global_opt.service_id.clone(),
