@@ -1,7 +1,7 @@
 use maplit::hashmap;
 use reqwest::blocking::Client;
 
-use crate::service::atcoder_page::{LoginPageBuilder, SettingsPageBuilder};
+use crate::service::atcoder_page::{HasHeader, LoginPageBuilder, SettingsPageBuilder};
 use crate::service::request::WithRetry as _;
 use crate::service::scrape::{HasUrl as _, Scrape as _};
 use crate::service::serve::{LoginOutcome, Serve};
@@ -35,16 +35,20 @@ impl Serve for AtcoderService<'_, '_> {
             .with_retry(client, ctx)
             .retry_send()?;
 
-        let _settings_page = SettingsPageBuilder::new()
+        let settings_page = SettingsPageBuilder::new()
             .build(client, ctx)?
-            .ok_or_else(|| {
-                Error::msg("Could not log in to service because of incorrect username or password")
-            })?;
+            .ok_or_else(|| Error::msg("Invalid username or password"))?;
+        let current_user = settings_page.current_user()?;
+        if current_user != user {
+            return Err(Error::msg(format!(
+                "Logged in as another user: {}",
+                current_user
+            )));
+        }
 
-        let outcome = LoginOutcome {
+        Ok(LoginOutcome {
             service_id: ctx.global_opt.service_id.clone(),
             username: user,
-        };
-        Ok(outcome)
+        })
     }
 }

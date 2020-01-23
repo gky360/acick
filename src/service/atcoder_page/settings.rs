@@ -2,7 +2,7 @@ use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::Html;
 
-use crate::service::atcoder_page::BASE_URL;
+use crate::service::atcoder_page::{HasHeader, BASE_URL};
 use crate::service::scrape::{CheckStatus, Fetch as _, HasUrl};
 use crate::{Context, Result};
 
@@ -52,3 +52,5 @@ impl AsRef<Html> for SettingsPage {
         &self.content
     }
 }
+
+impl HasHeader for SettingsPage {}

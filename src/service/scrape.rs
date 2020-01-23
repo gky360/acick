@@ -19,7 +19,7 @@ macro_rules! select {
         selector!($selectors)
     };
 }
-use select;
+pub use select;
 
 pub trait HasUrl {
     fn url(&self) -> Url;
