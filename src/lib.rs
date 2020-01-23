@@ -13,7 +13,6 @@ mod cmd;
 mod config;
 mod model;
 mod service;
-mod utils;
 
 use cmd::{Cmd, Run as _};
 use config::Config;

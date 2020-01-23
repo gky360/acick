@@ -25,22 +25,17 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
     }
 
     pub fn send(&mut self) -> Result<Response> {
+        let Self { client, ctx, .. } = self;
         let req = self
             .inner
             .try_clone()
             .ok_or_else(|| Error::msg("Could not build request"))?
             .build()?;
-        write!(
-            self.ctx.stderr,
-            "{:7} {} ... ",
-            req.method().as_str(),
-            req.url()
-        )
-        .unwrap_or(());
-        let result = self.client.execute(req).context("Could not send request");
+        write!(ctx.stderr, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
+        let result = client.execute(req).context("Could not send request");
         match &result {
-            Ok(res) => writeln!(self.ctx.stderr, "{}", res.status()),
-            Err(_) => writeln!(self.ctx.stderr, "failed"),
+            Ok(res) => writeln!(ctx.stderr, "{}", res.status()),
+            Err(_) => writeln!(ctx.stderr, "failed"),
         }
         .unwrap_or(());
         result
@@ -65,7 +60,6 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
             retry::Error::Operation { error, .. } => error,
             retry::Error::Internal(msg) => Error::msg(msg),
         })
-        .context("Could not get page from service")
     }
 }
 

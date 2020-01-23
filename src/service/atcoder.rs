@@ -2,9 +2,9 @@ use maplit::hashmap;
 use reqwest::blocking::Client;
 
 use crate::service::atcoder_page::{LoginPage, SettingsPage};
+use crate::service::request::WithRetry as _;
 use crate::service::scrape::{Extract as _, Scrape as _, ScrapeOnce as _};
 use crate::service::serve::{LoginOutcome, Serve};
-use crate::utils::WithRetry as _;
 use crate::{Context, Result};
 
 #[derive(Debug)]
