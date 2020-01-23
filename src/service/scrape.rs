@@ -37,7 +37,7 @@ pub trait CheckStatus {
 
 pub trait Fetch: HasUrl + CheckStatus {
     fn fetch(&self, client: &Client, ctx: &mut Context) -> Result<Option<Html>> {
-        let html = client
+        let maybe_html = client
             .get(self.url())
             .with_retry(client, ctx)
             .accept(|status| self.is_accept(status))
@@ -46,7 +46,7 @@ pub trait Fetch: HasUrl + CheckStatus {
             .map(|res| res.text())
             .transpose()?
             .map(|text| Html::parse_document(&text));
-        Ok(html)
+        Ok(maybe_html)
     }
 }
 
