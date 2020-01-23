@@ -1,9 +1,11 @@
 use maplit::hashmap;
 use reqwest::blocking::Client;
+use reqwest::StatusCode;
 
 use crate::service::atcoder_page::{LoginPage, SettingsPage};
 use crate::service::scrape::{Extract as _, Scrape as _, ScrapeOnce as _};
 use crate::service::serve::{LoginOutcome, SendPretty as _, Serve};
+use crate::utils::WithRetry as _;
 use crate::{Context, Result};
 
 #[derive(Debug)]
@@ -29,7 +31,8 @@ impl Serve for AtcoderService<'_, '_> {
         self.client
             .post(login_page.url())
             .form(&payload)
-            .send_pretty(&self.client, self.ctx)?;
+            .with_retry(&self.client, self.ctx)
+            .retry_send()?;
 
         let _settings_page = SettingsPage::new();
 
