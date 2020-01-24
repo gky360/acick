@@ -61,7 +61,7 @@ mod tests {
 
             let opt = $opt::default();
             let global_opt = GlobalOpt::default();
-            let conf = Config::load()?;
+            let conf = Config::default();
             let mut stdin_buf = ::std::io::BufReader::new(&b""[..]);
             let mut stderr_buf = Vec::new();
             let mut ctx = Context {
@@ -71,7 +71,9 @@ mod tests {
                 stderr: &mut stderr_buf,
             };
 
-            opt.run(&mut ctx)
+            let result = opt.run(&mut ctx);
+            eprintln!("{}", String::from_utf8_lossy(&stderr_buf));
+            result
         }};
     }
     pub(crate) use run_default;
