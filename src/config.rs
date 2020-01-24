@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::Mutex;
@@ -119,45 +120,50 @@ impl Expand<ProblemContext> for ProblemTempl {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TemplArray<T>(Vec<T>);
+pub struct TemplArray<T: Expand<C>, C: Serialize> {
+    arr: Vec<T>,
+    phantom: PhantomData<C>,
+}
 
-impl<T: Expand<CmdContext>> TemplArray<T> {
-    pub fn expand_all(&self, context: &CmdContext) -> Result<Vec<String>> {
-        self.0.iter().map(|c| c.expand(context)).collect()
+impl<T: Expand<C>, C: Serialize> TemplArray<T, C> {
+    pub fn expand_all(&self, context: &C) -> Result<Vec<String>> {
+        self.arr.iter().map(|c| c.expand(context)).collect()
     }
 }
 
-impl<I, S, T: From<String>> From<I> for TemplArray<T>
+impl<I, S, T: Expand<C> + From<String>, C: Serialize> From<I> for TemplArray<T, C>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
     fn from(value: I) -> Self {
-        TemplArray(
-            value
-                .into_iter()
-                .map(|s| s.as_ref().to_string().into())
-                .collect(),
-        )
+        let arr = value
+            .into_iter()
+            .map(|s| s.as_ref().to_string().into())
+            .collect();
+        TemplArray {
+            arr,
+            phantom: PhantomData,
+        }
     }
 }
 
-impl<T: fmt::Display> From<TemplArray<T>> for String {
-    fn from(shell: TemplArray<T>) -> String {
-        format!("{}", shell)
+impl<T: Expand<C> + fmt::Display, C: Serialize> From<TemplArray<T, C>> for String {
+    fn from(arr: TemplArray<T, C>) -> String {
+        format!("{}", arr)
     }
 }
 
-impl<T: fmt::Display> fmt::Display for TemplArray<T> {
+impl<T: Expand<C> + fmt::Display, C: Serialize> fmt::Display for TemplArray<T, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0
+        self.arr
             .iter()
             .enumerate()
             .try_for_each(|(i, c)| write!(f, "{}{}", if i == 0 { "" } else { " " }, c))
     }
 }
 
-pub type Shell = TemplArray<CmdTempl>;
+pub type Shell = TemplArray<CmdTempl, CmdContext>;
 
 impl Shell {
     pub fn exec(&self, command: impl ToString) -> Result<Output> {
@@ -173,6 +179,17 @@ impl Shell {
                 command.join(" ")
             ))?;
         Ok(output)
+    }
+
+    pub fn exec_templ_arr<T: Expand<C>, C: Serialize>(
+        &self,
+        templ_arr: &TemplArray<T, C>,
+        context: &C,
+    ) -> Result<Output> {
+        let command = templ_arr
+            .expand_all(context)
+            .context("Could not expand command template")?;
+        self.exec(command.join(" "))
     }
 }
 
@@ -237,8 +254,8 @@ pub struct AtcoderConfig {
     language: String,
     working_directory: ProblemTempl,
     src: ProblemTempl,
-    compile: TemplArray<ProblemTempl>,
-    run: TemplArray<ProblemTempl>,
+    compile: TemplArray<ProblemTempl, ProblemContext>,
+    run: TemplArray<ProblemTempl, ProblemContext>,
 }
 
 impl Default for AtcoderConfig {
@@ -256,6 +273,18 @@ impl Default for AtcoderConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::ServiceKind;
+
+    fn build_default_problem_context() -> ProblemContext {
+        let service = Service::new(ServiceKind::Atcoder);
+        let contest = Contest::new("arc100");
+        let problem = Problem::new("a");
+        ProblemContext {
+            service,
+            contest,
+            problem,
+        }
+    }
 
     #[test]
     fn expand_cmd_templ() -> anyhow::Result<()> {
@@ -267,17 +296,8 @@ mod tests {
 
     #[test]
     fn expand_problem_templ() -> anyhow::Result<()> {
-        use crate::model::ServiceKind;
-
         let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
-        let service = Service::new(ServiceKind::Atcoder);
-        let contest = Contest::new("arc100");
-        let problem = Problem::new("a");
-        let problem_context = ProblemContext {
-            service,
-            contest,
-            problem,
-        };
+        let problem_context = build_default_problem_context();
         templ.expand(&problem_context)?;
         Ok(())
     }
@@ -304,6 +324,17 @@ mod tests {
         let output = shell.exec("echo hello")?;
         println!("{:?}", output);
         assert!(output.status.success());
+        Ok(())
+    }
+
+    #[test]
+    fn exec_default_atcoder_compile() -> anyhow::Result<()> {
+        let shell = Shell::default();
+        let compile = AtcoderConfig::default().compile;
+        let context = build_default_problem_context();
+        let output = shell.exec_templ_arr(&compile, &context)?;
+        println!("{:?}", output);
+        // TODO: assert success
         Ok(())
     }
 }
