@@ -20,7 +20,19 @@ pub trait HasHeader: Scrape {
         self.find_first(select!("nav"))
     }
 
+    fn is_logged_in(&self) -> Result<bool> {
+        let ret = self
+            .select_header()?
+            .select(select!("a.dropdown-toggle .glyphicon-cog"))
+            .next()
+            .is_some();
+        Ok(ret)
+    }
+
     fn current_user(&self) -> Result<String> {
+        if !self.is_logged_in()? {
+            return Err(Error::msg("Not logged in"));
+        }
         self.select_header()?
             .select(select!("a.dropdown-toggle"))
             .nth(1)
@@ -35,6 +47,6 @@ pub trait HasHeader: Scrape {
     }
 
     fn is_logged_in_as(&self, user: &str) -> Result<bool> {
-        Ok(self.current_user()? == user)
+        Ok(self.is_logged_in()? && self.current_user()? == user)
     }
 }

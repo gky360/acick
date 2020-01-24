@@ -9,14 +9,18 @@ use crate::{Context, Result};
 mod login;
 mod show;
 
-use login::LoginOpt;
-use show::ShowOpt;
+pub use login::{LoginOpt, LoginOutcome};
+pub use show::{ShowOpt, ShowOutcome};
 
-pub trait Outcome: fmt::Display + fmt::Debug {
+pub trait Outcome: OutcomeSerialize + fmt::Display + fmt::Debug {
+    fn is_error(&self) -> bool;
+}
+
+pub trait OutcomeSerialize {
     fn to_yaml(&self) -> Result<String>;
 }
 
-impl<T: fmt::Display + fmt::Debug + Serialize> Outcome for T {
+impl<T: Serialize> OutcomeSerialize for T {
     fn to_yaml(&self) -> Result<String> {
         serde_yaml::to_string(self).context("Could not serialize outcome to yaml")
     }

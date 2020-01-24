@@ -1,7 +1,11 @@
+use std::fmt;
+
 use anyhow::Context as _;
+use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
+use crate::model::ServiceKind;
 use crate::{Context, GlobalOpt, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -24,6 +28,30 @@ impl Run for LoginOpt {
         let outcome = service.login(user, pass)?;
 
         Ok(Box::new(outcome))
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LoginOutcome {
+    pub service_id: ServiceKind,
+    pub username: String,
+    pub is_already: bool,
+}
+
+impl fmt::Display for LoginOutcome {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Successfully logged in to {} as {}",
+            Into::<&'static str>::into(&self.service_id),
+            &self.username
+        )
+    }
+}
+
+impl Outcome for LoginOutcome {
+    fn is_error(&self) -> bool {
+        self.is_already
     }
 }
 

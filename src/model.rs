@@ -26,6 +26,7 @@ impl Service {
     EnumVariantNames,
     IntoStaticStr,
     Debug,
+    Copy,
     Clone,
     PartialEq,
     Eq,
@@ -38,7 +39,7 @@ pub enum ServiceKind {
 }
 
 impl ServiceKind {
-    pub fn serve<'a>(&self, ctx: &'a mut Context<'_>) -> Box<dyn Serve + 'a> {
+    pub fn serve<'a>(self, ctx: &'a mut Context<'_>) -> Box<dyn Serve + 'a> {
         let client = self
             .get_client_builder(ctx)
             .build()
@@ -49,13 +50,13 @@ impl ServiceKind {
         }
     }
 
-    pub fn to_user_pass_env_names(&self) -> (&'static str, &'static str) {
+    pub fn to_user_pass_env_names(self) -> (&'static str, &'static str) {
         match self {
             Self::Atcoder => ("ACICK_ATCODER_USERNAME", "ACICK_ATCODER_PASSWORD"),
         }
     }
 
-    fn get_client_builder(&self, _ctx: &mut Context) -> ClientBuilder {
+    fn get_client_builder(self, _ctx: &mut Context) -> ClientBuilder {
         Client::builder()
             .referer(false)
             .redirect(Policy::none()) // redirects manually

@@ -2,10 +2,11 @@ use maplit::hashmap;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 
+use crate::cmd::LoginOutcome;
 use crate::service::atcoder_page::{HasHeader, LoginPageBuilder, SettingsPageBuilder};
 use crate::service::request::WithRetry as _;
 use crate::service::scrape::{HasUrl as _, Scrape as _};
-use crate::service::serve::{LoginOutcome, Serve};
+use crate::service::serve::Serve;
 use crate::{Context, Error, Result};
 
 #[derive(Debug)]
@@ -23,13 +24,21 @@ impl<'a, 'b> AtcoderService<'a, 'b> {
 impl Serve for AtcoderService<'_, '_> {
     fn login(&mut self, user: String, pass: String) -> Result<LoginOutcome> {
         let Self { client, ctx } = self;
+
         let login_page = LoginPageBuilder::new().build(client, ctx)?;
+        if login_page.is_logged_in_as(&user)? {
+            return Ok(LoginOutcome {
+                service_id: ctx.global_opt.service_id,
+                username: user,
+                is_already: true,
+            });
+        }
+
         let payload = hashmap!(
             "csrf_token" => login_page.extract_csrf_token()?,
             "username" => user.to_owned(),
             "password" => pass,
         );
-
         client
             .post(login_page.url())
             .form(&payload)
@@ -50,8 +59,9 @@ impl Serve for AtcoderService<'_, '_> {
         }
 
         Ok(LoginOutcome {
-            service_id: ctx.global_opt.service_id.clone(),
+            service_id: ctx.global_opt.service_id,
             username: user,
+            is_already: false,
         })
     }
 }
