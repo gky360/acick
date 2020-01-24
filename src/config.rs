@@ -120,14 +120,12 @@ impl Expand<ProblemContext> for ProblemTempl {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TemplArray<T: Expand<C>, C: Serialize> {
-    arr: Vec<T>,
-    phantom: PhantomData<C>,
-}
+#[serde(transparent)]
+pub struct TemplArray<T: Expand<C>, C: Serialize>(Vec<T>, #[serde(skip)] PhantomData<C>);
 
 impl<T: Expand<C>, C: Serialize> TemplArray<T, C> {
     pub fn expand_all(&self, context: &C) -> Result<Vec<String>> {
-        self.arr.iter().map(|c| c.expand(context)).collect()
+        self.0.iter().map(|c| c.expand(context)).collect()
     }
 }
 
@@ -141,10 +139,7 @@ where
             .into_iter()
             .map(|s| s.as_ref().to_string().into())
             .collect();
-        TemplArray {
-            arr,
-            phantom: PhantomData,
-        }
+        TemplArray(arr, PhantomData)
     }
 }
 
@@ -156,7 +151,7 @@ impl<T: Expand<C> + fmt::Display, C: Serialize> From<TemplArray<T, C>> for Strin
 
 impl<T: Expand<C> + fmt::Display, C: Serialize> fmt::Display for TemplArray<T, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.arr
+        self.0
             .iter()
             .enumerate()
             .try_for_each(|(i, c)| write!(f, "{}{}", if i == 0 { "" } else { " " }, c))
