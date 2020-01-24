@@ -13,7 +13,6 @@ pub struct Service {
 }
 
 impl Service {
-    #[cfg(test)] // TODO: not only test
     pub fn new(id: ServiceKind) -> Self {
         Self { id }
     }
@@ -71,7 +70,6 @@ pub struct Contest {
 }
 
 impl Contest {
-    #[cfg(test)] // TODO: not only test
     pub fn new(id: impl ToString) -> Self {
         Self { id: id.to_string() }
     }
@@ -83,7 +81,6 @@ pub struct Problem {
 }
 
 impl Problem {
-    #[cfg(test)] // TODO: not only test
     pub fn new(id: impl ToString) -> Self {
         Self { id: id.to_string() }
     }
