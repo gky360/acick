@@ -24,8 +24,9 @@ impl<'a, 'b> AtcoderService<'a, 'b> {
 impl Serve for AtcoderService<'_, '_> {
     fn login(&mut self, user: String, pass: String) -> Result<LoginOutcome> {
         let Self { client, ctx } = self;
-
         let login_page = LoginPageBuilder::new().build(client, ctx)?;
+
+        // Check if user is already logged in
         if login_page.is_logged_in_as(&user)? {
             return Ok(LoginOutcome {
                 service_id: ctx.global_opt.service_id,
@@ -34,6 +35,7 @@ impl Serve for AtcoderService<'_, '_> {
             });
         }
 
+        // Post form data to log in to service
         let payload = hashmap!(
             "csrf_token" => login_page.extract_csrf_token()?,
             "username" => user.to_owned(),
@@ -47,6 +49,7 @@ impl Serve for AtcoderService<'_, '_> {
             .retry_send()?
             .ok_or_else(|| Error::msg("Received invalid response"))?;
 
+        // Check if login succeeded
         let settings_page = SettingsPageBuilder::new()
             .build(client, ctx)?
             .ok_or_else(|| Error::msg("Invalid username or password"))?;
