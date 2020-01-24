@@ -1,9 +1,19 @@
 use anyhow::Context as _;
-use reqwest::blocking::{Client, RequestBuilder, Response};
+use reqwest::blocking::{Client, Request, RequestBuilder, Response};
 use reqwest::StatusCode;
 use retry::{delay, retry, OperationResult};
 
 use crate::{Context, Error, Result};
+
+trait ExecSession {
+    fn exec_session(&self, request: Request, ctx: &mut Context) -> reqwest::Result<Response>;
+}
+
+impl ExecSession for Client {
+    fn exec_session(&self, request: Request, _ctx: &mut Context) -> reqwest::Result<Response> {
+        self.execute(request)
+    }
+}
 
 pub struct RetryRequestBuilder<'a, 'b> {
     inner: RequestBuilder,
@@ -24,7 +34,7 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
         self
     }
 
-    pub fn send(&mut self) -> Result<Response> {
+    pub fn send_pretty(&mut self) -> Result<Response> {
         let Self { client, ctx, .. } = self;
         let req = self
             .inner
@@ -32,7 +42,9 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
             .ok_or_else(|| Error::msg("Could not build request"))?
             .build()?;
         write!(ctx.stderr, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
-        let result = client.execute(req).context("Could not send request");
+        let result = client
+            .exec_session(req, ctx)
+            .context("Could not send request");
         match &result {
             Ok(res) => writeln!(ctx.stderr, "{}", res.status()),
             Err(_) => writeln!(ctx.stderr, "failed"),
@@ -44,7 +56,7 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
     pub fn retry_send(&mut self) -> Result<Option<Response>> {
         // TODO: use config
         let durations = delay::Fixed::from_millis(1000).take(4);
-        retry(durations, || match self.send() {
+        retry(durations, || match self.send_pretty() {
             Ok(res) => {
                 if self.is_accept.as_ref()(res.status()) {
                     OperationResult::Ok(Some(res))
