@@ -1,6 +1,6 @@
 mod atcoder;
 mod atcoder_page;
-mod request;
+mod retry;
 mod scrape;
 mod serve;
 

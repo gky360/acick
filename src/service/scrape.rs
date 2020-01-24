@@ -3,7 +3,7 @@ use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
-use crate::service::request::WithRetry as _;
+use crate::service::retry::WithRetry as _;
 use crate::{Context, Error, Result};
 
 #[macro_export]

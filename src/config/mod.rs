@@ -5,8 +5,10 @@ use std::time::Duration;
 use dirs::{data_local_dir, home_dir};
 use serde::{Deserialize, Serialize};
 
-use crate::template::{ProblemContext, ProblemTempl, Shell, TemplArray};
 use crate::Result;
+use template::{ProblemContext, ProblemTempl, Shell, TemplArray};
+
+mod template;
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
