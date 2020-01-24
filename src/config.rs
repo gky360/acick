@@ -1,5 +1,8 @@
 use std::fmt;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
 
+use dirs::{data_local_dir, home_dir};
 use serde::{Deserialize, Serialize};
 
 use crate::template::{ProblemContext, ProblemTempl, Shell, TemplArray};
@@ -9,6 +12,7 @@ use crate::Result;
 #[serde(default)]
 pub struct Config {
     shell: Shell,
+    session: SessionConfig,
     services: ServicesConfig,
 }
 
@@ -23,6 +27,49 @@ impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let yaml_str = serde_yaml::to_string(self).map_err(|_| fmt::Error)?;
         write!(f, "{}", yaml_str)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[serde(default)]
+pub struct SessionConfig {
+    #[serde(with = "humantime_serde")]
+    timeout: Duration,
+    retry_limit: usize,
+    #[serde(with = "humantime_serde")]
+    retry_interval: Duration,
+    cookies_path: PathBuf,
+}
+
+impl SessionConfig {
+    fn default_cookies_path() -> PathBuf {
+        if let (Some(home), Some(local)) = (home_dir(), data_local_dir()) {
+            local
+                .strip_prefix(&home)
+                .ok()
+                .and_then(|path| path.to_str())
+                .map(|path| Path::new("~").join(path).join(env!("CARGO_PKG_NAME")))
+        } else {
+            None
+        }
+        .unwrap_or_else(|| {
+            Path::new("~")
+                .join(".local")
+                .join("share")
+                .join(env!("CARGO_PKG_NAME"))
+        })
+    }
+}
+
+impl Default for SessionConfig {
+    fn default() -> Self {
+        let cookies_path = Self::default_cookies_path();
+        Self {
+            timeout: Duration::from_secs(30),
+            retry_limit: 4,
+            retry_interval: Duration::from_secs(2),
+            cookies_path,
+        }
     }
 }
 
@@ -57,6 +104,12 @@ impl Default for AtcoderConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn serialize_default() -> anyhow::Result<()> {
+        serde_yaml::to_string(&Config::default())?;
+        Ok(())
+    }
 
     #[test]
     fn exec_default_atcoder_compile() -> anyhow::Result<()> {
