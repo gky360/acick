@@ -6,6 +6,7 @@ use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
 use serde::{Deserialize, Serialize};
 
+use crate::service::CookieStorage;
 use crate::Result;
 use template::{ProblemContext, ProblemTempl, Shell, TemplArray};
 
@@ -52,6 +53,10 @@ pub struct SessionConfig {
 }
 
 impl SessionConfig {
+    pub fn load_cookies(&self) -> Result<CookieStorage> {
+        CookieStorage::load(&self.cookies_path)
+    }
+
     fn default_cookies_path() -> PathBuf {
         if let (Some(home), Some(local)) = (home_dir(), data_local_dir()) {
             local

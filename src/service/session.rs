@@ -6,12 +6,13 @@ use retry::{delay, retry, OperationResult};
 use crate::{Context, Error, Result};
 
 trait ExecSession {
-    fn exec_session(&self, request: Request, ctx: &mut Context) -> reqwest::Result<Response>;
+    fn exec_session(&self, request: Request, ctx: &mut Context) -> Result<Response>;
 }
 
 impl ExecSession for Client {
-    fn exec_session(&self, request: Request, _ctx: &mut Context) -> reqwest::Result<Response> {
-        self.execute(request)
+    fn exec_session(&self, request: Request, ctx: &mut Context) -> Result<Response> {
+        ctx.conf.session().load_cookies()?;
+        Ok(self.execute(request)?)
     }
 }
 

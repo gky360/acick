@@ -4,9 +4,9 @@ use reqwest::StatusCode;
 
 use crate::cmd::LoginOutcome;
 use crate::service::atcoder_page::{HasHeader, LoginPageBuilder, SettingsPageBuilder};
-use crate::service::retry::WithRetry as _;
 use crate::service::scrape::{HasUrl as _, Scrape as _};
 use crate::service::serve::Serve;
+use crate::service::session::WithRetry as _;
 use crate::{Context, Error, Result};
 
 #[derive(Debug)]
