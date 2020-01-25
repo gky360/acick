@@ -1,10 +1,8 @@
-use std::time::Duration;
-
 use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
 use serde::{Deserialize, Serialize};
 
-use crate::service::{AtcoderService, Serve, USER_AGENT};
+use crate::service::{AtcoderService, Serve};
 use crate::Context;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -55,12 +53,14 @@ impl ServiceKind {
         }
     }
 
-    fn get_client_builder(self, _ctx: &mut Context) -> ClientBuilder {
+    fn get_client_builder(self, ctx: &mut Context) -> ClientBuilder {
+        let user_agent = ctx.conf.session().user_agent();
+        let timeout = ctx.conf.session().timeout();
         Client::builder()
             .referer(false)
             .redirect(Policy::none()) // redirects manually
-            .user_agent(USER_AGENT) // TODO: use config
-            .timeout(Some(Duration::from_secs(30))) // TODO: use config
+            .user_agent(user_agent)
+            .timeout(Some(timeout))
     }
 }
 

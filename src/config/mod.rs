@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use dirs::{data_local_dir, home_dir};
+use getset::{CopyGetters, Getters};
 use serde::{Deserialize, Serialize};
 
 use crate::Result;
@@ -10,8 +11,9 @@ use template::{ProblemContext, ProblemTempl, Shell, TemplArray};
 
 mod template;
 
-#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
+#[get = "pub"]
 pub struct Config {
     shell: Shell,
     session: SessionConfig,
@@ -32,14 +34,20 @@ impl fmt::Display for Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
 pub struct SessionConfig {
+    #[get = "pub"]
+    user_agent: String,
     #[serde(with = "humantime_serde")]
+    #[get_copy = "pub"]
     timeout: Duration,
+    #[get_copy = "pub"]
     retry_limit: usize,
     #[serde(with = "humantime_serde")]
+    #[get_copy = "pub"]
     retry_interval: Duration,
+    #[get = "pub"]
     cookies_path: PathBuf,
 }
 
@@ -65,8 +73,15 @@ impl SessionConfig {
 
 impl Default for SessionConfig {
     fn default() -> Self {
+        let user_agent = format!(
+            "{}-{} ({})",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_REPOSITORY")
+        );
         let cookies_path = Self::default_cookies_path();
         Self {
+            user_agent,
             timeout: Duration::from_secs(30),
             retry_limit: 4,
             retry_interval: Duration::from_secs(2),

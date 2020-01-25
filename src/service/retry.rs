@@ -24,12 +24,12 @@ pub struct RetryRequestBuilder<'a, 'b> {
 }
 
 impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
-    pub fn accept(mut self, accept: impl Fn(StatusCode) -> bool + 'a) -> Self {
+    pub fn accept(&mut self, accept: impl Fn(StatusCode) -> bool + 'a) -> &mut Self {
         self.is_accept = Box::new(accept);
         self
     }
 
-    pub fn reject(mut self, reject: impl Fn(StatusCode) -> bool + 'a) -> Self {
+    pub fn reject(&mut self, reject: impl Fn(StatusCode) -> bool + 'a) -> &mut Self {
         self.is_reject = Box::new(reject);
         self
     }
@@ -54,8 +54,10 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
     }
 
     pub fn retry_send(&mut self) -> Result<Option<Response>> {
-        // TODO: use config
-        let durations = delay::Fixed::from_millis(1000).take(4);
+        let session = self.ctx.conf.session();
+        let retry_interval = session.retry_interval().as_millis() as u64;
+        let retry_limit = session.retry_limit();
+        let durations = delay::Fixed::from_millis(retry_interval).take(retry_limit);
         retry(durations, || match self.send_pretty() {
             Ok(res) => {
                 if self.is_accept.as_ref()(res.status()) {
