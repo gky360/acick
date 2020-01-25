@@ -6,11 +6,12 @@ use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
 use serde::{Deserialize, Serialize};
 
+// mod abs_path;
+mod template;
+
 use crate::service::CookieStorage;
 use crate::Result;
 use template::{ProblemContext, ProblemTempl, Shell, TemplArray};
-
-mod template;
 
 #[derive(Serialize, Deserialize, Getters, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
@@ -53,44 +54,42 @@ pub struct SessionConfig {
 }
 
 impl SessionConfig {
+    const COOKIES_FILE_NAME: &'static str = "cookies.json";
+
     pub fn load_cookies(&self) -> Result<CookieStorage> {
-        CookieStorage::load(&self.cookies_path)
+        CookieStorage::open(&self.cookies_path)
+    }
+
+    fn default_user_agent() -> String {
+        format!(
+            "{}-{} ({})",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_REPOSITORY")
+        )
     }
 
     fn default_cookies_path() -> PathBuf {
-        if let (Some(home), Some(local)) = (home_dir(), data_local_dir()) {
-            local
-                .strip_prefix(&home)
-                .ok()
-                .and_then(|path| path.to_str())
-                .map(|path| Path::new("~").join(path).join(env!("CARGO_PKG_NAME")))
-        } else {
-            None
-        }
-        .unwrap_or_else(|| {
-            Path::new("~")
-                .join(".local")
-                .join("share")
-                .join(env!("CARGO_PKG_NAME"))
-        })
+        data_local_dir()
+            .unwrap_or_else(|| {
+                home_dir()
+                    .expect("Could not get home dir")
+                    .join(".local")
+                    .join("share")
+            })
+            .join(env!("CARGO_PKG_NAME"))
+            .join(Self::COOKIES_FILE_NAME)
     }
 }
 
 impl Default for SessionConfig {
     fn default() -> Self {
-        let user_agent = format!(
-            "{}-{} ({})",
-            env!("CARGO_PKG_NAME"),
-            env!("CARGO_PKG_VERSION"),
-            env!("CARGO_PKG_REPOSITORY")
-        );
-        let cookies_path = Self::default_cookies_path();
         Self {
-            user_agent,
+            user_agent: Self::default_user_agent(),
             timeout: Duration::from_secs(30),
             retry_limit: 4,
             retry_interval: Duration::from_secs(2),
-            cookies_path,
+            cookies_path: Self::default_cookies_path(),
         }
     }
 }

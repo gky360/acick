@@ -1,4 +1,4 @@
-use std::fs::{File, OpenOptions};
+use std::fs::{create_dir_all, File, OpenOptions};
 use std::io::BufReader;
 use std::path::Path;
 
@@ -13,7 +13,10 @@ pub struct CookieStorage {
 }
 
 impl CookieStorage {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
+        if let Some(dir) = path.as_ref().parent() {
+            create_dir_all(dir).context("Could not create dir for cookies files")?;
+        }
         let file = OpenOptions::new()
             .read(true)
             .write(true)
