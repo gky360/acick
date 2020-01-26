@@ -82,11 +82,16 @@ impl Opt {
         writeln!(stdout)?;
 
         if self.global_opt.debug {
-            writeln!(stdout, "{:#?}", outcome.as_ref())
+            writeln!(stdout, "{:#?}", &outcome)
         } else {
-            writeln!(stdout, "{}", outcome.as_ref())
+            writeln!(stdout, "{}", &outcome)
         }?;
-        Ok(())
+
+        if outcome.is_error() {
+            Err(Error::msg("Command exited with error"))
+        } else {
+            Ok(())
+        }
     }
 }
 

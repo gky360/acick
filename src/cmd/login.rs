@@ -42,7 +42,12 @@ impl fmt::Display for LoginOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Successfully logged in to {} as {}",
+            "{} logged in to {} as {}",
+            if self.is_already {
+                "Already"
+            } else {
+                "Successfully"
+            },
             Into::<&'static str>::into(&self.service_id),
             &self.username
         )
@@ -51,7 +56,7 @@ impl fmt::Display for LoginOutcome {
 
 impl Outcome for LoginOutcome {
     fn is_error(&self) -> bool {
-        self.is_already
+        false
     }
 }
 
