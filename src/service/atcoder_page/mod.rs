@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use reqwest::Url;
 use scraper::ElementRef;
 
-use crate::service::scrape::{select, Scrape};
+use crate::service::scrape::{select, ElementRefExt as _, Scrape};
 use crate::{Error, Result};
 
 mod login;
@@ -39,13 +39,7 @@ pub trait HasHeader: Scrape {
             .select(select!("a.dropdown-toggle"))
             .nth(1)
             .ok_or_else(|| Error::msg("Could not find element"))
-            .map(|elem| {
-                elem.text()
-                    .collect::<Vec<&str>>()
-                    .join("")
-                    .trim()
-                    .to_owned()
-            })
+            .map(|elem| elem.inner_text().trim().to_owned())
     }
 
     fn is_logged_in_as(&self, user: &str) -> Result<bool> {

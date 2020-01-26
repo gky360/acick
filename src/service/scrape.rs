@@ -76,3 +76,13 @@ pub trait Scrape: AsRef<Html> {
 }
 
 impl<T: AsRef<Html>> Scrape for T {}
+
+pub trait ElementRefExt {
+    fn inner_text(&self) -> String;
+}
+
+impl ElementRefExt for ElementRef<'_> {
+    fn inner_text(&self) -> String {
+        self.text().collect::<Vec<&str>>().join("")
+    }
+}

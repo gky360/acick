@@ -40,8 +40,6 @@ pub struct SettingsPage {
     content: Html,
 }
 
-impl SettingsPage {}
-
 impl HasUrl for SettingsPage {
     fn url(&self) -> Result<Url> {
         self.builder.url()

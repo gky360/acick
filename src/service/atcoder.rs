@@ -72,7 +72,8 @@ impl Serve for AtcoderService<'_, '_> {
     fn fetch(&mut self, _problem_id: &Option<ProblemId>) -> Result<Vec<Problem>> {
         let Self { client, ctx } = self;
         let contest_id = &ctx.global_opt.contest_id;
-        let _tasks_print_page = TasksPrintPageBuilder::new(contest_id).build(client, ctx)?;
-        Ok(vec![])
+        let tasks_print_page = TasksPrintPageBuilder::new(contest_id).build(client, ctx)?;
+        let problems = tasks_print_page.extract_problems()?;
+        Ok(problems)
     }
 }

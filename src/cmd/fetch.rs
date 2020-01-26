@@ -19,7 +19,8 @@ impl Run for FetchOpt {
         eprintln!("{:?}", self);
         let GlobalOpt { service_id, .. } = ctx.global_opt;
         let mut service = service_id.serve(ctx);
-        let _problems = service.fetch(&self.problem_id)?;
+        let problems = service.fetch(&self.problem_id)?;
+        eprintln!("{:?}", problems);
         Ok(Box::new(FetchOutcome {}))
     }
 }

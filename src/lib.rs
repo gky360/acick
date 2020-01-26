@@ -39,7 +39,7 @@ pub struct GlobalOpt {
         long,
         global = true,
         env = "ACICK_CONTEST",
-        default_value = "abc100"
+        default_value = "arc100"
     )]
     contest_id: ContestId,
     #[structopt(long, global = true)]
