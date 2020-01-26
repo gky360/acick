@@ -4,32 +4,35 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::{Config, Context, Result};
+use crate::{Context, GlobalOpt, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
-pub struct ShowOpt {}
+pub struct FetchOpt {
+    /// Problem id. If specified, only one problem will be fetched
+    #[structopt(name = "problem")]
+    problem_id: Option<String>,
+}
 
-impl Run for ShowOpt {
+impl Run for FetchOpt {
     fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
-        Ok(Box::new(ShowOutcome {
-            conf: ctx.conf.clone(),
-        }))
+        eprintln!("{:?}", self);
+        let GlobalOpt { service_id, .. } = ctx.global_opt;
+        let _service = service_id.serve(ctx);
+        Ok(Box::new(FetchOutcome {}))
     }
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ShowOutcome {
-    pub conf: Config,
-}
+pub struct FetchOutcome {}
 
-impl fmt::Display for ShowOutcome {
+impl fmt::Display for FetchOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.conf.fmt(f)
+        write!(f, "Successfully fetched problems")
     }
 }
 
-impl Outcome for ShowOutcome {
+impl Outcome for FetchOutcome {
     fn is_error(&self) -> bool {
         false
     }
@@ -42,7 +45,7 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        run_default!(ShowOpt)?;
+        run_default!(FetchOpt)?;
         Ok(())
     }
 }

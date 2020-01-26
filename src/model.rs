@@ -67,22 +67,26 @@ impl ServiceKind {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Contest {
-    id: String,
+    id: ContestId,
 }
 
 impl Contest {
-    pub fn new(id: impl ToString) -> Self {
-        Self { id: id.to_string() }
+    pub fn new(id: ContestId) -> Self {
+        Self { id }
     }
 }
+
+pub type ContestId = String;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Problem {
-    id: String,
+    id: ProblemId,
 }
 
 impl Problem {
-    pub fn new(id: impl ToString) -> Self {
-        Self { id: id.to_string() }
+    pub fn new(id: ProblemId) -> Self {
+        Self { id }
     }
 }
+
+pub type ProblemId = String;

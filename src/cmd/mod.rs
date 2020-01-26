@@ -6,9 +6,11 @@ use structopt::StructOpt;
 
 use crate::{Context, Result};
 
+mod fetch;
 mod login;
 mod show;
 
+pub use fetch::FetchOpt;
 pub use login::{LoginOpt, LoginOutcome};
 pub use show::{ShowOpt, ShowOutcome};
 
@@ -33,14 +35,17 @@ pub trait Run {
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub enum Cmd {
+    // Init(InitOpt),
     /// Shows current config
     Show(ShowOpt),
-    /// Log in to service
+    /// Logs in to service
     Login(LoginOpt),
     // Participate(ParticipateOpt),
     // New(NewOpt),
-    // Get(GetOpt),
-    // Judge(JudgeOpt),
+    /// Fetches problems from service
+    Fetch(FetchOpt),
+    // Test(TestOpt), // test samples
+    // Judge(JudgeOpt), // test full testcases, for AtCoder only
     // Submit(SubmitOpt),
 }
 
@@ -49,6 +54,7 @@ impl Run for Cmd {
         match self {
             Self::Show(opt) => opt.run(ctx),
             Self::Login(opt) => opt.run(ctx),
+            Self::Fetch(opt) => opt.run(ctx),
         }
     }
 }

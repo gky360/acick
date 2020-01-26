@@ -18,7 +18,7 @@ mod service;
 use abs_path::AbsPathBuf;
 use cmd::{Cmd, Run as _};
 use config::Config;
-use model::ServiceKind;
+use model::{ContestId, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
@@ -41,7 +41,7 @@ pub struct GlobalOpt {
         env = "ACICK_CONTEST",
         default_value = "abc100"
     )]
-    contest_id: String,
+    contest_id: ContestId,
     #[structopt(long, global = true)]
     debug: bool,
 }
