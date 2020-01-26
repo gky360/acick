@@ -14,8 +14,8 @@ use crate::Result;
 use template::{ProblemContext, ProblemTempl, Shell, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
+#[get = "pub"]
 pub struct Config {
-    #[get = "pub"]
     base_dir: AbsPathBuf,
     data: ConfigData,
 }
@@ -33,21 +33,6 @@ impl Config {
         let cookies_path = &self.data.session.cookies_path;
         CookieStorage::open(&cookies_path.to_abs(&self.base_dir))
     }
-
-    // #[inline(always)]
-    // pub fn shell(&self) -> &Shell {
-    //     &self.data.shell
-    // }
-
-    #[inline(always)]
-    pub fn session(&self) -> &SessionConfig {
-        &self.data.session
-    }
-
-    // #[inline(always)]
-    // pub fn services(&self) -> &ServicesConfig {
-    //     &self.data.services
-    // }
 }
 
 impl fmt::Display for Config {
@@ -57,9 +42,10 @@ impl fmt::Display for Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
-struct ConfigData {
+#[get = "pub"]
+pub struct ConfigData {
     shell: Shell,
     session: SessionConfig,
     services: ServicesConfig,

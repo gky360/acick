@@ -54,8 +54,9 @@ impl ServiceKind {
     }
 
     fn get_client_builder(self, ctx: &mut Context) -> ClientBuilder {
-        let user_agent = ctx.conf.session().user_agent();
-        let timeout = ctx.conf.session().timeout();
+        let session = ctx.conf.data().session();
+        let user_agent = session.user_agent();
+        let timeout = session.timeout();
         Client::builder()
             .referer(false)
             .redirect(Policy::none()) // redirects manually
