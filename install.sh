@@ -111,7 +111,8 @@ fi
 echo "Release Tag = $ACICK_RELEASE_TAG"
 
 # assemble expected release artifact name
-TAR="acick-${ACICK_RELEASE_TAG}-${ARCH}-${VENDOR}-${OS}.tar.gz"
+ARTIFACT="acick-${ACICK_RELEASE_TAG}-${ARCH}-${VENDOR}-${OS}"
+TAR="${ARTIFACT}.tar.gz"
 
 # fetch the real release data to make sure it exists before we attempt a download
 downloadJSON RELEASE_DATA "$RELEASES_URL/tag/$ACICK_RELEASE_TAG"
@@ -127,10 +128,10 @@ INSTALL_NAME="acick"
 if [ "$OS" = "windows" ]; then
     INSTALL_NAME="$INSTALL_NAME.exe"
 fi
-chmod +x "$DOWNLOAD_DIR/$INSTALL_NAME"
+chmod +x "$DOWNLOAD_DIR/$ARTIFACT/$INSTALL_NAME"
 
 echo "Moving executable to $INSTALL_DIRECTORY/$INSTALL_NAME ..."
-mv "$DOWNLOAD_DIR/$INSTALL_NAME" "$INSTALL_DIRECTORY/$INSTALL_NAME"
+mv "$DOWNLOAD_DIR/$ARTIFACT/$INSTALL_NAME" "$INSTALL_DIRECTORY/$INSTALL_NAME"
 
 # clean up temp dir
 echo "Cleaning up temp directory ..."
