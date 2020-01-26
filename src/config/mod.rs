@@ -2,8 +2,10 @@ use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
+use semver::Version;
 use serde::{Deserialize, Serialize};
 
 mod template;
@@ -23,10 +25,21 @@ pub struct Config {
 impl Config {
     pub fn load(base_dir: AbsPathBuf) -> Result<Self> {
         // TODO: load from file
-        Ok(Self {
-            base_dir,
-            data: ConfigData::default(),
-        })
+        let data = ConfigData::default();
+        let version_str = data.version.to_string();
+        let pkg_version = env!("CARGO_PKG_VERSION");
+        if version_str != pkg_version {
+            Err(anyhow!(
+                r#"Found mismatched version in config file.
+    config version: {}
+    acick version : {}
+Fix version in the config file so that it matches the acick version."#,
+                version_str,
+                pkg_version
+            ))
+        } else {
+            Ok(Self { base_dir, data })
+        }
     }
 
     pub fn open_cookie_storage(&self) -> Result<CookieStorage> {
@@ -42,13 +55,26 @@ impl fmt::Display for Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Getters, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
 #[get = "pub"]
 pub struct ConfigData {
+    #[serde(with = "string")]
+    version: Version,
     shell: Shell,
     session: SessionConfig,
     services: ServicesConfig,
+}
+
+impl Default for ConfigData {
+    fn default() -> Self {
+        Self {
+            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            shell: Shell::default(),
+            session: SessionConfig::default(),
+            services: ServicesConfig::default(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Getters, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
@@ -130,6 +156,32 @@ impl Default for AtcoderConfig {
             compile: (&["g++", "-std=gnu++1y", "-O2", "-I/opt/boost/gcc/include", "-L/opt/boost/gcc/lib", "-o", "./a.out", "./Main.cpp"]).into(),
             run: (&["./a.out"]).into(),
         }
+    }
+}
+
+mod string {
+    use std::fmt::Display;
+    use std::str::FromStr;
+
+    use serde::{de, Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Display,
+        S: Serializer,
+    {
+        serializer.collect_str(value)
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: FromStr,
+        T::Err: Display,
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
     }
 }
 
