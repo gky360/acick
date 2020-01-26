@@ -18,7 +18,7 @@ WIP project
 
 ## Requirements
 
-- Linux / OS X
+- Linux / OS X / Windows
 
 ## Installation
 
