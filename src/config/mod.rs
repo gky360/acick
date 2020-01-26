@@ -1,31 +1,51 @@
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 
 use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
 use serde::{Deserialize, Serialize};
 
-// mod abs_path;
 mod template;
 
+use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::service::CookieStorage;
 use crate::Result;
 use template::{ProblemContext, ProblemTempl, Shell, TemplArray};
 
-#[derive(Serialize, Deserialize, Getters, Default, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(default)]
-#[get = "pub"]
+#[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Config {
-    shell: Shell,
-    session: SessionConfig,
-    services: ServicesConfig,
+    #[get = "pub"]
+    base_dir: AbsPathBuf,
+    data: ConfigData,
 }
 
 impl Config {
-    pub fn load() -> Result<Self> {
+    pub fn load(base_dir: AbsPathBuf) -> Result<Self> {
         // TODO: load from file
-        Ok(Config::default())
+        Ok(Self {
+            base_dir,
+            data: ConfigData::default(),
+        })
+    }
+
+    pub fn load_cookies(&self) -> Result<CookieStorage> {
+        CookieStorage::open(&self.data.session.cookies_path.to_abs(&self.base_dir))
+    }
+
+    #[inline(always)]
+    pub fn shell(&self) -> &Shell {
+        &self.data.shell
+    }
+
+    #[inline(always)]
+    pub fn session(&self) -> &SessionConfig {
+        &self.data.session
+    }
+
+    #[inline(always)]
+    pub fn services(&self) -> &ServicesConfig {
+        &self.data.services
     }
 }
 
@@ -34,6 +54,14 @@ impl fmt::Display for Config {
         let yaml_str = serde_yaml::to_string(self).map_err(|_| fmt::Error)?;
         write!(f, "{}", yaml_str)
     }
+}
+
+#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[serde(default)]
+struct ConfigData {
+    shell: Shell,
+    session: SessionConfig,
+    services: ServicesConfig,
 }
 
 #[derive(Serialize, Deserialize, Getters, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
@@ -55,10 +83,6 @@ pub struct SessionConfig {
 
 impl SessionConfig {
     const COOKIES_FILE_NAME: &'static str = "cookies.json";
-
-    pub fn load_cookies(&self) -> Result<CookieStorage> {
-        CookieStorage::open(&self.cookies_path)
-    }
 
     fn default_user_agent() -> String {
         format!(
@@ -128,7 +152,7 @@ mod tests {
 
     #[test]
     fn serialize_default() -> anyhow::Result<()> {
-        serde_yaml::to_string(&Config::default())?;
+        serde_yaml::to_string(&Config::load(AbsPathBuf::cwd()?)?)?;
         Ok(())
     }
 

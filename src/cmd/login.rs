@@ -1,7 +1,7 @@
 use std::fmt;
 
 use anyhow::Context as _;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
@@ -31,7 +31,7 @@ impl Run for LoginOpt {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LoginOutcome {
     pub service_id: ServiceKind,
     pub username: String,

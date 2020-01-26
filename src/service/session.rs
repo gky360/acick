@@ -11,7 +11,7 @@ trait ExecSession {
 
 impl ExecSession for Client {
     fn exec_session(&self, request: Request, ctx: &mut Context) -> Result<Response> {
-        ctx.conf.session().load_cookies()?;
+        ctx.conf.load_cookies()?;
         Ok(self.execute(request)?)
     }
 }

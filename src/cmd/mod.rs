@@ -57,11 +57,14 @@ impl Run for Cmd {
 mod tests {
     macro_rules! run_default {
         ($opt:ident) => {{
+            use crate::abs_path::AbsPathBuf;
             use crate::{Config, GlobalOpt};
 
             let opt = $opt::default();
             let global_opt = GlobalOpt::default();
-            let conf = Config::default();
+            let conf =
+                Config::load(AbsPathBuf::cwd().expect("Could not get current working directory"))
+                    .expect("Could not load config");
             let mut stdin_buf = ::std::io::BufReader::new(&b""[..]);
             let mut stderr_buf = Vec::new();
             let mut ctx = Context {

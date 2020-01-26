@@ -4,7 +4,7 @@ use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
 use crate::{Config, Context, Result};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
@@ -18,7 +18,7 @@ impl Run for ShowOpt {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ShowOutcome {
     pub conf: Config,
 }

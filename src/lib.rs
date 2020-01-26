@@ -9,11 +9,13 @@ use std::{env, fmt, io};
 use structopt::StructOpt;
 use strum::VariantNames;
 
+mod abs_path;
 mod cmd;
 mod config;
 mod model;
 mod service;
 
+use abs_path::AbsPathBuf;
 use cmd::{Cmd, Run as _};
 use config::Config;
 use model::ServiceKind;
@@ -66,7 +68,8 @@ impl Opt {
         mut stdout: impl io::Write,
         mut stderr: impl io::Write + fmt::Debug,
     ) -> Result<()> {
-        let conf = Config::load().context("Could not load config")?;
+        let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
+        let conf = Config::load(cwd).context("Could not load config")?;
         let mut ctx = Context {
             global_opt: &self.global_opt,
             conf: &conf,
