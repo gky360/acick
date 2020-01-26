@@ -5,6 +5,7 @@ use std::io::{BufReader, Seek as _, SeekFrom};
 use anyhow::Context as _;
 use cookie::Cookie as RawCookie;
 use cookie_store::CookieStore;
+use fs2::FileExt as _;
 use reqwest::blocking::{Request, Response};
 use reqwest::header::{HeaderValue, COOKIE, SET_COOKIE};
 
@@ -19,7 +20,7 @@ pub struct CookieStorage {
 impl CookieStorage {
     pub fn open(path: &AbsPathBuf) -> Result<Self> {
         if let Some(dir) = path.as_ref().parent() {
-            create_dir_all(dir).context("Could not create dir for cookies files")?;
+            create_dir_all(dir).context("Could not create dir for cookies file")?;
         }
         let file = OpenOptions::new()
             .read(true)
@@ -27,7 +28,8 @@ impl CookieStorage {
             .create(true)
             .open(path.as_ref())
             .context("Could not open cookies file")?;
-        // TODO: lock file
+        file.try_lock_exclusive()
+            .context("Could not lock cookies file")?;
         let reader = BufReader::new(&file);
         let store = CookieStore::load_json(reader).map_err(Error::msg)?;
         Ok(Self { file, store })
@@ -74,6 +76,6 @@ impl CookieStorage {
 
 impl Drop for CookieStorage {
     fn drop(&mut self) {
-        // TODO: unlock file
+        self.file.unlock().expect("Could no unlock cookies file");
     }
 }
