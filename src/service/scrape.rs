@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::Context as _;
 use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
@@ -5,6 +7,19 @@ use scraper::{ElementRef, Html, Selector};
 
 use crate::service::session::WithRetry as _;
 use crate::{Context, Error, Result};
+
+#[macro_export]
+macro_rules! regex {
+    ($expr:expr) => {{
+        static REGEX: ::once_cell::sync::Lazy<::regex::Regex> =
+            ::once_cell::sync::Lazy::new(|| ::regex::Regex::new($expr).unwrap());
+        &REGEX
+    }};
+    ($expr:expr,) => {
+        lazy_regex!($expr)
+    };
+}
+pub use regex;
 
 #[macro_export]
 macro_rules! select {
@@ -83,6 +98,22 @@ pub trait ElementRefExt {
 
 impl ElementRefExt for ElementRef<'_> {
     fn inner_text(&self) -> String {
-        self.text().collect::<Vec<&str>>().join("")
+        self.text().fold("".to_owned(), |mut ret, s| {
+            ret.push_str(s);
+            ret
+        })
     }
+}
+
+pub fn parse_zenkaku_digits<T: FromStr>(s: &str) -> std::result::Result<T, T::Err> {
+    s.parse().or_else(|err| {
+        if s.chars().all(|c| '０' <= c && c <= '９') {
+            s.chars()
+                .map(|c| char::from((u32::from(c) - u32::from('０') + u32::from('0')) as u8))
+                .collect::<String>()
+                .parse()
+        } else {
+            Err(err)
+        }
+    })
 }

@@ -81,12 +81,31 @@ pub type ContestId = String;
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Problem {
     id: ProblemId,
+    name: String,
+    samples: Vec<Sample>,
 }
 
 impl Problem {
-    pub fn new(id: ProblemId) -> Self {
-        Self { id }
+    pub fn new(id: ProblemId, name: String, samples: Vec<Sample>) -> Self {
+        Self { id, name, samples }
     }
 }
 
 pub type ProblemId = String;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Sample {
+    name: String,
+    input: String,
+    output: String,
+}
+
+impl Sample {
+    pub fn new(name: String, input: String, output: String) -> Self {
+        Self {
+            name,
+            input,
+            output,
+        }
+    }
+}

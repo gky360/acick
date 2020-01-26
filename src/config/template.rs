@@ -117,7 +117,7 @@ impl Default for ProblemContext {
         Self {
             service: Service::new(ServiceKind::Atcoder),
             contest: Contest::new("arc100".into()),
-            problem: Problem::new("a".into()),
+            problem: Problem::new("c".into(), "Linear Approximation".into(), Vec::new()),
         }
     }
 }
