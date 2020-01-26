@@ -10,9 +10,19 @@ trait ExecSession {
 }
 
 impl ExecSession for Client {
-    fn exec_session(&self, request: Request, ctx: &mut Context) -> Result<Response> {
-        ctx.conf.load_cookies()?;
-        Ok(self.execute(request)?)
+    fn exec_session(&self, mut request: Request, ctx: &mut Context) -> Result<Response> {
+        let mut storage = ctx
+            .conf
+            .open_cookie_storage()
+            .context("Could not open cookie storage")?;
+        storage
+            .load_into(&mut request)
+            .context("Could not load cookies into request")?;
+        let response = self.execute(request)?;
+        storage
+            .store_from(&response)
+            .context("Could not store cookies from response")?;
+        Ok(response)
     }
 }
 

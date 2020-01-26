@@ -29,24 +29,25 @@ impl Config {
         })
     }
 
-    pub fn load_cookies(&self) -> Result<CookieStorage> {
-        CookieStorage::open(&self.data.session.cookies_path.to_abs(&self.base_dir))
+    pub fn open_cookie_storage(&self) -> Result<CookieStorage> {
+        let cookies_path = &self.data.session.cookies_path;
+        CookieStorage::open(&cookies_path.to_abs(&self.base_dir))
     }
 
-    #[inline(always)]
-    pub fn shell(&self) -> &Shell {
-        &self.data.shell
-    }
+    // #[inline(always)]
+    // pub fn shell(&self) -> &Shell {
+    //     &self.data.shell
+    // }
 
     #[inline(always)]
     pub fn session(&self) -> &SessionConfig {
         &self.data.session
     }
 
-    #[inline(always)]
-    pub fn services(&self) -> &ServicesConfig {
-        &self.data.services
-    }
+    // #[inline(always)]
+    // pub fn services(&self) -> &ServicesConfig {
+    //     &self.data.services
+    // }
 }
 
 impl fmt::Display for Config {
