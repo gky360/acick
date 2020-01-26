@@ -89,6 +89,7 @@ pub struct CmdContext {
 }
 
 impl CmdContext {
+    #[allow(dead_code)]
     pub fn new(command: impl ToString) -> Self {
         Self {
             command: command.to_string(),
@@ -134,6 +135,7 @@ impl Expand<ProblemContext> for ProblemTempl {
 pub struct TemplArray<T: Expand<C>, C: Serialize>(Vec<T>, #[serde(skip)] PhantomData<C>);
 
 impl<T: Expand<C>, C: Serialize> TemplArray<T, C> {
+    #[allow(dead_code)]
     pub fn expand_all(&self, context: &C) -> Result<Vec<String>> {
         self.0.iter().map(|c| c.expand(context)).collect()
     }
@@ -153,12 +155,6 @@ where
     }
 }
 
-impl<T: Expand<C> + fmt::Display, C: Serialize> From<TemplArray<T, C>> for String {
-    fn from(arr: TemplArray<T, C>) -> String {
-        format!("{}", arr)
-    }
-}
-
 impl<T: Expand<C> + fmt::Display, C: Serialize> fmt::Display for TemplArray<T, C> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0
@@ -171,6 +167,7 @@ impl<T: Expand<C> + fmt::Display, C: Serialize> fmt::Display for TemplArray<T, C
 pub type Shell = TemplArray<CmdTempl, CmdContext>;
 
 impl Shell {
+    #[allow(dead_code)]
     pub fn exec(&self, command: impl ToString) -> Result<Output> {
         let cmd_context = CmdContext::new(command);
         let command = self
@@ -186,6 +183,7 @@ impl Shell {
         Ok(output)
     }
 
+    #[allow(dead_code)]
     pub fn exec_templ_arr<T: Expand<C>, C: Serialize>(
         &self,
         templ_arr: &TemplArray<T, C>,

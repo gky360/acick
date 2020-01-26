@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use maplit::hashmap;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
@@ -55,10 +56,7 @@ impl Serve for AtcoderService<'_, '_> {
             .ok_or_else(|| Error::msg("Invalid username or password"))?;
         let current_user = settings_page.current_user()?;
         if current_user != user {
-            return Err(Error::msg(format!(
-                "Logged in as another user: {}",
-                current_user
-            )));
+            return Err(anyhow!("Logged in as another user: {}", current_user));
         }
 
         Ok(LoginOutcome {
