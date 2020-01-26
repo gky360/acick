@@ -29,8 +29,9 @@ impl LoginPageBuilder {
 impl CheckStatus for LoginPageBuilder {}
 
 impl HasUrl for LoginPageBuilder {
-    fn url(&self) -> Url {
-        BASE_URL.join(Self::PATH).unwrap()
+    fn url(&self) -> Result<Url> {
+        // parsing static path will never fail
+        Ok(BASE_URL.join(Self::PATH).unwrap())
     }
 }
 
@@ -41,7 +42,7 @@ pub struct LoginPage {
 }
 
 impl HasUrl for LoginPage {
-    fn url(&self) -> Url {
+    fn url(&self) -> Result<Url> {
         self.builder.url()
     }
 }

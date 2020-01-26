@@ -22,7 +22,7 @@ macro_rules! select {
 pub use select;
 
 pub trait HasUrl {
-    fn url(&self) -> Url;
+    fn url(&self) -> Result<Url>;
 }
 
 pub trait CheckStatus {
@@ -38,7 +38,7 @@ pub trait CheckStatus {
 pub trait Fetch: HasUrl + CheckStatus {
     fn fetch(&self, client: &Client, ctx: &mut Context) -> Result<Option<Html>> {
         let maybe_html = client
-            .get(self.url())
+            .get(self.url()?)
             .with_retry(client, ctx)
             .accept(|status| self.is_accept(status))
             .reject(|status| self.is_reject(status))

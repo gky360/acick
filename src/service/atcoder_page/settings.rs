@@ -28,8 +28,9 @@ impl SettingsPageBuilder {
 impl CheckStatus for SettingsPageBuilder {}
 
 impl HasUrl for SettingsPageBuilder {
-    fn url(&self) -> Url {
-        BASE_URL.join(Self::PATH).unwrap()
+    fn url(&self) -> Result<Url> {
+        // parsing static path will never fail
+        Ok(BASE_URL.join(Self::PATH).unwrap())
     }
 }
 
@@ -42,7 +43,7 @@ pub struct SettingsPage {
 impl SettingsPage {}
 
 impl HasUrl for SettingsPage {
-    fn url(&self) -> Url {
+    fn url(&self) -> Result<Url> {
         self.builder.url()
     }
 }

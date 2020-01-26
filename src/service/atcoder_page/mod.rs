@@ -7,9 +7,11 @@ use crate::{Error, Result};
 
 mod login;
 mod settings;
+mod tasks_print;
 
 pub use login::{LoginPage, LoginPageBuilder};
 pub use settings::{SettingsPage, SettingsPageBuilder};
+pub use tasks_print::{TasksPrintPage, TasksPrintPageBuilder};
 
 lazy_static! {
     pub static ref BASE_URL: Url = Url::parse("https://atcoder.jp").unwrap();

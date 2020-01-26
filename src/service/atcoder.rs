@@ -4,7 +4,10 @@ use reqwest::blocking::Client;
 use reqwest::StatusCode;
 
 use crate::cmd::LoginOutcome;
-use crate::service::atcoder_page::{HasHeader, LoginPageBuilder, SettingsPageBuilder};
+use crate::model::{Problem, ProblemId};
+use crate::service::atcoder_page::{
+    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPrintPageBuilder,
+};
 use crate::service::scrape::{HasUrl as _, Scrape as _};
 use crate::service::serve::Serve;
 use crate::service::session::WithRetry as _;
@@ -43,7 +46,7 @@ impl Serve for AtcoderService<'_, '_> {
             "password" => pass,
         );
         client
-            .post(login_page.url())
+            .post(login_page.url()?)
             .form(&payload)
             .with_retry(client, ctx)
             .accept(|status| status == StatusCode::FOUND)
@@ -64,5 +67,12 @@ impl Serve for AtcoderService<'_, '_> {
             username: user,
             is_already: false,
         })
+    }
+
+    fn fetch(&mut self, _problem_id: &Option<ProblemId>) -> Result<Vec<Problem>> {
+        let Self { client, ctx } = self;
+        let contest_id = &ctx.global_opt.contest_id;
+        let _tasks_print_page = TasksPrintPageBuilder::new(contest_id).build(client, ctx)?;
+        Ok(vec![])
     }
 }

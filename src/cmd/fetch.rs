@@ -9,7 +9,7 @@ use crate::{Context, GlobalOpt, Result};
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct FetchOpt {
-    /// Problem id. If specified, only one problem will be fetched
+    /// Problem id. If specified, only one problem will be fetched.
     #[structopt(name = "problem")]
     problem_id: Option<String>,
 }
@@ -18,7 +18,8 @@ impl Run for FetchOpt {
     fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
         eprintln!("{:?}", self);
         let GlobalOpt { service_id, .. } = ctx.global_opt;
-        let _service = service_id.serve(ctx);
+        let mut service = service_id.serve(ctx);
+        let _problems = service.fetch(&self.problem_id)?;
         Ok(Box::new(FetchOutcome {}))
     }
 }
