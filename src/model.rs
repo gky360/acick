@@ -1,4 +1,7 @@
+use std::convert::Infallible;
 use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
@@ -110,7 +113,46 @@ impl Problem {
     }
 }
 
-pub type ProblemId = String;
+#[derive(Serialize, Deserialize, Debug, Clone, Eq)]
+pub struct ProblemId(String);
+
+impl ProblemId {
+    pub fn normalize(&self) -> String {
+        self.0.to_uppercase()
+    }
+}
+
+impl PartialEq<ProblemId> for ProblemId {
+    fn eq(&self, other: &ProblemId) -> bool {
+        self.normalize() == other.normalize()
+    }
+}
+
+impl Hash for ProblemId {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.normalize().hash(state);
+    }
+}
+
+impl<T: Into<String>> From<T> for ProblemId {
+    fn from(id: T) -> Self {
+        Self(id.into())
+    }
+}
+
+impl FromStr for ProblemId {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self::from(s))
+    }
+}
+
+impl fmt::Display for ProblemId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Sample {

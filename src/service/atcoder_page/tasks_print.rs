@@ -99,7 +99,7 @@ impl Scrape for TasksPrintPage<'_> {
 struct ProblemElem<'a>(ElementRef<'a>);
 
 impl ProblemElem<'_> {
-    fn extract_id_name(&self) -> Result<(String, String)> {
+    fn extract_id_name(&self) -> Result<(ProblemId, String)> {
         let title = self
             .find_first(select!(".h2"))
             .context("Could not find problem title")?
@@ -110,7 +110,7 @@ impl ProblemElem<'_> {
             .next()
             .context("Could not find problem name")?
             .trim();
-        Ok((id.to_owned(), name.to_owned()))
+        Ok((id.into(), name.to_owned()))
     }
 
     fn select_statement(&self) -> Result<StatementElem> {

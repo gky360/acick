@@ -4,6 +4,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
+use crate::model::ProblemId;
 use crate::{Context, GlobalOpt, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -11,7 +12,7 @@ use crate::{Context, GlobalOpt, Result};
 pub struct FetchOpt {
     /// Problem id. If specified, only one problem will be fetched.
     #[structopt(name = "problem")]
-    problem_id: Option<String>,
+    problem_id: Option<ProblemId>,
 }
 
 impl Run for FetchOpt {
