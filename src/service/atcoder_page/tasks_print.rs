@@ -7,7 +7,7 @@ use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::{ElementRef, Html, Selector};
 
-use crate::model::{Problem, Sample};
+use crate::model::{Problem, ProblemId, Sample};
 use crate::service::atcoder_page::BASE_URL;
 use crate::service::scrape::{
     parse_zenkaku_digits, regex, select, CheckStatus, ElementRefExt as _, Fetch as _, HasUrl,
@@ -52,10 +52,15 @@ pub struct TasksPrintPage<'a> {
 }
 
 impl TasksPrintPage<'_> {
-    pub fn extract_problems(&self) -> Result<Vec<Problem>> {
+    pub fn extract_problems(&self, problem_id: &Option<ProblemId>) -> Result<Vec<Problem>> {
         let mut problems = Vec::new();
         for elem in self.select_problems() {
             let (id, name) = elem.extract_id_name()?;
+            if let Some(problem_id) = problem_id.as_ref() {
+                if &id != problem_id {
+                    continue;
+                }
+            }
             let samples = elem.select_statement()?.extract_samples();
             let problem = Problem::new(id, name, samples);
             problems.push(problem);

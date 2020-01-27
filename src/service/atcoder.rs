@@ -69,11 +69,19 @@ impl Serve for AtcoderService<'_, '_> {
         })
     }
 
-    fn fetch(&mut self, _problem_id: &Option<ProblemId>) -> Result<Vec<Problem>> {
+    fn fetch(&mut self, problem_id: &Option<ProblemId>) -> Result<Vec<Problem>> {
         let Self { client, ctx } = self;
         let contest_id = &ctx.global_opt.contest_id;
         let tasks_print_page = TasksPrintPageBuilder::new(contest_id).build(client, ctx)?;
-        let problems = tasks_print_page.extract_problems()?;
-        Ok(problems)
+        let problems = tasks_print_page.extract_problems(problem_id)?;
+        if problems.is_empty() {
+            if let Some(problem_id) = problem_id {
+                Err(anyhow!("Could not find problem \"{}\"", problem_id))
+            } else {
+                Err(anyhow!("Could not find any problems"))
+            }
+        } else {
+            Ok(problems)
+        }
     }
 }
