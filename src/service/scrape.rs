@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, Context as _};
+use anyhow::Context as _;
 use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
@@ -51,12 +51,17 @@ pub trait Fetch: HasUrl {
         Ok((status, html))
     }
 
-    fn fetch_ok(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
+    fn fetch_if(
+        &self,
+        check: impl FnOnce(StatusCode) -> bool,
+        client: &Client,
+        ctx: &mut Context,
+    ) -> Result<Html> {
         let (status, html) = self.fetch(client, ctx)?;
-        if status == StatusCode::OK {
+        if check(status) {
             Ok(html)
         } else {
-            Err(anyhow!("Rceived invalid response: {}", status))
+            Err(Error::msg("Received invalid response"))
         }
     }
 }

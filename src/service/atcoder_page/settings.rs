@@ -18,13 +18,13 @@ impl SettingsPageBuilder {
 
     pub fn build(self, client: &Client, ctx: &mut Context) -> Result<SettingsPage> {
         let (status, html) = self.fetch(client, ctx)?;
-        if status == StatusCode::OK {
-            Ok(SettingsPage {
+        match status {
+            StatusCode::OK => Ok(SettingsPage {
                 builder: self,
                 content: html,
-            })
-        } else {
-            Err(Error::msg("Invalid username or password"))
+            }),
+            StatusCode::FOUND => Err(Error::msg("Invalid username or password")),
+            _ => Err(Error::msg("Received invalid response")),
         }
     }
 }

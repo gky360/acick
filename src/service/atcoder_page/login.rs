@@ -1,5 +1,5 @@
 use reqwest::blocking::Client;
-use reqwest::Url;
+use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
@@ -17,10 +17,11 @@ impl LoginPageBuilder {
     }
 
     pub fn build(self, client: &Client, ctx: &mut Context) -> Result<LoginPage> {
-        self.fetch_ok(client, ctx).map(|html| LoginPage {
-            builder: self,
-            content: html,
-        })
+        self.fetch_if(|s| s == StatusCode::OK, client, ctx)
+            .map(|html| LoginPage {
+                builder: self,
+                content: html,
+            })
     }
 }
 
