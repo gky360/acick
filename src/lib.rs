@@ -155,3 +155,19 @@ impl Context<'_> {
         self.prompt_read(prompt, is_password)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use lazy_static::lazy_static;
+
+    use super::*;
+    use crate::model::{Contest, Problem, Service};
+
+    lazy_static! {
+        pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
+        pub static ref DEFAULT_CONTEST: Contest =
+            Contest::new("arc100", "AtCoder Regular Contest 100", Vec::new());
+        pub static ref DEFAULT_PROBLEM: Problem =
+            Problem::new("C", "Linear Approximation", Vec::new());
+    }
+}

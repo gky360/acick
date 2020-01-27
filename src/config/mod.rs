@@ -13,7 +13,7 @@ mod template;
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::service::CookieStorage;
 use crate::Result;
-use template::{ProblemContext, ProblemTempl, Shell, TemplArray};
+use template::{ProblemTempl, Shell, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[get = "pub"]
@@ -143,8 +143,8 @@ pub struct AtcoderConfig {
     language: String,
     working_directory: ProblemTempl,
     src: ProblemTempl,
-    compile: TemplArray<ProblemTempl, ProblemContext>,
-    run: TemplArray<ProblemTempl, ProblemContext>,
+    compile: TemplArray<ProblemTempl>,
+    run: TemplArray<ProblemTempl>,
 }
 
 impl Default for AtcoderConfig {
@@ -188,6 +188,8 @@ mod string {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::template::ProblemContext;
+    use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
 
     #[test]
     fn serialize_default() -> anyhow::Result<()> {
@@ -199,7 +201,11 @@ mod tests {
     fn exec_default_atcoder_compile() -> anyhow::Result<()> {
         let shell = Shell::default();
         let compile = AtcoderConfig::default().compile;
-        let context = ProblemContext::default();
+        let context = ProblemContext {
+            service: &DEFAULT_SERVICE,
+            contest: &DEFAULT_CONTEST,
+            problem: &DEFAULT_PROBLEM,
+        };
         let output = shell.exec_templ_arr(&compile, &context)?;
         println!("{:?}", output);
         // TODO: assert success

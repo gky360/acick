@@ -41,7 +41,6 @@ pub enum Cmd {
     /// Logs in to service
     Login(LoginOpt),
     // Participate(ParticipateOpt),
-    // New(NewOpt),
     /// Fetches problems from service
     Fetch(FetchOpt),
     // Test(TestOpt), // test samples
