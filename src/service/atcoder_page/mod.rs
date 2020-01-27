@@ -9,10 +9,12 @@ use crate::{Context, Error, Result};
 
 mod login;
 mod settings;
+mod tasks;
 mod tasks_print;
 
 pub use login::{LoginPage, LoginPageBuilder};
 pub use settings::{SettingsPage, SettingsPageBuilder};
+pub use tasks::{TasksPage, TasksPageBuilder};
 pub use tasks_print::{TasksPrintPage, TasksPrintPageBuilder};
 
 lazy_static! {
@@ -47,6 +49,11 @@ pub trait HasHeader: Scrape {
 
     fn is_logged_in_as(&self, user: &str) -> Result<bool> {
         Ok(self.is_logged_in()? && self.current_user()? == user)
+    }
+
+    fn extract_contest_name(&self) -> Option<String> {
+        self.find_first(select!(".contest-title"))
+            .map(|elem| elem.inner_text().trim().to_owned())
     }
 }
 

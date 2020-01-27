@@ -159,6 +159,7 @@ impl Context<'_> {
 #[cfg(test)]
 mod tests {
     use lazy_static::lazy_static;
+    use reqwest::Url;
 
     use super::*;
     use crate::model::{Contest, Problem, Service};
@@ -167,7 +168,11 @@ mod tests {
         pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
         pub static ref DEFAULT_CONTEST: Contest =
             Contest::new("arc100", "AtCoder Regular Contest 100", Vec::new());
-        pub static ref DEFAULT_PROBLEM: Problem =
-            Problem::new("C", "Linear Approximation", Vec::new());
+        pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
+            "C",
+            "Linear Approximation",
+            Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
+            Vec::new()
+        );
     }
 }

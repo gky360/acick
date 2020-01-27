@@ -61,8 +61,8 @@ impl TasksPrintPage<'_> {
                 }
             }
             let samples = elem.select_statement()?.extract_samples();
-            let problem = Problem::new(id, name, samples);
-            problems.push(problem);
+            // let problem = Problem::new(id, name, samples);
+            // problems.push(problem);
         }
         Ok(problems)
     }
@@ -88,6 +88,7 @@ impl Scrape for TasksPrintPage<'_> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct ProblemElem<'a>(ElementRef<'a>);
 
 impl ProblemElem<'_> {
@@ -118,6 +119,7 @@ impl Scrape for ProblemElem<'_> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct StatementElem<'a>(ElementRef<'a>);
 
 impl StatementElem<'_> {

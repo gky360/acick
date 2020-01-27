@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
+use crate::model::string;
 use crate::service::CookieStorage;
 use crate::Result;
 use template::{ProblemTempl, Shell, TemplArray};
@@ -156,32 +157,6 @@ impl Default for AtcoderConfig {
             compile: (&["g++", "-std=gnu++1y", "-O2", "-I/opt/boost/gcc/include", "-L/opt/boost/gcc/lib", "-o", "./a.out", "./Main.cpp"]).into(),
             run: (&["./a.out"]).into(),
         }
-    }
-}
-
-mod string {
-    use std::fmt::Display;
-    use std::str::FromStr;
-
-    use serde::{de, Deserialize, Deserializer, Serializer};
-
-    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        T: Display,
-        S: Serializer,
-    {
-        serializer.collect_str(value)
-    }
-
-    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-    where
-        T: FromStr,
-        T::Err: Display,
-        D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer)?
-            .parse()
-            .map_err(de::Error::custom)
     }
 }
 

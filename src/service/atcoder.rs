@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use crate::cmd::LoginOutcome;
 use crate::model::{Contest, ProblemId};
 use crate::service::atcoder_page::{
-    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPrintPageBuilder,
+    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPageBuilder, TasksPrintPageBuilder,
 };
 use crate::service::scrape::{HasUrl as _, Scrape as _};
 use crate::service::serve::Serve;
@@ -71,6 +71,10 @@ impl Serve for AtcoderService<'_, '_> {
     fn fetch(&mut self, problem_id: &Option<ProblemId>) -> Result<Contest> {
         let Self { client, ctx } = self;
         let contest_id = &ctx.global_opt.contest_id;
+
+        let tasks_page = TasksPageBuilder::new(contest_id).build(client, ctx)?;
+        let contest = tasks_page.extract_contest()?;
+
         let tasks_print_page = TasksPrintPageBuilder::new(contest_id).build(client, ctx)?;
         let problems = tasks_print_page
             .extract_problems(problem_id)

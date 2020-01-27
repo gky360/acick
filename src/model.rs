@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::convert::Infallible;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -5,6 +6,7 @@ use std::str::FromStr;
 
 use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
+use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
 use crate::service::{AtcoderService, Serve};
@@ -100,14 +102,22 @@ pub type ContestId = String;
 pub struct Problem {
     id: ProblemId,
     name: String,
+    #[serde(with = "string")]
+    url: Url,
     samples: Vec<Sample>,
 }
 
 impl Problem {
-    pub fn new(id: impl Into<ProblemId>, name: impl Into<String>, samples: Vec<Sample>) -> Self {
+    pub fn new(
+        id: impl Into<ProblemId>,
+        name: impl Into<String>,
+        url: Url,
+        samples: Vec<Sample>,
+    ) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
+            url,
             samples,
         }
     }
@@ -125,6 +135,18 @@ impl ProblemId {
 impl PartialEq<ProblemId> for ProblemId {
     fn eq(&self, other: &ProblemId) -> bool {
         self.normalize() == other.normalize()
+    }
+}
+
+impl PartialOrd for ProblemId {
+    fn partial_cmp(&self, other: &ProblemId) -> Option<Ordering> {
+        Some(self.normalize().cmp(&other.normalize()))
+    }
+}
+
+impl Ord for ProblemId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.normalize().cmp(&other.normalize())
     }
 }
 
@@ -172,5 +194,31 @@ impl Sample {
             input: input.into(),
             output: output.into(),
         }
+    }
+}
+
+pub mod string {
+    use std::fmt::Display;
+    use std::str::FromStr;
+
+    use serde::{de, Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Display,
+        S: Serializer,
+    {
+        serializer.collect_str(value)
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: FromStr,
+        T::Err: Display,
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
     }
 }
