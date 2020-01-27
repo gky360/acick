@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
@@ -40,32 +40,28 @@ pub trait HasUrl {
     fn url(&self) -> Result<Url>;
 }
 
-pub trait CheckStatus {
-    fn is_accept(&self, status: StatusCode) -> bool {
-        status.is_success()
-    }
-
-    fn is_reject(&self, status: StatusCode) -> bool {
-        status.is_redirection() || status.is_client_error()
-    }
-}
-
-pub trait Fetch: HasUrl + CheckStatus {
-    fn fetch(&self, client: &Client, ctx: &mut Context) -> Result<Option<Html>> {
-        let maybe_html = client
+pub trait Fetch: HasUrl {
+    fn fetch(&self, client: &Client, ctx: &mut Context) -> Result<(StatusCode, Html)> {
+        let res = client
             .get(self.url()?)
             .with_retry(client, ctx)
-            .accept(|status| self.is_accept(status))
-            .reject(|status| self.is_reject(status))
-            .retry_send()?
-            .map(|res| res.text())
-            .transpose()?
-            .map(|text| Html::parse_document(&text));
-        Ok(maybe_html)
+            .retry_send()?;
+        let status = res.status();
+        let html = res.text().map(|text| Html::parse_document(&text))?;
+        Ok((status, html))
+    }
+
+    fn fetch_ok(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
+        let (status, html) = self.fetch(client, ctx)?;
+        if status == StatusCode::OK {
+            Ok(html)
+        } else {
+            Err(anyhow!("Rceived invalid response: {}", status))
+        }
     }
 }
 
-impl<T: HasUrl + CheckStatus> Fetch for T {}
+impl<T: HasUrl> Fetch for T {}
 
 pub trait Scrape {
     fn elem(&self) -> ElementRef;

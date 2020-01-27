@@ -3,8 +3,8 @@ use reqwest::Url;
 use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
-use crate::service::scrape::{CheckStatus, Fetch as _, HasUrl, Scrape};
-use crate::{Context, Error, Result};
+use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
+use crate::{Context, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginPageBuilder {}
@@ -17,16 +17,12 @@ impl LoginPageBuilder {
     }
 
     pub fn build(self, client: &Client, ctx: &mut Context) -> Result<LoginPage> {
-        self.fetch(client, ctx)?
-            .ok_or_else(|| Error::msg("Received invalid page"))
-            .map(|html| LoginPage {
-                builder: self,
-                content: html,
-            })
+        self.fetch_ok(client, ctx).map(|html| LoginPage {
+            builder: self,
+            content: html,
+        })
     }
 }
-
-impl CheckStatus for LoginPageBuilder {}
 
 impl HasUrl for LoginPageBuilder {
     fn url(&self) -> Result<Url> {

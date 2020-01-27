@@ -1,10 +1,10 @@
 use reqwest::blocking::Client;
-use reqwest::Url;
+use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
-use crate::service::scrape::{CheckStatus, Fetch as _, HasUrl, Scrape};
-use crate::{Context, Result};
+use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
+use crate::{Context, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SettingsPageBuilder {}
@@ -16,16 +16,18 @@ impl SettingsPageBuilder {
         Self {}
     }
 
-    pub fn build(self, client: &Client, ctx: &mut Context) -> Result<Option<SettingsPage>> {
-        let maybe_page = self.fetch(client, ctx)?.map(|html| SettingsPage {
-            builder: self,
-            content: html,
-        });
-        Ok(maybe_page)
+    pub fn build(self, client: &Client, ctx: &mut Context) -> Result<SettingsPage> {
+        let (status, html) = self.fetch(client, ctx)?;
+        if status == StatusCode::OK {
+            Ok(SettingsPage {
+                builder: self,
+                content: html,
+            })
+        } else {
+            Err(Error::msg("Invalid username or password"))
+        }
     }
 }
-
-impl CheckStatus for SettingsPageBuilder {}
 
 impl HasUrl for SettingsPageBuilder {
     fn url(&self) -> Result<Url> {

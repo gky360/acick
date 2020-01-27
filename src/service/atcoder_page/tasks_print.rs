@@ -1,17 +1,17 @@
 use std::collections::BTreeMap;
 
 use anyhow::Context as _;
+use getset::CopyGetters;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::blocking::Client;
-use reqwest::Url;
+use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
 use crate::model::{Problem, ProblemId, Sample};
 use crate::service::atcoder_page::BASE_URL;
 use crate::service::scrape::{
-    parse_zenkaku_digits, regex, select, CheckStatus, ElementRefExt as _, Fetch as _, HasUrl,
-    Scrape,
+    parse_zenkaku_digits, regex, select, ElementRefExt as _, Fetch as _, HasUrl, Scrape,
 };
 use crate::{Context, Error, Result};
 
@@ -26,16 +26,19 @@ impl<'a> TasksPrintPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, ctx: &mut Context) -> Result<TasksPrintPage<'a>> {
-        self.fetch(client, ctx)?
-            .ok_or_else(|| Error::msg("Received invalid page"))
-            .map(|html| TasksPrintPage {
-                builder: self,
-                content: html,
-            })
+        let (status, html) = self.fetch(client, ctx)?;
+        let is_success = match status {
+            StatusCode::OK => true,
+            StatusCode::NOT_FOUND => false,
+            _ => return Err(Error::msg("Received invalid response")),
+        };
+        Ok(TasksPrintPage {
+            builder: self,
+            is_success,
+            content: html,
+        })
     }
 }
-
-impl CheckStatus for TasksPrintPageBuilder<'_> {}
 
 impl HasUrl for TasksPrintPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
@@ -46,14 +49,17 @@ impl HasUrl for TasksPrintPageBuilder<'_> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, CopyGetters, PartialEq, Eq)]
 pub struct TasksPrintPage<'a> {
     builder: TasksPrintPageBuilder<'a>,
+    #[get_copy = "pub"]
+    is_success: bool,
     content: Html,
 }
 
 impl TasksPrintPage<'_> {
     pub fn extract_problems(&self, problem_id: &Option<ProblemId>) -> Result<Vec<Problem>> {
+        // TODO: check is_success
         let mut problems = Vec::new();
         for elem in self.select_problems() {
             let (id, name) = elem.extract_id_name()?;

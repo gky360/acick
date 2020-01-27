@@ -45,18 +45,17 @@ impl Serve for AtcoderService<'_, '_> {
             "username" => user.to_owned(),
             "password" => pass,
         );
-        client
+        let res = client
             .post(login_page.url()?)
             .form(&payload)
             .with_retry(client, ctx)
-            .accept(|status| status == StatusCode::FOUND)
-            .retry_send()?
-            .ok_or_else(|| Error::msg("Received invalid response"))?;
+            .retry_send()?;
+        if res.status() != StatusCode::FOUND {
+            return Err(Error::msg("Received invalid response"));
+        }
 
         // Check if login succeeded
-        let settings_page = SettingsPageBuilder::new()
-            .build(client, ctx)?
-            .ok_or_else(|| Error::msg("Invalid username or password"))?;
+        let settings_page = SettingsPageBuilder::new().build(client, ctx)?;
         let current_user = settings_page.current_user()?;
         if current_user != user {
             return Err(anyhow!("Logged in as another user: {}", current_user));
