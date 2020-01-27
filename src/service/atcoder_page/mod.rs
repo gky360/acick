@@ -1,10 +1,11 @@
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use lazy_static::lazy_static;
-use reqwest::Url;
-use scraper::ElementRef;
+use reqwest::blocking::Client;
+use reqwest::{StatusCode, Url};
+use scraper::{ElementRef, Html};
 
-use crate::service::scrape::{select, ElementRefExt as _, Scrape};
-use crate::{Error, Result};
+use crate::service::scrape::{select, ElementRefExt as _, Fetch, Scrape};
+use crate::{Context, Error, Result};
 
 mod login;
 mod settings;
@@ -46,5 +47,53 @@ pub trait HasHeader: Scrape {
 
     fn is_logged_in_as(&self, user: &str) -> Result<bool> {
         Ok(self.is_logged_in()? && self.current_user()? == user)
+    }
+}
+
+pub trait FetchMaybeNotFound: Fetch {
+    fn fetch_maybe_not_found(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
+        let (status, html) = self.fetch(client, ctx)?;
+        match status {
+            StatusCode::OK => Ok(html),
+            StatusCode::NOT_FOUND if NotFoundPage(&html).is_not_found() => Err(anyhow!(
+                "Could not find contest : {} .
+Check if the contest id is correct.",
+                ctx.global_opt.contest_id
+            )),
+            StatusCode::NOT_FOUND if NotFoundPage(&html).is_permission_denied() => Err(anyhow!(
+                "Found not participated or not started contest : {} .
+Participate in the contest and wait until the contest starts.",
+                ctx.global_opt.contest_id
+            )),
+            _ => Err(Error::msg("Received invalid response")),
+        }
+    }
+}
+
+struct NotFoundPage<'a>(&'a Html);
+
+impl NotFoundPage<'_> {
+    fn select_alert(&self) -> Option<ElementRef> {
+        self.find_first(select!(".alert-danger"))
+    }
+
+    fn alert_contains(&self, pat: &str) -> bool {
+        self.select_alert()
+            .map(|elem| elem.inner_text().contains(pat))
+            .unwrap_or(false)
+    }
+
+    fn is_permission_denied(&self) -> bool {
+        self.alert_contains("Permission denied.")
+    }
+
+    fn is_not_found(&self) -> bool {
+        self.alert_contains("Contest not found.")
+    }
+}
+
+impl Scrape for NotFoundPage<'_> {
+    fn elem(&self) -> ElementRef {
+        self.0.root_element()
     }
 }
