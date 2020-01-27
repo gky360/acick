@@ -1,3 +1,5 @@
+use std::fmt;
+
 use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
 use serde::{Deserialize, Serialize};
@@ -65,14 +67,26 @@ impl ServiceKind {
     }
 }
 
+impl fmt::Display for ServiceKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(self.into())
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Contest {
     id: ContestId,
+    name: String,
+    problems: Vec<Problem>,
 }
 
 impl Contest {
-    pub fn new(id: ContestId) -> Self {
-        Self { id }
+    pub fn new(id: impl Into<ContestId>, name: impl Into<String>, problems: Vec<Problem>) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            problems,
+        }
     }
 }
 
@@ -86,8 +100,12 @@ pub struct Problem {
 }
 
 impl Problem {
-    pub fn new(id: ProblemId, name: String, samples: Vec<Sample>) -> Self {
-        Self { id, name, samples }
+    pub fn new(id: impl Into<ProblemId>, name: impl Into<String>, samples: Vec<Sample>) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            samples,
+        }
     }
 }
 
@@ -101,11 +119,15 @@ pub struct Sample {
 }
 
 impl Sample {
-    pub fn new(name: String, input: String, output: String) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        input: impl Into<String>,
+        output: impl Into<String>,
+    ) -> Self {
         Self {
-            name,
-            input,
-            output,
+            name: name.into(),
+            input: input.into(),
+            output: output.into(),
         }
     }
 }

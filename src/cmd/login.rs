@@ -48,7 +48,7 @@ impl fmt::Display for LoginOutcome {
             } else {
                 "Successfully"
             },
-            Into::<&'static str>::into(&self.service_id),
+            self.service_id,
             &self.username
         )
     }

@@ -116,8 +116,8 @@ impl Default for ProblemContext {
     fn default() -> Self {
         Self {
             service: Service::new(ServiceKind::Atcoder),
-            contest: Contest::new("arc100".into()),
-            problem: Problem::new("c".into(), "Linear Approximation".into(), Vec::new()),
+            contest: Contest::new("arc100", "AtCoder Regular Contest 100", Vec::new()),
+            problem: Problem::new("c", "Linear Approximation", Vec::new()),
         }
     }
 }

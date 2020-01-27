@@ -4,7 +4,7 @@ use reqwest::blocking::Client;
 use reqwest::StatusCode;
 
 use crate::cmd::LoginOutcome;
-use crate::model::{Problem, ProblemId};
+use crate::model::{Contest, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPrintPageBuilder,
 };
@@ -69,19 +69,25 @@ impl Serve for AtcoderService<'_, '_> {
         })
     }
 
-    fn fetch(&mut self, problem_id: &Option<ProblemId>) -> Result<Vec<Problem>> {
+    fn fetch(&mut self, problem_id: &Option<ProblemId>) -> Result<Contest> {
         let Self { client, ctx } = self;
         let contest_id = &ctx.global_opt.contest_id;
         let tasks_print_page = TasksPrintPageBuilder::new(contest_id).build(client, ctx)?;
-        let problems = tasks_print_page.extract_problems(problem_id)?;
-        if problems.is_empty() {
-            if let Some(problem_id) = problem_id {
-                Err(anyhow!("Could not find problem \"{}\"", problem_id))
-            } else {
-                Err(anyhow!("Could not find any problems"))
-            }
-        } else {
-            Ok(problems)
-        }
+        let problems = tasks_print_page
+            .extract_problems(problem_id)
+            .and_then(|problems| {
+                if problems.is_empty() {
+                    if let Some(problem_id) = problem_id {
+                        Err(anyhow!("Could not find problem \"{}\"", problem_id))
+                    } else {
+                        Err(anyhow!("Could not find any problems"))
+                    }
+                } else {
+                    Ok(problems)
+                }
+            })?;
+        // TODO: fetch problem name
+        let contest = Contest::new(contest_id, "problem.name goes here", problems);
+        Ok(contest)
     }
 }

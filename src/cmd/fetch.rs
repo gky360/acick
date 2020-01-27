@@ -16,11 +16,10 @@ pub struct FetchOpt {
 
 impl Run for FetchOpt {
     fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
-        eprintln!("{:?}", self);
         let GlobalOpt { service_id, .. } = ctx.global_opt;
         let mut service = service_id.serve(ctx);
-        let problems = service.fetch(&self.problem_id)?;
-        eprintln!("{:?}", problems);
+        let contest = service.fetch(&self.problem_id)?;
+        eprintln!("{:?}", contest);
         Ok(Box::new(FetchOutcome {}))
     }
 }
