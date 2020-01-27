@@ -1,3 +1,4 @@
+use anyhow::Context as _;
 use lazy_static::lazy_static;
 use reqwest::Url;
 use scraper::ElementRef;
@@ -20,6 +21,7 @@ lazy_static! {
 pub trait HasHeader: Scrape {
     fn select_header(&self) -> Result<ElementRef> {
         self.find_first(select!("nav"))
+            .context("Could not find header")
     }
 
     fn is_logged_in(&self) -> Result<bool> {

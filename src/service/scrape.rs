@@ -67,17 +67,17 @@ pub trait Fetch: HasUrl + CheckStatus {
 
 impl<T: HasUrl + CheckStatus> Fetch for T {}
 
-pub trait Scrape: AsRef<Html> {
-    fn find_first(&self, selector: &Selector) -> Result<ElementRef> {
-        self.as_ref()
-            .select(selector)
-            .next()
-            .context("Could not find element")
+pub trait Scrape {
+    fn elem(&self) -> ElementRef;
+
+    fn find_first(&self, selector: &Selector) -> Option<ElementRef> {
+        self.elem().select(selector).next()
     }
 
     fn extract_csrf_token(&self) -> Result<String> {
         let token = self
-            .find_first(select!("[name=\"csrf_token\"]"))?
+            .find_first(select!("[name=\"csrf_token\"]"))
+            .context("Could not extract csrf token")?
             .value()
             .attr("value")
             .context("Could not find csrf_token value attr")?
@@ -89,8 +89,6 @@ pub trait Scrape: AsRef<Html> {
         }
     }
 }
-
-impl<T: AsRef<Html>> Scrape for T {}
 
 pub trait ElementRefExt {
     fn inner_text(&self) -> String;

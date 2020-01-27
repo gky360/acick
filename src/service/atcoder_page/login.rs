@@ -1,9 +1,9 @@
 use reqwest::blocking::Client;
 use reqwest::Url;
-use scraper::Html;
+use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
-use crate::service::scrape::{CheckStatus, Fetch as _, HasUrl};
+use crate::service::scrape::{CheckStatus, Fetch as _, HasUrl, Scrape};
 use crate::{Context, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,9 +47,9 @@ impl HasUrl for LoginPage {
     }
 }
 
-impl AsRef<Html> for LoginPage {
-    fn as_ref(&self) -> &Html {
-        &self.content
+impl Scrape for LoginPage {
+    fn elem(&self) -> ElementRef {
+        self.content.root_element()
     }
 }
 

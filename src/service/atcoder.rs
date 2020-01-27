@@ -86,8 +86,8 @@ impl Serve for AtcoderService<'_, '_> {
                     Ok(problems)
                 }
             })?;
-        // TODO: fetch problem name
-        let contest = Contest::new(contest_id, "problem.name goes here", problems);
+        // TODO: fetch contest name
+        let contest = Contest::new(contest_id, "contest.name goes here", problems);
         Ok(contest)
     }
 }

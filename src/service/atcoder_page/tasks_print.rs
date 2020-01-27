@@ -11,6 +11,7 @@ use crate::model::{Problem, ProblemId, Sample};
 use crate::service::atcoder_page::BASE_URL;
 use crate::service::scrape::{
     parse_zenkaku_digits, regex, select, CheckStatus, ElementRefExt as _, Fetch as _, HasUrl,
+    Scrape,
 };
 use crate::{Context, Error, Result};
 
@@ -83,9 +84,9 @@ impl HasUrl for TasksPrintPage<'_> {
     }
 }
 
-impl AsRef<Html> for TasksPrintPage<'_> {
-    fn as_ref(&self) -> &Html {
-        &self.content
+impl Scrape for TasksPrintPage<'_> {
+    fn elem(&self) -> ElementRef {
+        self.content.root_element()
     }
 }
 
@@ -94,29 +95,28 @@ struct ProblemElem<'a>(ElementRef<'a>);
 impl ProblemElem<'_> {
     fn extract_id_name(&self) -> Result<(String, String)> {
         let title = self
-            .0
-            .select(select!(".h2"))
-            .next()
-            .ok_or_else(|| Error::msg("Could not find problem title"))?
+            .find_first(select!(".h2"))
+            .context("Could not find problem title")?
             .inner_text();
         let mut id_name = title.splitn(2, '-');
-        let id = id_name
-            .next()
-            .ok_or_else(|| Error::msg("Could not find problem id"))?
-            .trim();
+        let id = id_name.next().context("Could not find problem id")?.trim();
         let name = id_name
             .next()
-            .ok_or_else(|| Error::msg("Could not find problem name"))?
+            .context("Could not find problem name")?
             .trim();
         Ok((id.to_owned(), name.to_owned()))
     }
 
     fn select_statement(&self) -> Result<StatementElem> {
-        self.0
-            .select(select!("#task-statement"))
-            .next()
-            .ok_or_else(|| Error::msg("Could not find task statement"))
+        self.find_first(select!("#task-statement"))
+            .context("Could not find task statement")
             .map(StatementElem)
+    }
+}
+
+impl Scrape for ProblemElem<'_> {
+    fn elem(&self) -> ElementRef {
+        self.0
     }
 }
 
@@ -207,5 +207,11 @@ impl StatementElem<'_> {
         } else {
             Some(samples)
         }
+    }
+}
+
+impl Scrape for StatementElem<'_> {
+    fn elem(&self) -> ElementRef {
+        self.0
     }
 }
