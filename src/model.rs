@@ -74,6 +74,12 @@ impl ServiceKind {
     }
 }
 
+impl Default for ServiceKind {
+    fn default() -> Self {
+        Self::Atcoder
+    }
+}
+
 impl fmt::Display for ServiceKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.into())

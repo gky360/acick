@@ -4,7 +4,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::model::ProblemId;
+use crate::model::{Contest, ProblemId};
 use crate::{Context, GlobalOpt, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -20,13 +20,14 @@ impl Run for FetchOpt {
         let GlobalOpt { service_id, .. } = ctx.global_opt;
         let mut service = service_id.serve(ctx);
         let contest = service.fetch(&self.problem_id)?;
-        eprintln!("{:?}", contest);
-        Ok(Box::new(FetchOutcome {}))
+        Ok(Box::new(FetchOutcome { contest }))
     }
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct FetchOutcome {}
+pub struct FetchOutcome {
+    contest: Contest,
+}
 
 impl fmt::Display for FetchOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

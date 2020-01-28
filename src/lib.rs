@@ -23,6 +23,21 @@ use model::{ContestId, ServiceKind};
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
+#[derive(EnumString, EnumVariantNames, IntoStaticStr, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[strum(serialize_all = "kebab-case")]
+pub enum OutputFormat {
+    Default,
+    Debug,
+    Json,
+    Yaml,
+}
+
+impl Default for OutputFormat {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GlobalOpt {
     #[structopt(
@@ -30,7 +45,7 @@ pub struct GlobalOpt {
         long,
         global = true,
         env = "ACICK_SERVICE",
-        default_value = ServiceKind::Atcoder.into(),
+        default_value = ServiceKind::default().into(),
         possible_values = &ServiceKind::VARIANTS,
     )]
     service_id: ServiceKind,
@@ -42,8 +57,13 @@ pub struct GlobalOpt {
         default_value = "arc100"
     )]
     contest_id: ContestId,
-    #[structopt(long, global = true)]
-    debug: bool,
+    #[structopt(
+        long,
+        global = true,
+        default_value = OutputFormat::default().into(),
+        possible_values = &OutputFormat::VARIANTS
+    )]
+    output: OutputFormat,
 }
 
 impl Default for GlobalOpt {
@@ -64,28 +84,24 @@ pub struct Opt {
 impl Opt {
     pub fn run(
         &self,
-        mut stdin: impl io::BufRead + fmt::Debug,
-        mut stdout: impl io::Write,
-        mut stderr: impl io::Write + fmt::Debug,
+        stdin: &mut dyn Input,
+        stdout: &mut dyn io::Write,
+        stderr: &mut dyn Output,
     ) -> Result<()> {
         let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
         let conf = Config::load(cwd).context("Could not load config")?;
         let mut ctx = Context {
             global_opt: &self.global_opt,
             conf: &conf,
-            stdin: &mut stdin,
-            stderr: &mut stderr,
+            stdin,
+            stderr,
         };
         let outcome = self.cmd.run(&mut ctx)?;
 
         ctx.stderr.flush()?;
         writeln!(stdout)?;
 
-        if self.global_opt.debug {
-            writeln!(stdout, "{:#?}", &outcome)
-        } else {
-            writeln!(stdout, "{}", &outcome)
-        }?;
+        outcome.print(stdout, self.global_opt.output)?;
 
         if outcome.is_error() {
             Err(Error::msg("Command exited with error"))
