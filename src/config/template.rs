@@ -77,11 +77,10 @@ pub trait Expand<'a> {
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CmdContext<'a> {
-    pub command: &'a str,
+    command: &'a str,
 }
 
 impl<'a> CmdContext<'a> {
-    #[allow(dead_code)]
     pub fn new(command: &'a str) -> Self {
         Self { command }
     }
@@ -106,9 +105,19 @@ impl<'a, T: Into<String>> From<T> for CmdTempl {
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProblemContext<'a> {
-    pub service: &'a Service,
-    pub contest: &'a Contest,
-    pub problem: &'a Problem,
+    service: &'a Service,
+    contest: &'a Contest,
+    problem: &'a Problem,
+}
+
+impl<'a> ProblemContext<'a> {
+    pub fn new(service: &'a Service, contest: &'a Contest, problem: &'a Problem) -> Self {
+        Self {
+            service,
+            contest,
+            problem,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -169,7 +178,6 @@ impl<T: fmt::Display> fmt::Display for TemplArray<T> {
 pub type Shell = TemplArray<CmdTempl>;
 
 impl Shell {
-    #[allow(dead_code)]
     pub fn exec(&self, command: &str) -> Result<Output> {
         let cmd_context = CmdContext::new(command);
         let command = self
@@ -242,11 +250,8 @@ mod tests {
     #[test]
     fn expand_problem_templ() -> anyhow::Result<()> {
         let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
-        let problem_context = ProblemContext {
-            service: &DEFAULT_SERVICE,
-            contest: &DEFAULT_CONTEST,
-            problem: &DEFAULT_PROBLEM,
-        };
+        let problem_context =
+            ProblemContext::new(&DEFAULT_SERVICE, &DEFAULT_CONTEST, &DEFAULT_PROBLEM);
         templ.expand(&problem_context)?;
         Ok(())
     }

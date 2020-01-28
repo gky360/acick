@@ -68,11 +68,7 @@ Fix version in the config file so that it matches the acick version."#,
         contest: &Contest,
         problem: &Problem,
     ) -> Result<AbsPathBuf> {
-        let problem_context = ProblemContext {
-            service,
-            contest,
-            problem,
-        };
+        let problem_context = ProblemContext::new(service, contest, problem);
         let samples_path_expanded = self.data.samples_path.expand(&problem_context)?;
         Ok(self.base_dir.join(samples_path_expanded))
     }
@@ -222,11 +218,7 @@ mod tests {
     fn exec_default_atcoder_compile() -> anyhow::Result<()> {
         let shell = Shell::default();
         let compile = AtcoderConfig::default().compile;
-        let context = ProblemContext {
-            service: &DEFAULT_SERVICE,
-            contest: &DEFAULT_CONTEST,
-            problem: &DEFAULT_PROBLEM,
-        };
+        let context = ProblemContext::new(&DEFAULT_SERVICE, &DEFAULT_CONTEST, &DEFAULT_PROBLEM);
         let output = shell.exec_templ_arr(&compile, &context)?;
         println!("{:?}", output);
         // TODO: assert success
