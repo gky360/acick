@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context as _};
 use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
 use semver::Version;
@@ -58,7 +58,14 @@ Fix version in the config file so that it matches the acick version."#,
 
     fn save_problem(&self, service: &Service, contest: &Contest, problem: &Problem) -> Result<()> {
         let samples_path = self.samples_path(service, contest, problem)?;
-        eprintln!("{}", samples_path);
+        if samples_path.as_ref().is_file() {
+            // TODO: print warning for skipping
+            return Ok(());
+        }
+        let file = samples_path
+            .create_dir_all_and_open(false, true)
+            .with_context(|| format!("Could not create samples file : {}", samples_path))?;
+        serde_yaml::to_writer(file, &problem)?;
         Ok(())
     }
 
