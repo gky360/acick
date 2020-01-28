@@ -1,10 +1,10 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Context as _};
 use maplit::hashmap;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 
 use crate::cmd::LoginOutcome;
-use crate::model::{Contest, ProblemId};
+use crate::model::{Contest, Problem, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPageBuilder, TasksPrintPageBuilder,
 };
@@ -73,24 +73,51 @@ impl Serve for AtcoderService<'_, '_> {
         let contest_id = &ctx.global_opt.contest_id;
 
         let tasks_page = TasksPageBuilder::new(contest_id).build(client, ctx)?;
-        let contest = tasks_page.extract_contest()?;
+        let contest_name = tasks_page
+            .extract_contest_name()
+            .context("Could not extract contest name")?;
+        let mut problems: Vec<Problem> = tasks_page
+            .extract_problems()?
+            .into_iter()
+            .filter(|problem| {
+                if let Some(problem_id) = problem_id {
+                    problem.id() == problem_id
+                } else {
+                    true
+                }
+            })
+            .collect();
+        if problems.is_empty() {
+            let err = if let Some(problem_id) = problem_id {
+                Err(anyhow!(
+                    "Could not find problem \"{}\" in contest {}",
+                    problem_id,
+                    contest_id
+                ))
+            } else {
+                Err(anyhow!(
+                    "Could not find any problems in contest {}",
+                    contest_id
+                ))
+            };
+            return err;
+        }
 
         let tasks_print_page = TasksPrintPageBuilder::new(contest_id).build(client, ctx)?;
-        let problems = tasks_print_page
-            .extract_problems(problem_id)
-            .and_then(|problems| {
-                if problems.is_empty() {
-                    if let Some(problem_id) = problem_id {
-                        Err(anyhow!("Could not find problem \"{}\"", problem_id))
-                    } else {
-                        Err(anyhow!("Could not find any problems"))
-                    }
-                } else {
-                    Ok(problems)
-                }
-            })?;
-        // TODO: fetch contest name
-        let contest = Contest::new(contest_id, "contest.name goes here", problems);
+        let mut samples_map = tasks_print_page.extract_samples_map()?;
+        for problem in problems.iter_mut() {
+            if let Some(samples) = samples_map.remove(&problem.id()) {
+                problem.set_samples(samples);
+            } else {
+                // found problem on TasksPage but not found on TasksPrintPage
+                return Err(anyhow!(
+                    "Could not extract samples for problem : {}",
+                    problem.id()
+                ));
+            }
+        }
+
+        let contest = Contest::new(contest_id, contest_name, problems);
         Ok(contest)
     }
 }

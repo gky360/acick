@@ -1,14 +1,12 @@
-use std::collections::BTreeMap;
-
 use anyhow::Context as _;
 use reqwest::blocking::Client;
 use reqwest::Url;
-use scraper::{ElementRef, Html, Selector};
+use scraper::{ElementRef, Html};
 
-use crate::model::{Contest, Problem, ProblemId};
+use crate::model::{Problem, ProblemId};
 use crate::service::atcoder_page::{FetchMaybeNotFound, HasHeader, BASE_URL};
 use crate::service::scrape::{select, ElementRefExt as _, HasUrl, Scrape};
-use crate::{Context, Error, Result};
+use crate::{Context, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPageBuilder<'a> {
@@ -47,15 +45,7 @@ pub struct TasksPage<'a> {
 }
 
 impl TasksPage<'_> {
-    pub fn extract_contest(&self) -> Result<Contest> {
-        let name = self
-            .extract_contest_name()
-            .context("Could not extract contest name")?;
-        let problems = self.extract_problems()?;
-        Ok(Contest::new(self.builder.contest_id, name, problems))
-    }
-
-    fn extract_problems(&self) -> Result<Vec<Problem>> {
+    pub fn extract_problems(&self) -> Result<Vec<Problem>> {
         self.select_problem_rows()
             .map(|elem| elem.extract_problem())
             .collect()
@@ -102,7 +92,7 @@ impl ProblemRowElem<'_> {
             .context("Could not find link to a task")?
             .value()
             .attr("href")
-            .and_then(|href| Url::parse(href).ok())
+            .and_then(|href| BASE_URL.join(href).ok())
             .context("Could not parse task url")?;
         Ok(Problem::new(id, name, url, Vec::new()))
     }

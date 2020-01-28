@@ -4,6 +4,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
+use getset::{Getters, Setters};
 use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
 use reqwest::Url;
@@ -79,7 +80,8 @@ impl fmt::Display for ServiceKind {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
+#[get = "pub"]
 pub struct Contest {
     id: ContestId,
     name: String,
@@ -98,12 +100,14 @@ impl Contest {
 
 pub type ContestId = String;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Setters, Debug, Clone, PartialEq, Eq, Hash)]
+#[get = "pub"]
 pub struct Problem {
     id: ProblemId,
     name: String,
     #[serde(with = "string")]
     url: Url,
+    #[set = "pub"]
     samples: Vec<Sample>,
 }
 
