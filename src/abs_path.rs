@@ -1,5 +1,6 @@
 use std::env::current_dir;
 use std::fmt;
+use std::fs::{create_dir_all, File, OpenOptions};
 use std::path::{Path, PathBuf};
 
 use anyhow::anyhow;
@@ -28,6 +29,18 @@ impl AbsPathBuf {
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
         // TODO: use shellexpand, follow symlinks
         Self(self.0.join(path))
+    }
+
+    pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> Result<File> {
+        if let Some(dir) = self.0.parent() {
+            create_dir_all(&dir)?;
+        }
+        let file = OpenOptions::new()
+            .read(is_read)
+            .write(is_write)
+            .create(true)
+            .open(&self.0)?;
+        Ok(file)
     }
 }
 
