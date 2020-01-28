@@ -11,10 +11,10 @@ use serde::{Deserialize, Serialize};
 mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
-use crate::model::string;
+use crate::model::{string, Contest, Problem, Service, ServiceKind};
 use crate::service::CookieStorage;
 use crate::Result;
-use template::{ProblemTempl, Shell, TemplArray};
+use template::{Expand as _, ProblemContext, ProblemTempl, Shell, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[get = "pub"]
@@ -47,6 +47,35 @@ Fix version in the config file so that it matches the acick version."#,
         let cookies_path = &self.data.session.cookies_path;
         CookieStorage::open(&cookies_path.to_abs(&self.base_dir))
     }
+
+    pub fn save_problems(&self, service_id: ServiceKind, contest: &Contest) -> Result<()> {
+        let service = Service::new(service_id);
+        for problem in contest.problems().iter() {
+            self.save_problem(&service, contest, problem)?;
+        }
+        Ok(())
+    }
+
+    fn save_problem(&self, service: &Service, contest: &Contest, problem: &Problem) -> Result<()> {
+        let samples_path = self.samples_path(service, contest, problem)?;
+        eprintln!("{}", samples_path);
+        Ok(())
+    }
+
+    fn samples_path(
+        &self,
+        service: &Service,
+        contest: &Contest,
+        problem: &Problem,
+    ) -> Result<AbsPathBuf> {
+        let problem_context = ProblemContext {
+            service,
+            contest,
+            problem,
+        };
+        let samples_path_expanded = self.data.samples_path.expand(&problem_context)?;
+        Ok(self.base_dir.join(samples_path_expanded))
+    }
 }
 
 impl fmt::Display for Config {
@@ -58,12 +87,16 @@ impl fmt::Display for Config {
 
 #[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
-#[get = "pub"]
 pub struct ConfigData {
     #[serde(with = "string")]
+    #[get = "pub"]
     version: Version,
+    #[get = "pub"]
     shell: Shell,
+    samples_path: ProblemTempl,
+    #[get = "pub"]
     session: SessionConfig,
+    #[get = "pub"]
     services: ServicesConfig,
 }
 
@@ -72,6 +105,9 @@ impl Default for ConfigData {
         Self {
             version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
             shell: Shell::default(),
+            samples_path:
+                "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/samples.yaml"
+                    .into(),
             session: SessionConfig::default(),
             services: ServicesConfig::default(),
         }
@@ -142,7 +178,7 @@ pub struct ServicesConfig {
 #[serde(default)]
 pub struct AtcoderConfig {
     language: String,
-    working_directory: ProblemTempl,
+    working_dir: ProblemTempl,
     src: ProblemTempl,
     compile: TemplArray<ProblemTempl>,
     run: TemplArray<ProblemTempl>,
@@ -152,9 +188,19 @@ impl Default for AtcoderConfig {
     fn default() -> Self {
         Self {
             language: "C++14 (GCC 5.4.1)".into(),
-            working_directory: "{{ service.id }}/{{ contest.id | kebab_case }}/{{ problem.id | kebab_case }}".into(),
-            src: "{{ service.id }}/{{ contest.id | kebab_case }}/{{ problem.id | kebab_case }}/Main.cpp".into(),
-            compile: (&["g++", "-std=gnu++1y", "-O2", "-I/opt/boost/gcc/include", "-L/opt/boost/gcc/lib", "-o", "./a.out", "./Main.cpp"]).into(),
+            working_dir: "{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}".into(),
+            src: "{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/Main.cpp".into(),
+            compile: (&[
+                "g++",
+                "-std=gnu++1y",
+                "-O2",
+                "-I/opt/boost/gcc/include",
+                "-L/opt/boost/gcc/lib",
+                "-o",
+                "./a.out",
+                "./Main.cpp",
+            ])
+                .into(),
             run: (&["./a.out"]).into(),
         }
     }

@@ -19,7 +19,6 @@ pub struct Service {
 }
 
 impl Service {
-    #[allow(dead_code)]
     pub fn new(id: ServiceKind) -> Self {
         Self { id }
     }
