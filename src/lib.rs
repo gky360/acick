@@ -3,12 +3,14 @@
 #[macro_use]
 extern crate strum;
 
+use std::io::{self, Read, Write};
+use std::{env, fmt};
+
 use anyhow::Context as _;
-use rpassword::read_password_from_tty;
 use serde::Serialize;
-use std::{env, fmt, io};
 use structopt::StructOpt;
 use strum::VariantNames;
+use termion::input::TermRead as _;
 
 mod abs_path;
 mod cmd;
@@ -88,9 +90,9 @@ pub struct Opt {
 impl Opt {
     pub fn run(
         &self,
-        stdin: &mut dyn Input,
-        stdout: &mut dyn io::Write,
-        stderr: &mut dyn Output,
+        stdin: &mut dyn Read,
+        stdout: &mut dyn Write,
+        stderr: &mut dyn Write,
     ) -> Result<()> {
         let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
         let conf = Config::load(self.global_opt.clone(), cwd).context("Could not load config")?;
@@ -110,51 +112,46 @@ impl Opt {
     }
 }
 
-pub trait Input: io::BufRead + fmt::Debug {
-    fn read_input(&mut self, is_password: bool) -> Result<String> {
-        let raw = if is_password {
-            read_password_from_tty(None)?
-        } else {
-            let mut buf = String::new();
-            self.read_line(&mut buf)?;
-            buf
-        };
-        Ok(raw.trim().to_string())
+pub struct Console<'a> {
+    stdin: &'a mut dyn Read,
+    stderr: &'a mut dyn Write,
+}
+
+impl fmt::Debug for Console<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("Console")
     }
 }
 
-impl<T: io::BufRead + fmt::Debug> Input for T {}
+impl Console<'_> {
+    fn read_user(&mut self, is_password: bool) -> io::Result<String> {
+        if is_password {
+            self.stdin.read_passwd(&mut self.stderr)
+        } else {
+            self.read_line()
+        }
+        .and_then(|maybe_str| {
+            maybe_str.ok_or_else(|| io::Error::new(io::ErrorKind::Interrupted, "Interrupted"))
+        })
+    }
 
-pub trait Output: io::Write + fmt::Debug {
-    fn prompt(&mut self, prompt: &str) -> Result<()> {
+    fn prompt(&mut self, prompt: &str) -> io::Result<()> {
         write!(self, "{}", prompt)?;
         self.flush()?;
         Ok(())
     }
-}
 
-impl<T: io::Write + fmt::Debug> Output for T {}
-
-#[derive(Debug)]
-pub struct Console<'a> {
-    stdin: &'a mut dyn Input,
-    stderr: &'a mut dyn Output,
-}
-
-impl Console<'_> {
-    fn prompt_read(&mut self, prompt: &str, is_password: bool) -> Result<String> {
-        self.stderr
-            .prompt(prompt)
-            .context("Could not output prompt message")?;
-        self.stdin.read_input(is_password)
+    fn prompt_and_read(&mut self, prompt: &str, is_password: bool) -> io::Result<String> {
+        self.prompt(prompt)?;
+        self.read_user(is_password)
     }
 
-    fn get_env_or_prompt_read(
+    fn get_env_or_prompt_and_read(
         &mut self,
         env_name: &str,
         prompt: &str,
         is_password: bool,
-    ) -> Result<String> {
+    ) -> io::Result<String> {
         if let Ok(val) = env::var(env_name) {
             writeln!(
                 self.stderr,
@@ -165,7 +162,26 @@ impl Console<'_> {
             )?;
             return Ok(val);
         };
-        self.prompt_read(prompt, is_password)
+        self.prompt_and_read(prompt, is_password)
+    }
+}
+
+impl Read for Console<'_> {
+    #[inline(always)]
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.stdin.read(buf)
+    }
+}
+
+impl Write for Console<'_> {
+    #[inline(always)]
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.stderr.write(buf)
+    }
+
+    #[inline(always)]
+    fn flush(&mut self) -> io::Result<()> {
+        self.stderr.flush()
     }
 }
 

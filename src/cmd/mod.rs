@@ -88,15 +88,15 @@ mod tests {
                 AbsPathBuf::cwd().expect("Could not get current working directory"),
             )
             .expect("Could not load config");
-            let mut stdin_buf = ::std::io::BufReader::new(&b""[..]);
-            let mut stderr_buf = Vec::new();
+            let mut input_buf = &b""[..];
+            let mut output_buf = Vec::new();
             let mut cnsl = Console {
-                stdin: &mut stdin_buf,
-                stderr: &mut stderr_buf,
+                stdin: &mut input_buf,
+                stderr: &mut output_buf,
             };
 
             let result = opt.run(&conf, &mut cnsl);
-            eprintln!("{}", String::from_utf8_lossy(&stderr_buf));
+            eprintln!("{}", String::from_utf8_lossy(&output_buf));
             result
         }};
     }

@@ -17,10 +17,10 @@ impl Run for LoginOpt {
         let GlobalOpt { service_id, .. } = conf.global_opt();
         let (user_env, pass_env) = service_id.to_user_pass_env_names();
         let user = cnsl
-            .get_env_or_prompt_read(user_env, "username: ", false)
+            .get_env_or_prompt_and_read(user_env, "username: ", false)
             .context("Could not read username")?;
         let pass = cnsl
-            .get_env_or_prompt_read(pass_env, "password: ", true)
+            .get_env_or_prompt_and_read(pass_env, "password: ", true)
             .context("Could not read password")?;
         writeln!(cnsl.stderr)?;
 

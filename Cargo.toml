@@ -26,7 +26,6 @@ once_cell = "1.3.1"
 regex = "1.3.3"
 retry = "1.0.0"
 reqwest = { version = "0.10.1", default_features = false, features = ["rustls-tls", "blocking"] }
-rpassword = "4.0.4"
 scraper = "0.11.0"
 semver = "0.9.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -35,3 +34,4 @@ serde_json = "1.0.44"
 structopt = "0.3.7"
 strum = { version = "0.17.1", features = ["derive"] }
 tera = "1.0.2"
+termion = "1.5.5"
