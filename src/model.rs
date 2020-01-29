@@ -30,6 +30,8 @@ impl Service {
     Clone,
     PartialEq,
     Eq,
+    PartialOrd,
+    Ord,
     Hash,
 )]
 #[serde(rename_all = "kebab-case")]

@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -6,6 +7,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Context as _};
 use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
+use maplit::btreemap;
 use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
 use semver::Version;
@@ -164,7 +166,7 @@ pub struct ConfigBody {
     #[get = "pub"]
     session: SessionConfig,
     #[get = "pub"]
-    services: ServicesConfig,
+    services: BTreeMap<ServiceKind, ServiceConfig>,
 }
 
 impl Default for ConfigBody {
@@ -176,7 +178,9 @@ impl Default for ConfigBody {
                 "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/problem.yaml"
                     .into(),
             session: SessionConfig::default(),
-            services: ServicesConfig::default(),
+            services: btreemap! {
+                ServiceKind::default() => ServiceConfig::default_for(ServiceKind::default())
+            },
         }
     }
 }
@@ -235,15 +239,8 @@ impl Default for SessionConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(default)]
-pub struct ServicesConfig {
-    atcoder: AtcoderConfig,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(default)]
-pub struct AtcoderConfig {
+pub struct ServiceConfig {
     language: String,
     working_dir: ProblemTempl,
     src: ProblemTempl,
@@ -252,7 +249,7 @@ pub struct AtcoderConfig {
     template: ProblemTempl,
 }
 
-impl AtcoderConfig {
+impl ServiceConfig {
     const DEFAULT_TEMPLATE: &'static str = r#"/*
 [{{ contest.id }}] {{ problem.id }} - {{ problem.name }}
 */
@@ -264,27 +261,27 @@ int main() {
     return 0;
 }
 "#;
-}
 
-impl Default for AtcoderConfig {
-    fn default() -> Self {
-        Self {
-            language: "C++14 (GCC 5.4.1)".into(),
-            working_dir: "{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}".into(),
-            src: "{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/Main.cpp".into(),
-            compile: (&[
-                "g++",
-                "-std=gnu++1y",
-                "-O2",
-                "-I/opt/boost/gcc/include",
-                "-L/opt/boost/gcc/lib",
-                "-o",
-                "./a.out",
-                "./Main.cpp",
-            ])
-                .into(),
-            run: (&["./a.out"]).into(),
-            template: Self::DEFAULT_TEMPLATE.into(),
+    fn default_for(service_id: ServiceKind) -> Self {
+        match service_id {
+            ServiceKind::Atcoder => Self {
+                language: "C++14 (GCC 5.4.1)".into(),
+                working_dir: "{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}".into(),
+                src: "{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/Main.cpp".into(),
+                compile: (&[
+                    "g++",
+                    "-std=gnu++1y",
+                    "-O2",
+                    "-I/opt/boost/gcc/include",
+                    "-L/opt/boost/gcc/lib",
+                    "-o",
+                    "./a.out",
+                    "./Main.cpp",
+                ])
+                    .into(),
+                run: (&["./a.out"]).into(),
+                template: Self::DEFAULT_TEMPLATE.into(),
+            },
         }
     }
 }
@@ -304,7 +301,7 @@ mod tests {
     #[test]
     fn exec_default_atcoder_compile() -> anyhow::Result<()> {
         let shell = Shell::default();
-        let compile = AtcoderConfig::default().compile;
+        let compile = ServiceConfig::default_for(ServiceKind::Atcoder).compile;
         let context = ProblemContext::new(&DEFAULT_SERVICE, &DEFAULT_CONTEST, &DEFAULT_PROBLEM);
         let output = shell.exec_templ_arr(&compile, &context)?;
         println!("{:?}", output);
