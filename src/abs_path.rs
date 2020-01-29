@@ -1,7 +1,7 @@
 use std::env::current_dir;
-use std::fmt;
 use std::fs::{create_dir_all, File, OpenOptions};
 use std::path::{Path, PathBuf};
+use std::{fmt, io};
 
 use anyhow::anyhow;
 use serde::Serialize;
@@ -31,7 +31,7 @@ impl AbsPathBuf {
         Self(self.0.join(path))
     }
 
-    pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> Result<File> {
+    pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
         if let Some(dir) = self.0.parent() {
             create_dir_all(&dir)?;
         }
@@ -41,6 +41,12 @@ impl AbsPathBuf {
             .create(true)
             .open(&self.0)?;
         Ok(file)
+    }
+
+    pub fn strip_prefix(&self, base: &AbsPathBuf) -> &Path {
+        self.0
+            .strip_prefix(&base.0)
+            .unwrap_or_else(|_| self.0.as_path())
     }
 }
 

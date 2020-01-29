@@ -21,7 +21,7 @@ impl Run for FetchOpt {
         let service = conf.build_service();
         let contest = service.fetch(&self.problem_id, cnsl)?;
 
-        conf.save_problems(service_id, &contest)?;
+        conf.save_problems(service_id, &contest, cnsl)?;
         Ok(Box::new(FetchOutcome { contest }))
     }
 }

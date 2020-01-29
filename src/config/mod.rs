@@ -1,4 +1,5 @@
 use std::fmt;
+use std::io::Write as _;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -15,7 +16,7 @@ mod template;
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::model::{string, Contest, Problem, Service, ServiceKind};
 use crate::service::{AtcoderService, CookieStorage, Serve};
-use crate::{GlobalOpt, Result};
+use crate::{Console, GlobalOpt, Result};
 use template::{Expand as _, ProblemContext, ProblemTempl, Shell, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
@@ -79,25 +80,46 @@ Fix version in the config file so that it matches the acick version."#,
         CookieStorage::open(&cookies_path.to_abs(&self.base_dir))
     }
 
-    pub fn save_problems(&self, service_id: ServiceKind, contest: &Contest) -> Result<()> {
+    pub fn save_problems(
+        &self,
+        service_id: ServiceKind,
+        contest: &Contest,
+        cnsl: &mut Console,
+    ) -> Result<()> {
         let service = Service::new(service_id);
         for problem in contest.problems().iter() {
-            self.save_problem(&service, contest, problem)?;
+            self.save_problem(&service, contest, problem, cnsl)?;
         }
         Ok(())
     }
 
-    fn save_problem(&self, service: &Service, contest: &Contest, problem: &Problem) -> Result<()> {
+    fn save_problem(
+        &self,
+        service: &Service,
+        contest: &Contest,
+        problem: &Problem,
+        cnsl: &mut Console,
+    ) -> Result<bool> {
         let samples_path = self.samples_path(service, contest, problem)?;
-        if samples_path.as_ref().is_file() {
-            // TODO: print warning for skipping
-            return Ok(());
-        }
-        let file = samples_path
-            .create_dir_all_and_open(false, true)
-            .with_context(|| format!("Could not create samples file : {}", samples_path))?;
-        serde_yaml::to_writer(file, &problem)?;
-        Ok(())
+        write!(
+            cnsl,
+            "Saving {} ... ",
+            samples_path.strip_prefix(&self.base_dir).display()
+        )?;
+        let is_saved = if samples_path.as_ref().is_file() {
+            false
+        } else {
+            samples_path
+                .create_dir_all_and_open(false, true)
+                .with_context(|| format!("Could not create samples file : {}", samples_path))
+                .and_then(|file| {
+                    serde_yaml::to_writer(file, &problem).context("Could not save problem as yaml")
+                })?;
+            true
+        };
+        let msg = if is_saved { "saved" } else { "already exists" };
+        writeln!(cnsl, "{}", msg)?;
+        Ok(is_saved)
     }
 
     fn samples_path(
