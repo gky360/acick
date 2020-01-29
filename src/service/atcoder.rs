@@ -8,23 +8,23 @@ use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPageBuilder, TasksPrintPageBuilder,
 };
 use crate::service::scrape::{HasUrl as _, Scrape as _};
-use crate::service::serve::Serve;
 use crate::service::session::WithRetry as _;
+use crate::service::Act;
 use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]
-pub struct AtcoderService<'a> {
+pub struct AtcoderActor<'a> {
     client: Client,
     conf: &'a Config,
 }
 
-impl<'a> AtcoderService<'a> {
+impl<'a> AtcoderActor<'a> {
     pub fn new(client: Client, conf: &'a Config) -> Self {
-        Self { client, conf }
+        AtcoderActor { client, conf }
     }
 }
 
-impl Serve for AtcoderService<'_> {
+impl Act for AtcoderActor<'_> {
     fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool> {
         let Self { client, conf } = self;
         let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;

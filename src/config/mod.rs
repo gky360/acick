@@ -15,7 +15,7 @@ mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::model::{string, Contest, Problem, Service, ServiceKind};
-use crate::service::{AtcoderService, CookieStorage, Serve};
+use crate::service::{Act, AtcoderActor, CookieStorage};
 use crate::{Console, GlobalOpt, Result};
 use template::{Expand as _, ProblemContext, ProblemTempl, Shell, TemplArray};
 
@@ -51,7 +51,7 @@ Fix version in the config file so that it matches the acick version."#,
         }
     }
 
-    pub fn build_service<'a>(&'a self) -> Box<dyn Serve + 'a> {
+    pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
         let client = self
             .get_client_builder()
             .build()
@@ -59,7 +59,7 @@ Fix version in the config file so that it matches the acick version."#,
                 TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
         let service_id = self.global_opt.service_id;
         match service_id {
-            ServiceKind::Atcoder => Box::new(AtcoderService::new(client, self)),
+            ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, self)),
         }
     }
 

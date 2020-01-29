@@ -1,7 +1,7 @@
 use crate::model::{Contest, Problem, ProblemId};
 use crate::{Console, Result};
 
-pub trait Serve {
+pub trait Act {
     fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool>;
     fn fetch(
         &self,

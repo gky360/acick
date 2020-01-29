@@ -27,8 +27,8 @@ impl Run for FetchOpt {
         } = *self;
 
         // fetch data from service
-        let service = conf.build_service();
-        let (contest, problems) = service.fetch(problem_id, cnsl)?;
+        let actor = conf.build_actor();
+        let (contest, problems) = actor.fetch(problem_id, cnsl)?;
 
         let service = Service::new(conf.global_opt().service_id);
 

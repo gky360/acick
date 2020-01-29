@@ -25,8 +25,8 @@ impl Run for LoginOpt {
             .context("Could not read password")?;
         writeln!(cnsl)?;
 
-        let service = conf.build_service();
-        let is_not_already = service.login(user.to_owned(), pass, cnsl)?;
+        let actor = conf.build_actor();
+        let is_not_already = actor.login(user.to_owned(), pass, cnsl)?;
 
         let outcome = LoginOutcome {
             service: Service::new(conf.global_opt().service_id),
