@@ -3,7 +3,6 @@ use maplit::hashmap;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 
-use crate::cmd::LoginOutcome;
 use crate::model::{Contest, Problem, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPageBuilder, TasksPrintPageBuilder,
@@ -26,7 +25,7 @@ impl<'a> AtcoderService<'a> {
 }
 
 impl Serve for AtcoderService<'_> {
-    fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<LoginOutcome> {
+    fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool> {
         let Self { client, conf } = self;
         let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
 
@@ -36,11 +35,7 @@ impl Serve for AtcoderService<'_> {
             if current_user != user {
                 return Err(anyhow!("Logged in as another user: {}", current_user));
             }
-            return Ok(LoginOutcome {
-                service_id: conf.global_opt().service_id,
-                username: user,
-                is_already: true,
-            });
+            return Ok(false);
         }
 
         // Post form data to log in to service
@@ -65,11 +60,7 @@ impl Serve for AtcoderService<'_> {
             return Err(anyhow!("Logged in as another user: {}", current_user));
         }
 
-        Ok(LoginOutcome {
-            service_id: conf.global_opt().service_id,
-            username: user,
-            is_already: false,
-        })
+        Ok(true)
     }
 
     fn fetch(&self, problem_id: &Option<ProblemId>, cnsl: &mut Console) -> Result<Contest> {

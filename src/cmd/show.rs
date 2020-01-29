@@ -18,7 +18,7 @@ impl Run for ShowOpt {
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ShowOutcome {
-    pub conf: Config,
+    conf: Config,
 }
 
 impl fmt::Display for ShowOutcome {

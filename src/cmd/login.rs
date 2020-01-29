@@ -6,7 +6,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::model::ServiceKind;
+use crate::model::Service;
 use crate::{Config, Console, GlobalOpt, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -26,17 +26,22 @@ impl Run for LoginOpt {
         writeln!(cnsl)?;
 
         let service = conf.build_service();
-        let outcome = service.login(user, pass, cnsl)?;
+        let is_not_already = service.login(user.to_owned(), pass, cnsl)?;
 
+        let outcome = LoginOutcome {
+            service: Service::new(conf.global_opt().service_id),
+            username: user,
+            is_already: !is_not_already,
+        };
         Ok(Box::new(outcome))
     }
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LoginOutcome {
-    pub service_id: ServiceKind,
-    pub username: String,
-    pub is_already: bool,
+    service: Service,
+    username: String,
+    is_already: bool,
 }
 
 impl fmt::Display for LoginOutcome {
@@ -49,7 +54,7 @@ impl fmt::Display for LoginOutcome {
             } else {
                 "Successfully"
             },
-            self.service_id,
+            self.service.id(),
             &self.username
         )
     }

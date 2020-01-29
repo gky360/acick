@@ -4,7 +4,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::model::{Contest, ProblemId};
+use crate::model::{Contest, ProblemId, Service};
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -25,12 +25,16 @@ impl Run for FetchOpt {
 
         conf.save_problems_files(&contest, self.overwrite, cnsl)?;
 
-        Ok(Box::new(FetchOutcome { contest }))
+        Ok(Box::new(FetchOutcome {
+            service: Service::new(conf.global_opt().service_id),
+            contest,
+        }))
     }
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FetchOutcome {
+    service: Service,
     contest: Contest,
 }
 
