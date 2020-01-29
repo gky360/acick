@@ -18,10 +18,8 @@ pub struct FetchOpt {
 impl Run for FetchOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         let service_id = conf.global_opt().service_id;
-        let contest = {
-            let mut service = conf.build_service(cnsl);
-            service.fetch(&self.problem_id)?
-        };
+        let service = conf.build_service();
+        let contest = service.fetch(&self.problem_id, cnsl)?;
 
         conf.save_problems(service_id, &contest)?;
         Ok(Box::new(FetchOutcome { contest }))

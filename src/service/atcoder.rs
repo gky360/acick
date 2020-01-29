@@ -14,21 +14,20 @@ use crate::service::session::WithRetry as _;
 use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]
-pub struct AtcoderService<'a, 'b> {
+pub struct AtcoderService<'a> {
     client: Client,
     conf: &'a Config,
-    cnsl: &'a mut Console<'b>,
 }
 
-impl<'a, 'b> AtcoderService<'a, 'b> {
-    pub fn new(client: Client, conf: &'a Config, cnsl: &'a mut Console<'b>) -> Self {
-        Self { client, conf, cnsl }
+impl<'a> AtcoderService<'a> {
+    pub fn new(client: Client, conf: &'a Config) -> Self {
+        Self { client, conf }
     }
 }
 
-impl Serve for AtcoderService<'_, '_> {
-    fn login(&mut self, user: String, pass: String) -> Result<LoginOutcome> {
-        let Self { client, conf, cnsl } = self;
+impl Serve for AtcoderService<'_> {
+    fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<LoginOutcome> {
+        let Self { client, conf } = self;
         let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
 
         // Check if user is already logged in
@@ -69,8 +68,8 @@ impl Serve for AtcoderService<'_, '_> {
         })
     }
 
-    fn fetch(&mut self, problem_id: &Option<ProblemId>) -> Result<Contest> {
-        let Self { client, conf, cnsl } = self;
+    fn fetch(&self, problem_id: &Option<ProblemId>, cnsl: &mut Console) -> Result<Contest> {
+        let Self { client, conf } = self;
         let contest_id = &conf.global_opt().contest_id;
 
         let tasks_page = TasksPageBuilder::new(conf).build(client, cnsl)?;

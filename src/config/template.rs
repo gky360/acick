@@ -53,7 +53,7 @@ pub trait Expand<'a> {
         let template = self.get_template();
         let template_name = template;
 
-        let cnsl =
+        let ctx =
             tera::Context::from_serialize(context).context("Could not create template context")?;
 
         let mut renderer = RENDERER.lock().unwrap();
@@ -67,7 +67,7 @@ pub trait Expand<'a> {
                 return Err(err).context("Could not expand template")?;
             }
         };
-        renderer.render(template_name, &cnsl).context(format!(
+        renderer.render(template_name, &ctx).context(format!(
             "Could not expand template with context\n    template: {}\n    context: {}",
             template,
             serde_json::to_string(context).expect("Failed to serialize context")
