@@ -62,7 +62,7 @@ Fix version in the config file so that it matches the acick version."#,
         }
     }
 
-    pub fn get_client_builder(&self) -> ClientBuilder {
+    fn get_client_builder(&self) -> ClientBuilder {
         let session = &self.body.session;
         let user_agent = &session.user_agent;
         let timeout = session.timeout;
