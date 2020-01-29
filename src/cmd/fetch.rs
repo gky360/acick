@@ -17,7 +17,7 @@ pub struct FetchOpt {
 
 impl Run for FetchOpt {
     fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
-        let service_id = ctx.global_opt.service_id;
+        let service_id = ctx.conf.global_opt().service_id;
         let contest = {
             let mut service = service_id.serve(ctx);
             service.fetch(&self.problem_id)?

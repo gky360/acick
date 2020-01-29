@@ -14,7 +14,7 @@ pub struct LoginOpt {}
 
 impl Run for LoginOpt {
     fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
-        let GlobalOpt { service_id, .. } = ctx.global_opt;
+        let GlobalOpt { service_id, .. } = ctx.conf.global_opt();
         let (user_env, pass_env) = service_id.to_user_pass_env_names();
         let user = ctx
             .get_env_or_prompt_read(user_env, "username: ", false)

@@ -5,6 +5,7 @@ extern crate strum;
 
 use anyhow::Context as _;
 use rpassword::read_password_from_tty;
+use serde::Serialize;
 use std::{env, fmt, io};
 use structopt::StructOpt;
 use strum::VariantNames;
@@ -23,7 +24,10 @@ use model::{ContestId, ServiceKind};
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
-#[derive(EnumString, EnumVariantNames, IntoStaticStr, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(
+    Serialize, EnumString, EnumVariantNames, IntoStaticStr, Debug, Copy, Clone, PartialEq, Eq, Hash,
+)]
+#[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
 pub enum OutputFormat {
     Default,
@@ -38,7 +42,7 @@ impl Default for OutputFormat {
     }
 }
 
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(StructOpt, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GlobalOpt {
     #[structopt(
         name = "service",
@@ -89,9 +93,8 @@ impl Opt {
         stderr: &mut dyn Output,
     ) -> Result<()> {
         let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
-        let conf = Config::load(cwd).context("Could not load config")?;
+        let conf = Config::load(self.global_opt.clone(), cwd).context("Could not load config")?;
         let mut ctx = Context {
-            global_opt: &self.global_opt,
             conf: &conf,
             stdin,
             stderr,
@@ -138,7 +141,6 @@ impl<T: io::Write + fmt::Debug> Output for T {}
 
 #[derive(Debug)]
 pub struct Context<'a> {
-    global_opt: &'a GlobalOpt,
     conf: &'a Config,
     stdin: &'a mut dyn Input,
     stderr: &'a mut dyn Output,

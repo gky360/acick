@@ -13,21 +13,22 @@ mod template;
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::model::{string, Contest, Problem, Service, ServiceKind};
 use crate::service::CookieStorage;
-use crate::Result;
+use crate::{GlobalOpt, Result};
 use template::{Expand as _, ProblemContext, ProblemTempl, Shell, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[get = "pub"]
 pub struct Config {
+    global_opt: GlobalOpt,
     base_dir: AbsPathBuf,
-    data: ConfigData,
+    body: ConfigBody,
 }
 
 impl Config {
-    pub fn load(base_dir: AbsPathBuf) -> Result<Self> {
+    pub fn load(global_opt: GlobalOpt, base_dir: AbsPathBuf) -> Result<Self> {
         // TODO: load from file
-        let data = ConfigData::default();
-        let version_str = data.version.to_string();
+        let body = ConfigBody::default();
+        let version_str = body.version.to_string();
         let pkg_version = env!("CARGO_PKG_VERSION");
         if version_str != pkg_version {
             Err(anyhow!(
@@ -39,12 +40,16 @@ Fix version in the config file so that it matches the acick version."#,
                 pkg_version
             ))
         } else {
-            Ok(Self { base_dir, data })
+            Ok(Self {
+                global_opt,
+                base_dir,
+                body,
+            })
         }
     }
 
     pub fn open_cookie_storage(&self) -> Result<CookieStorage> {
-        let cookies_path = &self.data.session.cookies_path;
+        let cookies_path = &self.body.session.cookies_path;
         CookieStorage::open(&cookies_path.to_abs(&self.base_dir))
     }
 
@@ -76,7 +81,7 @@ Fix version in the config file so that it matches the acick version."#,
         problem: &Problem,
     ) -> Result<AbsPathBuf> {
         let problem_context = ProblemContext::new(service, contest, problem);
-        let samples_path_expanded = self.data.samples_path.expand(&problem_context)?;
+        let samples_path_expanded = self.body.samples_path.expand(&problem_context)?;
         Ok(self.base_dir.join(samples_path_expanded))
     }
 }
@@ -90,7 +95,7 @@ impl fmt::Display for Config {
 
 #[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
-pub struct ConfigData {
+pub struct ConfigBody {
     #[serde(with = "string")]
     #[get = "pub"]
     version: Version,
@@ -103,7 +108,7 @@ pub struct ConfigData {
     services: ServicesConfig,
 }
 
-impl Default for ConfigData {
+impl Default for ConfigBody {
     fn default() -> Self {
         Self {
             version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
@@ -217,7 +222,7 @@ mod tests {
 
     #[test]
     fn serialize_default() -> anyhow::Result<()> {
-        serde_yaml::to_string(&Config::load(AbsPathBuf::cwd()?)?)?;
+        serde_yaml::to_string(&Config::load(GlobalOpt::default(), AbsPathBuf::cwd()?)?)?;
         Ok(())
     }
 

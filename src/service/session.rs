@@ -52,7 +52,7 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
     }
 
     pub fn retry_send(&mut self) -> Result<Response> {
-        let session = self.ctx.conf.data().session();
+        let session = self.ctx.conf.body().session();
         let retry_interval = session.retry_interval().as_millis() as u64;
         let retry_limit = session.retry_limit();
         let durations = delay::Fixed::from_millis(retry_interval).take(retry_limit);

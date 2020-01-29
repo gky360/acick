@@ -83,13 +83,14 @@ mod tests {
 
             let opt = $opt::default();
             let global_opt = GlobalOpt::default();
-            let conf =
-                Config::load(AbsPathBuf::cwd().expect("Could not get current working directory"))
-                    .expect("Could not load config");
+            let conf = Config::load(
+                global_opt,
+                AbsPathBuf::cwd().expect("Could not get current working directory"),
+            )
+            .expect("Could not load config");
             let mut stdin_buf = ::std::io::BufReader::new(&b""[..]);
             let mut stderr_buf = Vec::new();
             let mut ctx = Context {
-                global_opt: &global_opt,
                 conf: &conf,
                 stdin: &mut stdin_buf,
                 stderr: &mut stderr_buf,

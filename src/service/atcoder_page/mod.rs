@@ -65,12 +65,12 @@ pub trait FetchMaybeNotFound: Fetch {
             StatusCode::NOT_FOUND if NotFoundPage(&html).is_not_found() => Err(anyhow!(
                 "Could not find contest : {} .
 Check if the contest id is correct.",
-                ctx.global_opt.contest_id
+                ctx.conf.global_opt().contest_id
             )),
             StatusCode::NOT_FOUND if NotFoundPage(&html).is_permission_denied() => Err(anyhow!(
                 "Found not participated or not started contest : {} .
 Participate in the contest and wait until the contest starts.",
-                ctx.global_opt.contest_id
+                ctx.conf.global_opt().contest_id
             )),
             _ => Err(Error::msg("Received invalid response")),
         }

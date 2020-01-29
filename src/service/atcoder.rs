@@ -33,7 +33,7 @@ impl Serve for AtcoderService<'_, '_> {
         // Check if user is already logged in
         if login_page.is_logged_in_as(&user)? {
             return Ok(LoginOutcome {
-                service_id: ctx.global_opt.service_id,
+                service_id: ctx.conf.global_opt().service_id,
                 username: user,
                 is_already: true,
             });
@@ -62,7 +62,7 @@ impl Serve for AtcoderService<'_, '_> {
         }
 
         Ok(LoginOutcome {
-            service_id: ctx.global_opt.service_id,
+            service_id: ctx.conf.global_opt().service_id,
             username: user,
             is_already: false,
         })
@@ -70,7 +70,7 @@ impl Serve for AtcoderService<'_, '_> {
 
     fn fetch(&mut self, problem_id: &Option<ProblemId>) -> Result<Contest> {
         let Self { client, ctx } = self;
-        let contest_id = &ctx.global_opt.contest_id;
+        let contest_id = &ctx.conf.global_opt().contest_id;
 
         let tasks_page = TasksPageBuilder::new(contest_id).build(client, ctx)?;
         let contest_name = tasks_page

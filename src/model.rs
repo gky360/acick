@@ -62,7 +62,7 @@ impl ServiceKind {
     }
 
     fn get_client_builder(self, ctx: &mut Context) -> ClientBuilder {
-        let session = ctx.conf.data().session();
+        let session = ctx.conf.body().session();
         let user_agent = session.user_agent();
         let timeout = session.timeout();
         Client::builder()
