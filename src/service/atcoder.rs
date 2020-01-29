@@ -63,7 +63,11 @@ impl Serve for AtcoderService<'_> {
         Ok(true)
     }
 
-    fn fetch(&self, problem_id: &Option<ProblemId>, cnsl: &mut Console) -> Result<Contest> {
+    fn fetch(
+        &self,
+        problem_id: &Option<ProblemId>,
+        cnsl: &mut Console,
+    ) -> Result<(Contest, Vec<Problem>)> {
         let Self { client, conf } = self;
         let contest_id = &conf.global_opt().contest_id;
 
@@ -112,7 +116,7 @@ impl Serve for AtcoderService<'_> {
             }
         }
 
-        let contest = Contest::new(contest_id, contest_name, problems);
-        Ok(contest)
+        let contest = Contest::new(contest_id, contest_name);
+        Ok((contest, problems))
     }
 }

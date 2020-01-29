@@ -123,7 +123,7 @@ mod tests {
     lazy_static! {
         pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
         pub static ref DEFAULT_CONTEST: Contest =
-            Contest::new("arc100", "AtCoder Regular Contest 100", Vec::new());
+            Contest::new("arc100", "AtCoder Regular Contest 100");
         pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
             "C",
             "Linear Approximation",

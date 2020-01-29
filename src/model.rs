@@ -66,15 +66,13 @@ impl fmt::Display for ServiceKind {
 pub struct Contest {
     id: ContestId,
     name: String,
-    problems: Vec<Problem>,
 }
 
 impl Contest {
-    pub fn new(id: impl Into<ContestId>, name: impl Into<String>, problems: Vec<Problem>) -> Self {
+    pub fn new(id: impl Into<ContestId>, name: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
-            problems,
         }
     }
 }

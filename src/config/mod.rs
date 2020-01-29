@@ -83,15 +83,16 @@ Fix version in the config file so that it matches the acick version."#,
     pub fn save_problems_files(
         &self,
         contest: &Contest,
+        problems: &[Problem],
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<()> {
         let service = &Service::new(self.global_opt.service_id);
-        for problem in contest.problems().iter() {
+        for problem in problems.iter() {
             self.save_problem(service, contest, problem, overwrite, cnsl)
                 .context("Could not save problem file")?;
         }
-        for problem in contest.problems().iter() {
+        for problem in problems.iter() {
             self.save_source(service, contest, problem, overwrite, cnsl)
                 .context("Could not save source file from template")?;
         }
