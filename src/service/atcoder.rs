@@ -31,7 +31,11 @@ impl Serve for AtcoderService<'_> {
         let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
 
         // Check if user is already logged in
-        if login_page.is_logged_in_as(&user)? {
+        if login_page.is_logged_in()? {
+            let current_user = login_page.current_user()?;
+            if current_user != user {
+                return Err(anyhow!("Logged in as another user: {}", current_user));
+            }
             return Ok(LoginOutcome {
                 service_id: conf.global_opt().service_id,
                 username: user,

@@ -1,7 +1,7 @@
 use std::io::{self, Read, Write};
 use std::{env, fmt};
 
-use termion::input::TermRead as _;
+use rpassword::read_password;
 
 pub struct Console<'a> {
     stdin: &'a mut dyn Read,
@@ -33,13 +33,21 @@ impl<'a> Console<'a> {
     }
     fn read_user(&mut self, is_password: bool) -> io::Result<String> {
         if is_password {
-            self.stdin.read_passwd(&mut self.stderr)
+            read_password()
         } else {
-            self.read_line()
+            let mut buf = String::new();
+            io::stdin().read_line(&mut buf)?;
+
+            if buf.ends_with('\n') {
+                // Remove the \n from the line if present
+                buf.pop();
+                // Remove the \r from the line if present
+                if buf.ends_with('\r') {
+                    buf.pop();
+                }
+            }
+            Ok(buf)
         }
-        .and_then(|maybe_str| {
-            maybe_str.ok_or_else(|| io::Error::new(io::ErrorKind::Interrupted, "Interrupted"))
-        })
     }
 
     fn prompt(&mut self, prompt: &str) -> io::Result<()> {
