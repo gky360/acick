@@ -5,13 +5,8 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 use getset::{Getters, Setters};
-use reqwest::blocking::{Client, ClientBuilder};
-use reqwest::redirect::Policy;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-
-use crate::service::{AtcoderService, Serve};
-use crate::{Config, Context};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
@@ -44,32 +39,10 @@ pub enum ServiceKind {
 }
 
 impl ServiceKind {
-    pub fn serve<'a>(self, conf: &'a Config, ctx: &'a mut Context<'_>) -> Box<dyn Serve + 'a> {
-        let client = self
-            .get_client_builder(conf)
-            .build()
-            .expect("Could not setup client. \
-                TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
-        match self {
-            Self::Atcoder => Box::new(AtcoderService::new(client, conf, ctx)),
-        }
-    }
-
     pub fn to_user_pass_env_names(self) -> (&'static str, &'static str) {
         match self {
             Self::Atcoder => ("ACICK_ATCODER_USERNAME", "ACICK_ATCODER_PASSWORD"),
         }
-    }
-
-    fn get_client_builder(self, conf: &Config) -> ClientBuilder {
-        let session = conf.body().session();
-        let user_agent = session.user_agent();
-        let timeout = session.timeout();
-        Client::builder()
-            .referer(false)
-            .redirect(Policy::none()) // redirects manually
-            .user_agent(user_agent)
-            .timeout(Some(timeout))
     }
 }
 

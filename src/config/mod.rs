@@ -5,6 +5,8 @@ use std::time::Duration;
 use anyhow::{anyhow, Context as _};
 use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
+use reqwest::blocking::{Client, ClientBuilder};
+use reqwest::redirect::Policy;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
@@ -12,8 +14,8 @@ mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::model::{string, Contest, Problem, Service, ServiceKind};
-use crate::service::CookieStorage;
-use crate::{GlobalOpt, Result};
+use crate::service::{AtcoderService, CookieStorage, Serve};
+use crate::{Context, GlobalOpt, Result};
 use template::{Expand as _, ProblemContext, ProblemTempl, Shell, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
@@ -46,6 +48,30 @@ Fix version in the config file so that it matches the acick version."#,
                 body,
             })
         }
+    }
+
+    pub fn build_service<'a>(&'a self, ctx: &'a mut Context<'_>) -> Box<dyn Serve + 'a> {
+        let client = self
+            .get_client_builder()
+            .build()
+            .expect("Could not setup client. \
+                TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
+        let service_id = self.global_opt.service_id;
+        match service_id {
+            ServiceKind::Atcoder => Box::new(AtcoderService::new(client, self, ctx)),
+        }
+    }
+
+    pub fn get_client_builder(&self) -> ClientBuilder {
+        let session = &self.body.session;
+        let user_agent = &session.user_agent;
+        let timeout = session.timeout;
+        // TODO : switch client by service
+        Client::builder()
+            .referer(false)
+            .redirect(Policy::none()) // redirects manually
+            .user_agent(user_agent)
+            .timeout(Some(timeout))
     }
 
     pub fn open_cookie_storage(&self) -> Result<CookieStorage> {

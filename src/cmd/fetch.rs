@@ -19,7 +19,7 @@ impl Run for FetchOpt {
     fn run(&self, conf: &Config, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
         let service_id = conf.global_opt().service_id;
         let contest = {
-            let mut service = service_id.serve(conf, ctx);
+            let mut service = conf.build_service(ctx);
             service.fetch(&self.problem_id)?
         };
 

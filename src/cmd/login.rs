@@ -24,7 +24,7 @@ impl Run for LoginOpt {
             .context("Could not read password")?;
         writeln!(ctx.stderr)?;
 
-        let mut service = service_id.serve(conf, ctx);
+        let mut service = conf.build_service(ctx);
         let outcome = service.login(user, pass)?;
 
         Ok(Box::new(outcome))
