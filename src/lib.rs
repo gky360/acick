@@ -3,24 +3,24 @@
 #[macro_use]
 extern crate strum;
 
-use std::io::{self, Read, Write};
-use std::{env, fmt};
+use std::io::{Read, Write};
 
 use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
-use termion::input::TermRead as _;
 
 mod abs_path;
 mod cmd;
 mod config;
+mod console;
 mod model;
 mod service;
 
 use abs_path::AbsPathBuf;
 use cmd::{Cmd, Run as _};
 use config::Config;
+use console::Console;
 use model::{ContestId, ServiceKind};
 
 pub type Error = anyhow::Error;
@@ -96,10 +96,10 @@ impl Opt {
     ) -> Result<()> {
         let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
         let conf = Config::load(self.global_opt.clone(), cwd).context("Could not load config")?;
-        let mut cnsl = Console { stdin, stderr };
+        let mut cnsl = Console::new(stdin, stderr);
         let outcome = self.cmd.run(&conf, &mut cnsl)?;
 
-        cnsl.stderr.flush()?;
+        cnsl.flush()?;
         writeln!(stdout)?;
 
         outcome.print(stdout, self.global_opt.output)?;
@@ -109,79 +109,6 @@ impl Opt {
         } else {
             Ok(())
         }
-    }
-}
-
-pub struct Console<'a> {
-    stdin: &'a mut dyn Read,
-    stderr: &'a mut dyn Write,
-}
-
-impl fmt::Debug for Console<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("Console")
-    }
-}
-
-impl Console<'_> {
-    fn read_user(&mut self, is_password: bool) -> io::Result<String> {
-        if is_password {
-            self.stdin.read_passwd(&mut self.stderr)
-        } else {
-            self.read_line()
-        }
-        .and_then(|maybe_str| {
-            maybe_str.ok_or_else(|| io::Error::new(io::ErrorKind::Interrupted, "Interrupted"))
-        })
-    }
-
-    fn prompt(&mut self, prompt: &str) -> io::Result<()> {
-        write!(self, "{}", prompt)?;
-        self.flush()?;
-        Ok(())
-    }
-
-    fn prompt_and_read(&mut self, prompt: &str, is_password: bool) -> io::Result<String> {
-        self.prompt(prompt)?;
-        self.read_user(is_password)
-    }
-
-    fn get_env_or_prompt_and_read(
-        &mut self,
-        env_name: &str,
-        prompt: &str,
-        is_password: bool,
-    ) -> io::Result<String> {
-        if let Ok(val) = env::var(env_name) {
-            writeln!(
-                self.stderr,
-                "{}{:16} (read from env {})",
-                prompt,
-                if is_password { "********" } else { &val },
-                env_name
-            )?;
-            return Ok(val);
-        };
-        self.prompt_and_read(prompt, is_password)
-    }
-}
-
-impl Read for Console<'_> {
-    #[inline(always)]
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.stdin.read(buf)
-    }
-}
-
-impl Write for Console<'_> {
-    #[inline(always)]
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.stderr.write(buf)
-    }
-
-    #[inline(always)]
-    fn flush(&mut self) -> io::Result<()> {
-        self.stderr.flush()
     }
 }
 

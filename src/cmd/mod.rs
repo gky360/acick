@@ -90,10 +90,7 @@ mod tests {
             .expect("Could not load config");
             let mut input_buf = &b""[..];
             let mut output_buf = Vec::new();
-            let mut cnsl = Console {
-                stdin: &mut input_buf,
-                stderr: &mut output_buf,
-            };
+            let mut cnsl = Console::new(&mut input_buf, &mut output_buf);
 
             let result = opt.run(&conf, &mut cnsl);
             eprintln!("{}", String::from_utf8_lossy(&output_buf));
