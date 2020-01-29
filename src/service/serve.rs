@@ -1,6 +1,8 @@
 use crate::cmd::LoginOutcome;
-use crate::Result;
+use crate::model::{Contest, ProblemId};
+use crate::{Console, Result};
 
 pub trait Serve {
-    fn login(&mut self, user: String, pass: String) -> Result<LoginOutcome>;
+    fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<LoginOutcome>;
+    fn fetch(&self, problem_id: &Option<ProblemId>, cnsl: &mut Console) -> Result<Contest>;
 }

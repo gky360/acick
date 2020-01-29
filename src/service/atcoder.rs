@@ -1,36 +1,43 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Context as _};
 use maplit::hashmap;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 
 use crate::cmd::LoginOutcome;
-use crate::service::atcoder_page::{HasHeader, LoginPageBuilder, SettingsPageBuilder};
+use crate::model::{Contest, Problem, ProblemId};
+use crate::service::atcoder_page::{
+    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPageBuilder, TasksPrintPageBuilder,
+};
 use crate::service::scrape::{HasUrl as _, Scrape as _};
 use crate::service::serve::Serve;
 use crate::service::session::WithRetry as _;
-use crate::{Context, Error, Result};
+use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]
-pub struct AtcoderService<'a, 'b> {
+pub struct AtcoderService<'a> {
     client: Client,
-    ctx: &'a mut Context<'b>,
+    conf: &'a Config,
 }
 
-impl<'a, 'b> AtcoderService<'a, 'b> {
-    pub fn new(client: Client, ctx: &'a mut Context<'b>) -> Self {
-        Self { client, ctx }
+impl<'a> AtcoderService<'a> {
+    pub fn new(client: Client, conf: &'a Config) -> Self {
+        Self { client, conf }
     }
 }
 
-impl Serve for AtcoderService<'_, '_> {
-    fn login(&mut self, user: String, pass: String) -> Result<LoginOutcome> {
-        let Self { client, ctx } = self;
-        let login_page = LoginPageBuilder::new().build(client, ctx)?;
+impl Serve for AtcoderService<'_> {
+    fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<LoginOutcome> {
+        let Self { client, conf } = self;
+        let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
 
         // Check if user is already logged in
-        if login_page.is_logged_in_as(&user)? {
+        if login_page.is_logged_in()? {
+            let current_user = login_page.current_user()?;
+            if current_user != user {
+                return Err(anyhow!("Logged in as another user: {}", current_user));
+            }
             return Ok(LoginOutcome {
-                service_id: ctx.global_opt.service_id,
+                service_id: conf.global_opt().service_id,
                 username: user,
                 is_already: true,
             });
@@ -42,27 +49,79 @@ impl Serve for AtcoderService<'_, '_> {
             "username" => user.to_owned(),
             "password" => pass,
         );
-        client
-            .post(login_page.url())
+        let res = client
+            .post(login_page.url()?)
             .form(&payload)
-            .with_retry(client, ctx)
-            .accept(|status| status == StatusCode::FOUND)
-            .retry_send()?
-            .ok_or_else(|| Error::msg("Received invalid response"))?;
+            .with_retry(client, conf, cnsl)
+            .retry_send()?;
+        if res.status() != StatusCode::FOUND {
+            return Err(Error::msg("Received invalid response"));
+        }
 
         // Check if login succeeded
-        let settings_page = SettingsPageBuilder::new()
-            .build(client, ctx)?
-            .ok_or_else(|| Error::msg("Invalid username or password"))?;
+        let settings_page = SettingsPageBuilder::new(conf).build(client, cnsl)?;
         let current_user = settings_page.current_user()?;
         if current_user != user {
             return Err(anyhow!("Logged in as another user: {}", current_user));
         }
 
         Ok(LoginOutcome {
-            service_id: ctx.global_opt.service_id,
+            service_id: conf.global_opt().service_id,
             username: user,
             is_already: false,
         })
+    }
+
+    fn fetch(&self, problem_id: &Option<ProblemId>, cnsl: &mut Console) -> Result<Contest> {
+        let Self { client, conf } = self;
+        let contest_id = &conf.global_opt().contest_id;
+
+        let tasks_page = TasksPageBuilder::new(conf).build(client, cnsl)?;
+        let contest_name = tasks_page
+            .extract_contest_name()
+            .context("Could not extract contest name")?;
+        let mut problems: Vec<Problem> = tasks_page
+            .extract_problems()?
+            .into_iter()
+            .filter(|problem| {
+                if let Some(problem_id) = problem_id {
+                    problem.id() == problem_id
+                } else {
+                    true
+                }
+            })
+            .collect();
+        if problems.is_empty() {
+            let err = if let Some(problem_id) = problem_id {
+                Err(anyhow!(
+                    "Could not find problem \"{}\" in contest {}",
+                    problem_id,
+                    contest_id
+                ))
+            } else {
+                Err(anyhow!(
+                    "Could not find any problems in contest {}",
+                    contest_id
+                ))
+            };
+            return err;
+        }
+
+        let tasks_print_page = TasksPrintPageBuilder::new(conf).build(client, cnsl)?;
+        let mut samples_map = tasks_print_page.extract_samples_map()?;
+        for problem in problems.iter_mut() {
+            if let Some(samples) = samples_map.remove(&problem.id()) {
+                problem.set_samples(samples);
+            } else {
+                // found problem on TasksPage but not found on TasksPrintPage
+                return Err(anyhow!(
+                    "Could not extract samples for problem : {}",
+                    problem.id()
+                ));
+            }
+        }
+
+        let contest = Contest::new(contest_id, contest_name, problems);
+        Ok(contest)
     }
 }

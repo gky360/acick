@@ -1,15 +1,21 @@
+use anyhow::{anyhow, Context as _};
 use lazy_static::lazy_static;
-use reqwest::Url;
-use scraper::ElementRef;
+use reqwest::blocking::Client;
+use reqwest::{StatusCode, Url};
+use scraper::{ElementRef, Html};
 
-use crate::service::scrape::{select, Scrape};
-use crate::{Error, Result};
+use crate::service::scrape::{select, ElementRefExt as _, Fetch, Scrape};
+use crate::{Config, Console, Error, Result};
 
 mod login;
 mod settings;
+mod tasks;
+mod tasks_print;
 
 pub use login::{LoginPage, LoginPageBuilder};
 pub use settings::{SettingsPage, SettingsPageBuilder};
+pub use tasks::{TasksPage, TasksPageBuilder};
+pub use tasks_print::{TasksPrintPage, TasksPrintPageBuilder};
 
 lazy_static! {
     pub static ref BASE_URL: Url = Url::parse("https://atcoder.jp").unwrap();
@@ -18,6 +24,7 @@ lazy_static! {
 pub trait HasHeader: Scrape {
     fn select_header(&self) -> Result<ElementRef> {
         self.find_first(select!("nav"))
+            .context("Could not find header")
     }
 
     fn is_logged_in(&self) -> Result<bool> {
@@ -37,16 +44,68 @@ pub trait HasHeader: Scrape {
             .select(select!("a.dropdown-toggle"))
             .nth(1)
             .ok_or_else(|| Error::msg("Could not find element"))
-            .map(|elem| {
-                elem.text()
-                    .collect::<Vec<&str>>()
-                    .join("")
-                    .trim()
-                    .to_owned()
-            })
+            .map(|elem| elem.inner_text().trim().to_owned())
     }
 
     fn is_logged_in_as(&self, user: &str) -> Result<bool> {
         Ok(self.is_logged_in()? && self.current_user()? == user)
+    }
+
+    fn extract_contest_name(&self) -> Option<String> {
+        self.find_first(select!(".contest-title"))
+            .map(|elem| elem.inner_text().trim().to_owned())
+    }
+}
+
+pub trait FetchMaybeNotFound: Fetch {
+    fn fetch_maybe_not_found(
+        &self,
+        client: &Client,
+        conf: &Config,
+        cnsl: &mut Console,
+    ) -> Result<Html> {
+        let (status, html) = self.fetch(client, conf, cnsl)?;
+        match status {
+            StatusCode::OK => Ok(html),
+            StatusCode::NOT_FOUND if NotFoundPage(&html).is_not_found() => Err(anyhow!(
+                "Could not find contest : {} .
+Check if the contest id is correct.",
+                conf.global_opt().contest_id
+            )),
+            StatusCode::NOT_FOUND if NotFoundPage(&html).is_permission_denied() => Err(anyhow!(
+                "Found not participated or not started contest : {} .
+Participate in the contest and wait until the contest starts.",
+                conf.global_opt().contest_id
+            )),
+            _ => Err(Error::msg("Received invalid response")),
+        }
+    }
+}
+
+struct NotFoundPage<'a>(&'a Html);
+
+impl NotFoundPage<'_> {
+    fn select_alert(&self) -> Option<ElementRef> {
+        self.find_first(select!(".alert-danger"))
+    }
+
+    fn alert_contains(&self, pat: &str) -> bool {
+        self.select_alert()
+            .map(|elem| elem.inner_text().contains(pat))
+            .unwrap_or(false)
+    }
+
+    fn is_permission_denied(&self) -> bool {
+        self.alert_contains("Permission denied.")
+    }
+
+    fn is_not_found(&self) -> bool {
+        self.alert_contains("Contest not found.")
+    }
+}
+
+impl Scrape for NotFoundPage<'_> {
+    fn elem(&self) -> ElementRef {
+        self.0.root_element()
     }
 }

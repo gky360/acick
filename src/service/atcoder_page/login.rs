@@ -1,24 +1,25 @@
 use reqwest::blocking::Client;
-use reqwest::Url;
-use scraper::Html;
+use reqwest::{StatusCode, Url};
+use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
-use crate::service::scrape::{CheckStatus, Fetch as _, HasUrl};
-use crate::{Context, Error, Result};
+use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
+use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LoginPageBuilder {}
+pub struct LoginPageBuilder<'a> {
+    conf: &'a Config,
+}
 
-impl LoginPageBuilder {
+impl<'a> LoginPageBuilder<'a> {
     const PATH: &'static str = "/login";
 
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(conf: &'a Config) -> Self {
+        Self { conf }
     }
 
-    pub fn build(self, client: &Client, ctx: &mut Context) -> Result<LoginPage> {
-        self.fetch(client, ctx)?
-            .ok_or_else(|| Error::msg("Received invalid page"))
+    pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<LoginPage<'a>> {
+        self.fetch_if(|s| s == StatusCode::OK, client, self.conf, cnsl)
             .map(|html| LoginPage {
                 builder: self,
                 content: html,
@@ -26,30 +27,29 @@ impl LoginPageBuilder {
     }
 }
 
-impl CheckStatus for LoginPageBuilder {}
-
-impl HasUrl for LoginPageBuilder {
-    fn url(&self) -> Url {
-        BASE_URL.join(Self::PATH).unwrap()
+impl HasUrl for LoginPageBuilder<'_> {
+    fn url(&self) -> Result<Url> {
+        // parsing static path will never fail
+        Ok(BASE_URL.join(Self::PATH).unwrap())
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LoginPage {
-    builder: LoginPageBuilder,
+pub struct LoginPage<'a> {
+    builder: LoginPageBuilder<'a>,
     content: Html,
 }
 
-impl HasUrl for LoginPage {
-    fn url(&self) -> Url {
+impl HasUrl for LoginPage<'_> {
+    fn url(&self) -> Result<Url> {
         self.builder.url()
     }
 }
 
-impl AsRef<Html> for LoginPage {
-    fn as_ref(&self) -> &Html {
-        &self.content
+impl Scrape for LoginPage<'_> {
+    fn elem(&self) -> ElementRef {
+        self.content.root_element()
     }
 }
 
-impl HasHeader for LoginPage {}
+impl HasHeader for LoginPage<'_> {}

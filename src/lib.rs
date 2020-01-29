@@ -3,34 +3,55 @@
 #[macro_use]
 extern crate strum;
 
+use std::io::{Read, Write};
+
 use anyhow::Context as _;
-use rpassword::read_password_from_tty;
-use std::{env, fmt, io};
+use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
 
 mod abs_path;
 mod cmd;
 mod config;
+mod console;
 mod model;
 mod service;
 
 use abs_path::AbsPathBuf;
 use cmd::{Cmd, Run as _};
 use config::Config;
-use model::ServiceKind;
+use console::Console;
+use model::{ContestId, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(
+    Serialize, EnumString, EnumVariantNames, IntoStaticStr, Debug, Copy, Clone, PartialEq, Eq, Hash,
+)]
+#[serde(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab-case")]
+pub enum OutputFormat {
+    Default,
+    Debug,
+    Json,
+    Yaml,
+}
+
+impl Default for OutputFormat {
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
+#[derive(StructOpt, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GlobalOpt {
     #[structopt(
         name = "service",
         long,
         global = true,
         env = "ACICK_SERVICE",
-        default_value = ServiceKind::Atcoder.into(),
+        default_value = ServiceKind::default().into(),
         possible_values = &ServiceKind::VARIANTS,
     )]
     service_id: ServiceKind,
@@ -39,11 +60,16 @@ pub struct GlobalOpt {
         long,
         global = true,
         env = "ACICK_CONTEST",
-        default_value = "abc100"
+        default_value = "arc100"
     )]
-    contest_id: String,
-    #[structopt(long, global = true)]
-    debug: bool,
+    contest_id: ContestId,
+    #[structopt(
+        long,
+        global = true,
+        default_value = OutputFormat::default().into(),
+        possible_values = &OutputFormat::VARIANTS
+    )]
+    output: OutputFormat,
 }
 
 impl Default for GlobalOpt {
@@ -64,28 +90,19 @@ pub struct Opt {
 impl Opt {
     pub fn run(
         &self,
-        mut stdin: impl io::BufRead + fmt::Debug,
-        mut stdout: impl io::Write,
-        mut stderr: impl io::Write + fmt::Debug,
+        stdin: &mut dyn Read,
+        stdout: &mut dyn Write,
+        stderr: &mut dyn Write,
     ) -> Result<()> {
         let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
-        let conf = Config::load(cwd).context("Could not load config")?;
-        let mut ctx = Context {
-            global_opt: &self.global_opt,
-            conf: &conf,
-            stdin: &mut stdin,
-            stderr: &mut stderr,
-        };
-        let outcome = self.cmd.run(&mut ctx)?;
+        let conf = Config::load(self.global_opt.clone(), cwd).context("Could not load config")?;
+        let mut cnsl = Console::new(stdin, stderr);
+        let outcome = self.cmd.run(&conf, &mut cnsl)?;
 
-        ctx.stderr.flush()?;
+        cnsl.flush()?;
         writeln!(stdout)?;
 
-        if self.global_opt.debug {
-            writeln!(stdout, "{:#?}", &outcome)
-        } else {
-            writeln!(stdout, "{}", &outcome)
-        }?;
+        outcome.print(stdout, self.global_opt.output)?;
 
         if outcome.is_error() {
             Err(Error::msg("Command exited with error"))
@@ -95,63 +112,23 @@ impl Opt {
     }
 }
 
-pub trait Input: io::BufRead + fmt::Debug {
-    fn read_input(&mut self, is_password: bool) -> Result<String> {
-        let raw = if is_password {
-            read_password_from_tty(None)?
-        } else {
-            let mut buf = String::new();
-            self.read_line(&mut buf)?;
-            buf
-        };
-        Ok(raw.trim().to_string())
-    }
-}
+#[cfg(test)]
+mod tests {
+    use lazy_static::lazy_static;
+    use reqwest::Url;
 
-impl<T: io::BufRead + fmt::Debug> Input for T {}
+    use super::*;
+    use crate::model::{Contest, Problem, Service};
 
-pub trait Output: io::Write + fmt::Debug {
-    fn prompt(&mut self, prompt: &str) -> Result<()> {
-        write!(self, "{}", prompt)?;
-        self.flush()?;
-        Ok(())
-    }
-}
-
-impl<T: io::Write + fmt::Debug> Output for T {}
-
-#[derive(Debug)]
-pub struct Context<'a> {
-    global_opt: &'a GlobalOpt,
-    conf: &'a Config,
-    stdin: &'a mut dyn Input,
-    stderr: &'a mut dyn Output,
-}
-
-impl Context<'_> {
-    fn prompt_read(&mut self, prompt: &str, is_password: bool) -> Result<String> {
-        self.stderr
-            .prompt(prompt)
-            .context("Could not output prompt message")?;
-        self.stdin.read_input(is_password)
-    }
-
-    fn get_env_or_prompt_read(
-        &mut self,
-        env_name: &str,
-        prompt: &str,
-        is_password: bool,
-    ) -> Result<String> {
-        if let Ok(val) = env::var(env_name) {
-            writeln!(
-                self.stderr,
-                "{}{:16} (read from env {})",
-                prompt,
-                if is_password { "********" } else { &val },
-                env_name
-            )?;
-            return Ok(val);
-        };
-        self.prompt_read(prompt, is_password)
+    lazy_static! {
+        pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
+        pub static ref DEFAULT_CONTEST: Contest =
+            Contest::new("arc100", "AtCoder Regular Contest 100", Vec::new());
+        pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
+            "C",
+            "Linear Approximation",
+            Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
+            Vec::new()
+        );
     }
 }

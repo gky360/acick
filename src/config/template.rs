@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use std::sync::Mutex;
@@ -11,7 +10,7 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
 
-use crate::model::{Contest, Problem, Service, ServiceKind};
+use crate::model::{Contest, Problem, Service};
 use crate::Result;
 
 macro_rules! register_case_conversion {
@@ -45,10 +44,16 @@ lazy_static! {
     };
 }
 
-pub trait Expand<C: Serialize> {
+pub trait Expand<'a> {
+    type Context: Serialize + 'a;
+
     fn get_template(&self) -> &str;
 
-    fn expand(&self, context: &C) -> Result<String> {
+    fn is_empty(&self) -> bool {
+        self.get_template().is_empty()
+    }
+
+    fn expand(&self, context: &Self::Context) -> Result<String> {
         let template = self.get_template();
         let template_name = template;
 
@@ -74,88 +79,113 @@ pub trait Expand<C: Serialize> {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Templ(String);
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CmdContext<'a> {
+    command: &'a str,
+}
 
-impl<T: ToString> From<T> for Templ {
-    fn from(value: T) -> Self {
-        Self(value.to_string())
+impl<'a> CmdContext<'a> {
+    pub fn new(command: &'a str) -> Self {
+        Self { command }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CmdContext {
-    command: String,
-}
+pub struct CmdTempl(String);
 
-impl CmdContext {
-    #[allow(dead_code)]
-    pub fn new(command: impl ToString) -> Self {
-        Self {
-            command: command.to_string(),
-        }
-    }
-}
+impl<'a> Expand<'a> for CmdTempl {
+    type Context = CmdContext<'a>;
 
-pub type CmdTempl = Templ;
-
-impl Expand<CmdContext> for CmdTempl {
     fn get_template(&self) -> &str {
         &self.0
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ProblemContext {
-    service: Service,
-    contest: Contest,
-    problem: Problem,
+impl<'a, T: Into<String>> From<T> for CmdTempl {
+    fn from(s: T) -> Self {
+        Self(s.into())
+    }
 }
 
-impl Default for ProblemContext {
-    fn default() -> Self {
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ProblemContext<'a> {
+    service: &'a Service,
+    contest: &'a Contest,
+    problem: &'a Problem,
+}
+
+impl<'a> ProblemContext<'a> {
+    pub fn new(service: &'a Service, contest: &'a Contest, problem: &'a Problem) -> Self {
         Self {
-            service: Service::new(ServiceKind::Atcoder),
-            contest: Contest::new("arc100"),
-            problem: Problem::new("a"),
+            service,
+            contest,
+            problem,
         }
     }
 }
 
-pub type ProblemTempl = Templ;
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ProblemTempl(String);
 
-impl Expand<ProblemContext> for ProblemTempl {
+impl ProblemTempl {
+    pub fn expand_with(
+        &self,
+        service: &Service,
+        contest: &Contest,
+        problem: &Problem,
+    ) -> Result<String> {
+        self.expand(&ProblemContext {
+            service,
+            contest,
+            problem,
+        })
+    }
+}
+
+impl<'a> Expand<'a> for ProblemTempl {
+    type Context = ProblemContext<'a>;
+
     fn get_template(&self) -> &str {
         &self.0
+    }
+}
+
+impl<T: Into<String>> From<T> for ProblemTempl {
+    fn from(s: T) -> Self {
+        Self(s.into())
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(transparent)]
-pub struct TemplArray<T: Expand<C>, C: Serialize>(Vec<T>, #[serde(skip)] PhantomData<C>);
+pub struct TemplArray<T>(Vec<T>);
 
-impl<T: Expand<C>, C: Serialize> TemplArray<T, C> {
-    #[allow(dead_code)]
-    pub fn expand_all(&self, context: &C) -> Result<Vec<String>> {
+impl<'a, T: Expand<'a>> TemplArray<T> {
+    pub fn expand_all(&self, context: &<T as Expand<'a>>::Context) -> Result<Vec<String>> {
         self.0.iter().map(|c| c.expand(context)).collect()
+    }
+
+    pub fn expand_all_join(&self, context: &<T as Expand<'a>>::Context) -> Result<String> {
+        self.expand_all(context).map(|arr| arr.join(" "))
     }
 }
 
-impl<I, S, T: Expand<C> + From<String>, C: Serialize> From<I> for TemplArray<T, C>
+impl<'a, I, S, T> From<I> for TemplArray<T>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
+    T: Expand<'a> + From<String>,
 {
     fn from(value: I) -> Self {
         let arr = value
             .into_iter()
             .map(|s| s.as_ref().to_string().into())
             .collect();
-        TemplArray(arr, PhantomData)
+        TemplArray(arr)
     }
 }
 
-impl<T: Expand<C> + fmt::Display, C: Serialize> fmt::Display for TemplArray<T, C> {
+impl<T: fmt::Display> fmt::Display for TemplArray<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0
             .iter()
@@ -164,11 +194,10 @@ impl<T: Expand<C> + fmt::Display, C: Serialize> fmt::Display for TemplArray<T, C
     }
 }
 
-pub type Shell = TemplArray<CmdTempl, CmdContext>;
+pub type Shell = TemplArray<CmdTempl>;
 
 impl Shell {
-    #[allow(dead_code)]
-    pub fn exec(&self, command: impl ToString) -> Result<Output> {
+    pub fn exec(&self, command: &str) -> Result<Output> {
         let cmd_context = CmdContext::new(command);
         let command = self
             .expand_all(&cmd_context)
@@ -184,15 +213,15 @@ impl Shell {
     }
 
     #[allow(dead_code)]
-    pub fn exec_templ_arr<T: Expand<C>, C: Serialize>(
+    pub fn exec_templ_arr<'a, T: Expand<'a>>(
         &self,
-        templ_arr: &TemplArray<T, C>,
-        context: &C,
+        templ_arr: &TemplArray<T>,
+        context: &<T as Expand<'a>>::Context,
     ) -> Result<Output> {
         let command = templ_arr
-            .expand_all(context)
+            .expand_all_join(context)
             .context("Could not expand command template")?;
-        self.exec(command.join(" "))
+        self.exec(&command)
     }
 }
 
@@ -227,6 +256,7 @@ impl Default for Shell {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
 
     #[test]
     fn expand_cmd_templ() -> anyhow::Result<()> {
@@ -239,7 +269,8 @@ mod tests {
     #[test]
     fn expand_problem_templ() -> anyhow::Result<()> {
         let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
-        let problem_context = ProblemContext::default();
+        let problem_context =
+            ProblemContext::new(&DEFAULT_SERVICE, &DEFAULT_CONTEST, &DEFAULT_PROBLEM);
         templ.expand(&problem_context)?;
         Ok(())
     }

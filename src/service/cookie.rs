@@ -1,5 +1,5 @@
 use std::convert::TryFrom as _;
-use std::fs::{create_dir_all, File, OpenOptions};
+use std::fs::File;
 use std::io::{BufReader, Seek as _, SeekFrom};
 
 use anyhow::Context as _;
@@ -19,14 +19,8 @@ pub struct CookieStorage {
 
 impl CookieStorage {
     pub fn open(path: &AbsPathBuf) -> Result<Self> {
-        if let Some(dir) = path.as_ref().parent() {
-            create_dir_all(dir).context("Could not create dir for cookies file")?;
-        }
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(path.as_ref())
+        let file = path
+            .create_dir_all_and_open(true, true)
             .context("Could not open cookies file")?;
         file.try_lock_exclusive()
             .context("Could not lock cookies file")?;

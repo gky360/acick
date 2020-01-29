@@ -1,4 +1,5 @@
 use std::fmt;
+use std::io::Write as _;
 
 use anyhow::Context as _;
 use serde::Serialize;
@@ -6,26 +7,26 @@ use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
 use crate::model::ServiceKind;
-use crate::{Context, GlobalOpt, Result};
+use crate::{Config, Console, GlobalOpt, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct LoginOpt {}
 
 impl Run for LoginOpt {
-    fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
-        let GlobalOpt { service_id, .. } = ctx.global_opt;
+    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+        let GlobalOpt { service_id, .. } = conf.global_opt();
         let (user_env, pass_env) = service_id.to_user_pass_env_names();
-        let user = ctx
-            .get_env_or_prompt_read(user_env, "username: ", false)
+        let user = cnsl
+            .get_env_or_prompt_and_read(user_env, "username: ", false)
             .context("Could not read username")?;
-        let pass = ctx
-            .get_env_or_prompt_read(pass_env, "password: ", true)
+        let pass = cnsl
+            .get_env_or_prompt_and_read(pass_env, "password: ", true)
             .context("Could not read password")?;
-        writeln!(ctx.stderr)?;
+        writeln!(cnsl)?;
 
-        let mut service = service_id.serve(ctx);
-        let outcome = service.login(user, pass)?;
+        let service = conf.build_service();
+        let outcome = service.login(user, pass, cnsl)?;
 
         Ok(Box::new(outcome))
     }
@@ -48,7 +49,7 @@ impl fmt::Display for LoginOutcome {
             } else {
                 "Successfully"
             },
-            Into::<&'static str>::into(&self.service_id),
+            self.service_id,
             &self.username
         )
     }
