@@ -94,10 +94,10 @@ impl Opt {
     ) -> Result<()> {
         let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
         let conf = Config::load(self.global_opt.clone(), cwd).context("Could not load config")?;
-        let mut ctx = Context { stdin, stderr };
-        let outcome = self.cmd.run(&conf, &mut ctx)?;
+        let mut cnsl = Console { stdin, stderr };
+        let outcome = self.cmd.run(&conf, &mut cnsl)?;
 
-        ctx.stderr.flush()?;
+        cnsl.stderr.flush()?;
         writeln!(stdout)?;
 
         outcome.print(stdout, self.global_opt.output)?;
@@ -136,12 +136,12 @@ pub trait Output: io::Write + fmt::Debug {
 impl<T: io::Write + fmt::Debug> Output for T {}
 
 #[derive(Debug)]
-pub struct Context<'a> {
+pub struct Console<'a> {
     stdin: &'a mut dyn Input,
     stderr: &'a mut dyn Output,
 }
 
-impl Context<'_> {
+impl Console<'_> {
     fn prompt_read(&mut self, prompt: &str, is_password: bool) -> Result<String> {
         self.stderr
             .prompt(prompt)

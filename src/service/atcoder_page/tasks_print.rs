@@ -12,7 +12,7 @@ use crate::service::atcoder_page::{FetchMaybeNotFound, BASE_URL};
 use crate::service::scrape::{
     parse_zenkaku_digits, regex, select, ElementRefExt as _, HasUrl, Scrape,
 };
-use crate::{Config, Context, Result};
+use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPrintPageBuilder<'a> {
@@ -24,8 +24,8 @@ impl<'a> TasksPrintPageBuilder<'a> {
         Self { conf }
     }
 
-    pub fn build(self, client: &Client, ctx: &mut Context) -> Result<TasksPrintPage<'a>> {
-        self.fetch_maybe_not_found(client, self.conf, ctx)
+    pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<TasksPrintPage<'a>> {
+        self.fetch_maybe_not_found(client, self.conf, cnsl)
             .map(|html| TasksPrintPage {
                 builder: self,
                 content: html,

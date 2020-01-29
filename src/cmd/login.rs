@@ -6,25 +6,25 @@ use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
 use crate::model::ServiceKind;
-use crate::{Config, Context, GlobalOpt, Result};
+use crate::{Config, Console, GlobalOpt, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct LoginOpt {}
 
 impl Run for LoginOpt {
-    fn run(&self, conf: &Config, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
+    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         let GlobalOpt { service_id, .. } = conf.global_opt();
         let (user_env, pass_env) = service_id.to_user_pass_env_names();
-        let user = ctx
+        let user = cnsl
             .get_env_or_prompt_read(user_env, "username: ", false)
             .context("Could not read username")?;
-        let pass = ctx
+        let pass = cnsl
             .get_env_or_prompt_read(pass_env, "password: ", true)
             .context("Could not read password")?;
-        writeln!(ctx.stderr)?;
+        writeln!(cnsl.stderr)?;
 
-        let mut service = conf.build_service(ctx);
+        let mut service = conf.build_service(cnsl);
         let outcome = service.login(user, pass)?;
 
         Ok(Box::new(outcome))

@@ -6,7 +6,7 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
 use crate::service::session::WithRetry as _;
-use crate::{Config, Context, Error, Result};
+use crate::{Config, Console, Error, Result};
 
 #[macro_export]
 macro_rules! regex {
@@ -45,11 +45,11 @@ pub trait Fetch: HasUrl {
         &self,
         client: &Client,
         conf: &Config,
-        ctx: &mut Context,
+        cnsl: &mut Console,
     ) -> Result<(StatusCode, Html)> {
         let res = client
             .get(self.url()?)
-            .with_retry(client, conf, ctx)
+            .with_retry(client, conf, cnsl)
             .retry_send()?;
         let status = res.status();
         let html = res.text().map(|text| Html::parse_document(&text))?;
@@ -61,9 +61,9 @@ pub trait Fetch: HasUrl {
         check: impl FnOnce(StatusCode) -> bool,
         client: &Client,
         conf: &Config,
-        ctx: &mut Context,
+        cnsl: &mut Console,
     ) -> Result<Html> {
-        let (status, html) = self.fetch(client, conf, ctx)?;
+        let (status, html) = self.fetch(client, conf, cnsl)?;
         if check(status) {
             Ok(html)
         } else {

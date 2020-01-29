@@ -4,14 +4,14 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::{Config, Context, Result};
+use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct ShowOpt {}
 
 impl Run for ShowOpt {
-    fn run(&self, conf: &Config, _ctx: &mut Context) -> Result<Box<dyn Outcome>> {
+    fn run(&self, conf: &Config, _cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         Ok(Box::new(ShowOutcome { conf: conf.clone() }))
     }
 }

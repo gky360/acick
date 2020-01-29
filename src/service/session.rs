@@ -2,7 +2,7 @@ use anyhow::Context as _;
 use reqwest::blocking::{Client, Request, RequestBuilder, Response};
 use retry::{delay, retry, OperationResult};
 
-use crate::{Config, Context, Error, Result};
+use crate::{Config, Console, Error, Result};
 
 trait ExecSession {
     fn exec_session(&self, request: Request, conf: &Config) -> Result<Response>;
@@ -28,26 +28,32 @@ pub struct RetryRequestBuilder<'a, 'b> {
     inner: RequestBuilder,
     client: &'a Client,
     conf: &'a Config,
-    ctx: &'a mut Context<'b>,
+    cnsl: &'a mut Console<'b>,
 }
 
 impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
     pub fn send_pretty(&mut self) -> Result<Response> {
         let Self {
-            client, conf, ctx, ..
+            client, conf, cnsl, ..
         } = self;
         let req = self
             .inner
             .try_clone()
             .ok_or_else(|| Error::msg("Could not build request"))?
             .build()?;
-        write!(ctx.stderr, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
+        write!(
+            cnsl.stderr,
+            "{:7} {} ... ",
+            req.method().as_str(),
+            req.url()
+        )
+        .unwrap_or(());
         let result = client
             .exec_session(req, conf)
             .context("Could not send request");
         match &result {
-            Ok(res) => writeln!(ctx.stderr, "{}", res.status()),
-            Err(_) => writeln!(ctx.stderr, "failed"),
+            Ok(res) => writeln!(cnsl.stderr, "{}", res.status()),
+            Err(_) => writeln!(cnsl.stderr, "failed"),
         }
         .unwrap_or(());
         result
@@ -80,7 +86,7 @@ pub trait WithRetry {
         self,
         client: &'a Client,
         conf: &'a Config,
-        ctx: &'a mut Context<'b>,
+        cnsl: &'a mut Console<'b>,
     ) -> RetryRequestBuilder<'a, 'b>;
 }
 
@@ -89,13 +95,13 @@ impl WithRetry for RequestBuilder {
         self,
         client: &'a Client,
         conf: &'a Config,
-        ctx: &'a mut Context<'b>,
+        cnsl: &'a mut Console<'b>,
     ) -> RetryRequestBuilder<'a, 'b> {
         RetryRequestBuilder {
             inner: self,
             client,
             conf,
-            ctx,
+            cnsl,
         }
     }
 }

@@ -6,7 +6,7 @@ use scraper::{ElementRef, Html};
 use crate::model::{Problem, ProblemId};
 use crate::service::atcoder_page::{FetchMaybeNotFound, HasHeader, BASE_URL};
 use crate::service::scrape::{select, ElementRefExt as _, HasUrl, Scrape};
-use crate::{Config, Context, Result};
+use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPageBuilder<'a> {
@@ -18,8 +18,8 @@ impl<'a> TasksPageBuilder<'a> {
         Self { conf }
     }
 
-    pub fn build(self, client: &Client, ctx: &mut Context) -> Result<TasksPage<'a>> {
-        self.fetch_maybe_not_found(client, self.conf, ctx)
+    pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<TasksPage<'a>> {
+        self.fetch_maybe_not_found(client, self.conf, cnsl)
             .map(|html| TasksPage {
                 builder: self,
                 content: html,

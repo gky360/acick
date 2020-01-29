@@ -4,7 +4,7 @@ use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
 use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
-use crate::{Config, Context, Error, Result};
+use crate::{Config, Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SettingsPageBuilder<'a> {
@@ -18,8 +18,8 @@ impl<'a> SettingsPageBuilder<'a> {
         Self { conf }
     }
 
-    pub fn build(self, client: &Client, ctx: &mut Context) -> Result<SettingsPage<'a>> {
-        let (status, html) = self.fetch(client, self.conf, ctx)?;
+    pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<SettingsPage<'a>> {
+        let (status, html) = self.fetch(client, self.conf, cnsl)?;
         match status {
             StatusCode::OK => Ok(SettingsPage {
                 builder: self,

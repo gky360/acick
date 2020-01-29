@@ -5,7 +5,7 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::service::scrape::{select, ElementRefExt as _, Fetch, Scrape};
-use crate::{Config, Context, Error, Result};
+use crate::{Config, Console, Error, Result};
 
 mod login;
 mod settings;
@@ -62,9 +62,9 @@ pub trait FetchMaybeNotFound: Fetch {
         &self,
         client: &Client,
         conf: &Config,
-        ctx: &mut Context,
+        cnsl: &mut Console,
     ) -> Result<Html> {
-        let (status, html) = self.fetch(client, conf, ctx)?;
+        let (status, html) = self.fetch(client, conf, cnsl)?;
         match status {
             StatusCode::OK => Ok(html),
             StatusCode::NOT_FOUND if NotFoundPage(&html).is_not_found() => Err(anyhow!(

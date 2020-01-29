@@ -5,7 +5,7 @@ use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
 use crate::model::{Contest, ProblemId};
-use crate::{Config, Context, Result};
+use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
@@ -16,10 +16,10 @@ pub struct FetchOpt {
 }
 
 impl Run for FetchOpt {
-    fn run(&self, conf: &Config, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
+    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         let service_id = conf.global_opt().service_id;
         let contest = {
-            let mut service = conf.build_service(ctx);
+            let mut service = conf.build_service(cnsl);
             service.fetch(&self.problem_id)?
         };
 

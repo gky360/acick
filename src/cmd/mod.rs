@@ -4,7 +4,7 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::{Config, Context, OutputFormat, Result};
+use crate::{Config, Console, OutputFormat, Result};
 
 mod fetch;
 mod login;
@@ -45,7 +45,7 @@ impl<T: Serialize + fmt::Display + fmt::Debug> OutcomeSerialize for T {
 }
 
 pub trait Run {
-    fn run(&self, conf: &Config, ctx: &mut Context) -> Result<Box<dyn Outcome>>;
+    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>>;
 }
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -65,11 +65,11 @@ pub enum Cmd {
 }
 
 impl Run for Cmd {
-    fn run(&self, conf: &Config, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
+    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         match self {
-            Self::Show(opt) => opt.run(conf, ctx),
-            Self::Login(opt) => opt.run(conf, ctx),
-            Self::Fetch(opt) => opt.run(conf, ctx),
+            Self::Show(opt) => opt.run(conf, cnsl),
+            Self::Login(opt) => opt.run(conf, cnsl),
+            Self::Fetch(opt) => opt.run(conf, cnsl),
         }
     }
 }
@@ -90,12 +90,12 @@ mod tests {
             .expect("Could not load config");
             let mut stdin_buf = ::std::io::BufReader::new(&b""[..]);
             let mut stderr_buf = Vec::new();
-            let mut ctx = Context {
+            let mut cnsl = Console {
                 stdin: &mut stdin_buf,
                 stderr: &mut stderr_buf,
             };
 
-            let result = opt.run(&conf, &mut ctx);
+            let result = opt.run(&conf, &mut cnsl);
             eprintln!("{}", String::from_utf8_lossy(&stderr_buf));
             result
         }};

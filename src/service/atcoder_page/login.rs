@@ -4,7 +4,7 @@ use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
 use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
-use crate::{Config, Context, Result};
+use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginPageBuilder<'a> {
@@ -18,8 +18,8 @@ impl<'a> LoginPageBuilder<'a> {
         Self { conf }
     }
 
-    pub fn build(self, client: &Client, ctx: &mut Context) -> Result<LoginPage<'a>> {
-        self.fetch_if(|s| s == StatusCode::OK, client, self.conf, ctx)
+    pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<LoginPage<'a>> {
+        self.fetch_if(|s| s == StatusCode::OK, client, self.conf, cnsl)
             .map(|html| LoginPage {
                 builder: self,
                 content: html,
