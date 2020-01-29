@@ -249,6 +249,21 @@ pub struct AtcoderConfig {
     src: ProblemTempl,
     compile: TemplArray<ProblemTempl>,
     run: TemplArray<ProblemTempl>,
+    template: ProblemTempl,
+}
+
+impl AtcoderConfig {
+    const DEFAULT_TEMPLATE: &'static str = r#"/*
+[{{ contest.id }}] {{ problem.id }} - {{ problem.name }}
+*/
+
+#include <iostream>
+using namespace std;
+
+int main() {
+    return 0;
+}
+"#;
 }
 
 impl Default for AtcoderConfig {
@@ -269,6 +284,7 @@ impl Default for AtcoderConfig {
             ])
                 .into(),
             run: (&["./a.out"]).into(),
+            template: Self::DEFAULT_TEMPLATE.into(),
         }
     }
 }
