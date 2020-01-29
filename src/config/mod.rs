@@ -84,11 +84,12 @@ Fix version in the config file so that it matches the acick version."#,
         &self,
         service_id: ServiceKind,
         contest: &Contest,
+        overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<()> {
         let service = Service::new(service_id);
         for problem in contest.problems().iter() {
-            self.save_problem(&service, contest, problem, cnsl)?;
+            self.save_problem(&service, contest, problem, overwrite, cnsl)?;
         }
         Ok(())
     }
@@ -98,6 +99,7 @@ Fix version in the config file so that it matches the acick version."#,
         service: &Service,
         contest: &Contest,
         problem: &Problem,
+        overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
         let problem_path = self.problem_path(service, contest, problem)?;
@@ -106,7 +108,8 @@ Fix version in the config file so that it matches the acick version."#,
             "Saving {} ... ",
             problem_path.strip_prefix(&self.base_dir).display()
         )?;
-        let is_saved = if problem_path.as_ref().is_file() {
+        let is_existed = problem_path.as_ref().is_file();
+        let is_saved = if !overwrite && is_existed {
             false
         } else {
             problem_path
@@ -117,7 +120,15 @@ Fix version in the config file so that it matches the acick version."#,
                 })?;
             true
         };
-        let msg = if is_saved { "saved" } else { "already exists" };
+        let msg = if is_saved {
+            if is_existed {
+                "overwritten"
+            } else {
+                "saved"
+            }
+        } else {
+            "already exists"
+        };
         writeln!(cnsl, "{}", msg)?;
         Ok(is_saved)
     }

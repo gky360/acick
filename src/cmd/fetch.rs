@@ -10,9 +10,12 @@ use crate::{Config, Console, Result};
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct FetchOpt {
-    /// Problem id. If specified, only one problem will be fetched.
+    /// If specified, fetches only one problem
     #[structopt(name = "problem")]
     problem_id: Option<ProblemId>,
+    /// Overwrites existing problem files and source files
+    #[structopt(long, short = "w")]
+    overwrite: bool,
 }
 
 impl Run for FetchOpt {
@@ -21,7 +24,8 @@ impl Run for FetchOpt {
         let service = conf.build_service();
         let contest = service.fetch(&self.problem_id, cnsl)?;
 
-        conf.save_problems(service_id, &contest, cnsl)?;
+        conf.save_problems(service_id, &contest, self.overwrite, cnsl)?;
+
         Ok(Box::new(FetchOutcome { contest }))
     }
 }
