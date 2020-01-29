@@ -80,26 +80,7 @@ Fix version in the config file so that it matches the acick version."#,
         CookieStorage::open(&cookies_path.to_abs(&self.base_dir))
     }
 
-    pub fn save_problems_files(
-        &self,
-        contest: &Contest,
-        problems: &[Problem],
-        overwrite: bool,
-        cnsl: &mut Console,
-    ) -> Result<()> {
-        let service = &Service::new(self.global_opt.service_id);
-        for problem in problems.iter() {
-            self.save_problem(service, contest, problem, overwrite, cnsl)
-                .context("Could not save problem file")?;
-        }
-        for problem in problems.iter() {
-            self.save_source(service, contest, problem, overwrite, cnsl)
-                .context("Could not save source file from template")?;
-        }
-        Ok(())
-    }
-
-    fn save_problem(
+    pub fn save_problem(
         &self,
         service: &Service,
         contest: &Contest,
@@ -116,7 +97,7 @@ Fix version in the config file so that it matches the acick version."#,
         )
     }
 
-    fn save_source(
+    pub fn expand_and_save_source(
         &self,
         service: &Service,
         contest: &Contest,

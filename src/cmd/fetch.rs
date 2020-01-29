@@ -1,5 +1,6 @@
 use std::fmt;
 
+use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
@@ -20,15 +21,33 @@ pub struct FetchOpt {
 
 impl Run for FetchOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+        let Self {
+            ref problem_id,
+            overwrite,
+        } = *self;
+
+        // fetch data from service
         let service = conf.build_service();
-        let (contest, problems) = service.fetch(&self.problem_id, cnsl)?;
+        let (contest, problems) = service.fetch(problem_id, cnsl)?;
 
-        conf.save_problems_files(&contest, &problems, self.overwrite, cnsl)?;
+        let service = Service::new(conf.global_opt().service_id);
 
-        Ok(Box::new(FetchOutcome {
-            service: Service::new(conf.global_opt().service_id),
-            contest,
-        }))
+        // save contest
+        // TODO: save contest
+
+        // save problem data file
+        for problem in problems.iter() {
+            conf.save_problem(&service, &contest, problem, overwrite, cnsl)
+                .context("Could not save problem data file")?;
+        }
+
+        // expand source template and save source file
+        for problem in problems.iter() {
+            conf.expand_and_save_source(&service, &contest, problem, overwrite, cnsl)
+                .context("Could not save source file from template")?;
+        }
+
+        Ok(Box::new(FetchOutcome { service, contest }))
     }
 }
 
