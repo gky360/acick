@@ -100,18 +100,18 @@ Fix version in the config file so that it matches the acick version."#,
         problem: &Problem,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let samples_path = self.samples_path(service, contest, problem)?;
+        let problem_path = self.problem_path(service, contest, problem)?;
         write!(
             cnsl,
             "Saving {} ... ",
-            samples_path.strip_prefix(&self.base_dir).display()
+            problem_path.strip_prefix(&self.base_dir).display()
         )?;
-        let is_saved = if samples_path.as_ref().is_file() {
+        let is_saved = if problem_path.as_ref().is_file() {
             false
         } else {
-            samples_path
+            problem_path
                 .create_dir_all_and_open(false, true)
-                .with_context(|| format!("Could not create samples file : {}", samples_path))
+                .with_context(|| format!("Could not create problem file : {}", problem_path))
                 .and_then(|file| {
                     serde_yaml::to_writer(file, &problem).context("Could not save problem as yaml")
                 })?;
@@ -122,15 +122,15 @@ Fix version in the config file so that it matches the acick version."#,
         Ok(is_saved)
     }
 
-    fn samples_path(
+    fn problem_path(
         &self,
         service: &Service,
         contest: &Contest,
         problem: &Problem,
     ) -> Result<AbsPathBuf> {
         let problem_context = ProblemContext::new(service, contest, problem);
-        let samples_path_expanded = self.body.samples_path.expand(&problem_context)?;
-        Ok(self.base_dir.join(samples_path_expanded))
+        let problem_path_expanded = self.body.problem_path.expand(&problem_context)?;
+        Ok(self.base_dir.join(problem_path_expanded))
     }
 }
 
@@ -149,7 +149,7 @@ pub struct ConfigBody {
     version: Version,
     #[get = "pub"]
     shell: Shell,
-    samples_path: ProblemTempl,
+    problem_path: ProblemTempl,
     #[get = "pub"]
     session: SessionConfig,
     #[get = "pub"]
@@ -161,8 +161,8 @@ impl Default for ConfigBody {
         Self {
             version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
             shell: Shell::default(),
-            samples_path:
-                "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/samples.yaml"
+            problem_path:
+                "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/problem.yaml"
                     .into(),
             session: SessionConfig::default(),
             services: ServicesConfig::default(),
