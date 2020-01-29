@@ -4,12 +4,13 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
-use getset::{Getters, Setters};
+use getset::{CopyGetters, Getters, Setters};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
+    #[get_copy = "pub"]
     id: ServiceKind,
 }
 

@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fmt;
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -7,7 +6,6 @@ use std::time::Duration;
 use anyhow::{anyhow, Context as _};
 use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
-use maplit::btreemap;
 use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
 use semver::Version;
@@ -82,16 +80,20 @@ Fix version in the config file so that it matches the acick version."#,
         CookieStorage::open(&cookies_path.to_abs(&self.base_dir))
     }
 
-    pub fn save_problems(
+    pub fn save_problems_files(
         &self,
-        service_id: ServiceKind,
         contest: &Contest,
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<()> {
-        let service = Service::new(service_id);
+        let service = &Service::new(self.global_opt.service_id);
         for problem in contest.problems().iter() {
-            self.save_problem(&service, contest, problem, overwrite, cnsl)?;
+            self.save_problem(service, contest, problem, overwrite, cnsl)
+                .context("Could not save problem file")?;
+        }
+        for problem in contest.problems().iter() {
+            self.save_src(service, contest, problem, overwrite, cnsl)
+                .context("Could not save src file from template")?;
         }
         Ok(())
     }
@@ -104,46 +106,56 @@ Fix version in the config file so that it matches the acick version."#,
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let problem_path = self.problem_path(service, contest, problem)?;
-        write!(
+        let problem_abs_path = self.problem_abs_path(service, contest, problem)?;
+        problem_abs_path.save_pretty(
+            &self.base_dir,
+            overwrite,
+            |file| serde_yaml::to_writer(file, &problem).context("Could not save problem as yaml"),
             cnsl,
-            "Saving {} ... ",
-            problem_path.strip_prefix(&self.base_dir).display()
-        )?;
-        let is_existed = problem_path.as_ref().is_file();
-        let is_saved = if !overwrite && is_existed {
-            false
-        } else {
-            problem_path
-                .create_dir_all_and_open(false, true)
-                .with_context(|| format!("Could not create problem file : {}", problem_path))
-                .and_then(|file| {
-                    serde_yaml::to_writer(file, &problem).context("Could not save problem as yaml")
-                })?;
-            true
-        };
-        let msg = if is_saved {
-            if is_existed {
-                "overwritten"
-            } else {
-                "saved"
-            }
-        } else {
-            "already exists"
-        };
-        writeln!(cnsl, "{}", msg)?;
-        Ok(is_saved)
+        )
     }
 
-    fn problem_path(
+    fn save_src(
+        &self,
+        service: &Service,
+        contest: &Contest,
+        problem: &Problem,
+        overwrite: bool,
+        cnsl: &mut Console,
+    ) -> Result<bool> {
+        let src_abs_path = self.src_abs_path(service, contest, problem)?;
+        let template = &self.body.services.get(service.id()).template;
+        let template_expanded = template.expand_with(service, contest, problem)?;
+        src_abs_path.save_pretty(
+            &self.base_dir,
+            overwrite,
+            |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
+            cnsl,
+        )
+    }
+
+    fn problem_abs_path(
         &self,
         service: &Service,
         contest: &Contest,
         problem: &Problem,
     ) -> Result<AbsPathBuf> {
         let problem_context = ProblemContext::new(service, contest, problem);
-        let problem_path_expanded = self.body.problem_path.expand(&problem_context)?;
+        let problem_path = &self.body.problem_path;
+        let problem_path_expanded = problem_path.expand(&problem_context)?;
         Ok(self.base_dir.join(problem_path_expanded))
+    }
+
+    fn src_abs_path(
+        &self,
+        service: &Service,
+        contest: &Contest,
+        problem: &Problem,
+    ) -> Result<AbsPathBuf> {
+        let problem_context = ProblemContext::new(service, contest, problem);
+        let src_path = &self.body.services.get(service.id()).src_path;
+        let src_path_expanded = src_path.expand(&problem_context)?;
+        Ok(self.base_dir.join(src_path_expanded))
     }
 }
 
@@ -166,7 +178,7 @@ pub struct ConfigBody {
     #[get = "pub"]
     session: SessionConfig,
     #[get = "pub"]
-    services: BTreeMap<ServiceKind, ServiceConfig>,
+    services: ServicesConfig,
 }
 
 impl Default for ConfigBody {
@@ -178,9 +190,7 @@ impl Default for ConfigBody {
                 "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/problem.yaml"
                     .into(),
             session: SessionConfig::default(),
-            services: btreemap! {
-                ServiceKind::default() => ServiceConfig::default_for(ServiceKind::default())
-            },
+            services: ServicesConfig::default(),
         }
     }
 }
@@ -240,10 +250,32 @@ impl Default for SessionConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[serde(default)]
+pub struct ServicesConfig {
+    atcoder: ServiceConfig,
+}
+
+impl ServicesConfig {
+    pub fn get(&self, service_id: ServiceKind) -> &ServiceConfig {
+        match service_id {
+            ServiceKind::Atcoder => &self.atcoder,
+        }
+    }
+}
+
+impl Default for ServicesConfig {
+    fn default() -> Self {
+        Self {
+            atcoder: ServiceConfig::default_for(ServiceKind::Atcoder),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
     language: String,
     working_dir: ProblemTempl,
-    src: ProblemTempl,
+    src_path: ProblemTempl,
     compile: TemplArray<ProblemTempl>,
     run: TemplArray<ProblemTempl>,
     template: ProblemTempl,
@@ -266,8 +298,11 @@ int main() {
         match service_id {
             ServiceKind::Atcoder => Self {
                 language: "C++14 (GCC 5.4.1)".into(),
-                working_dir: "{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}".into(),
-                src: "{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/Main.cpp".into(),
+                working_dir:
+                    "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}".into(),
+                src_path:
+                    "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/Main.cpp"
+                        .into(),
                 compile: (&[
                     "g++",
                     "-std=gnu++1y",

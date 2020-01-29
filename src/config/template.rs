@@ -49,6 +49,10 @@ pub trait Expand<'a> {
 
     fn get_template(&self) -> &str;
 
+    fn is_empty(&self) -> bool {
+        self.get_template().is_empty()
+    }
+
     fn expand(&self, context: &Self::Context) -> Result<String> {
         let template = self.get_template();
         let template_name = template;
@@ -122,6 +126,21 @@ impl<'a> ProblemContext<'a> {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProblemTempl(String);
+
+impl ProblemTempl {
+    pub fn expand_with(
+        &self,
+        service: &Service,
+        contest: &Contest,
+        problem: &Problem,
+    ) -> Result<String> {
+        self.expand(&ProblemContext {
+            service,
+            contest,
+            problem,
+        })
+    }
+}
 
 impl<'a> Expand<'a> for ProblemTempl {
     type Context = ProblemContext<'a>;
