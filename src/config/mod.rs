@@ -92,8 +92,8 @@ Fix version in the config file so that it matches the acick version."#,
                 .context("Could not save problem file")?;
         }
         for problem in contest.problems().iter() {
-            self.save_src(service, contest, problem, overwrite, cnsl)
-                .context("Could not save src file from template")?;
+            self.save_source(service, contest, problem, overwrite, cnsl)
+                .context("Could not save source file from template")?;
         }
         Ok(())
     }
@@ -115,7 +115,7 @@ Fix version in the config file so that it matches the acick version."#,
         )
     }
 
-    fn save_src(
+    fn save_source(
         &self,
         service: &Service,
         contest: &Contest,
@@ -123,10 +123,10 @@ Fix version in the config file so that it matches the acick version."#,
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let src_abs_path = self.src_abs_path(service, contest, problem)?;
+        let source_abs_path = self.source_abs_path(service, contest, problem)?;
         let template = &self.body.services.get(service.id()).template;
         let template_expanded = template.expand_with(service, contest, problem)?;
-        src_abs_path.save_pretty(
+        source_abs_path.save_pretty(
             &self.base_dir,
             overwrite,
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
@@ -146,16 +146,16 @@ Fix version in the config file so that it matches the acick version."#,
         Ok(self.base_dir.join(problem_path_expanded))
     }
 
-    fn src_abs_path(
+    fn source_abs_path(
         &self,
         service: &Service,
         contest: &Contest,
         problem: &Problem,
     ) -> Result<AbsPathBuf> {
         let problem_context = ProblemContext::new(service, contest, problem);
-        let src_path = &self.body.services.get(service.id()).src_path;
-        let src_path_expanded = src_path.expand(&problem_context)?;
-        Ok(self.base_dir.join(src_path_expanded))
+        let source_path = &self.body.services.get(service.id()).source_path;
+        let source_path_expanded = source_path.expand(&problem_context)?;
+        Ok(self.base_dir.join(source_path_expanded))
     }
 }
 
@@ -275,7 +275,7 @@ impl Default for ServicesConfig {
 pub struct ServiceConfig {
     language: String,
     working_dir: ProblemTempl,
-    src_path: ProblemTempl,
+    source_path: ProblemTempl,
     compile: TemplArray<ProblemTempl>,
     run: TemplArray<ProblemTempl>,
     template: ProblemTempl,
@@ -300,7 +300,7 @@ int main() {
                 language: "C++14 (GCC 5.4.1)".into(),
                 working_dir:
                     "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}".into(),
-                src_path:
+                source_path:
                     "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/Main.cpp"
                         .into(),
                 compile: (&[
