@@ -1,3 +1,5 @@
+use std::io::Write as _;
+
 use anyhow::Context as _;
 use reqwest::blocking::{Client, Request, RequestBuilder, Response};
 use retry::{delay, retry, OperationResult};
@@ -41,19 +43,13 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
             .try_clone()
             .ok_or_else(|| Error::msg("Could not build request"))?
             .build()?;
-        write!(
-            cnsl.stderr,
-            "{:7} {} ... ",
-            req.method().as_str(),
-            req.url()
-        )
-        .unwrap_or(());
+        write!(cnsl, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
         let result = client
             .exec_session(req, conf)
             .context("Could not send request");
         match &result {
-            Ok(res) => writeln!(cnsl.stderr, "{}", res.status()),
-            Err(_) => writeln!(cnsl.stderr, "failed"),
+            Ok(res) => writeln!(cnsl, "{}", res.status()),
+            Err(_) => writeln!(cnsl, "failed"),
         }
         .unwrap_or(());
         result

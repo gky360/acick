@@ -1,4 +1,5 @@
 use std::fmt;
+use std::io::Write as _;
 
 use anyhow::Context as _;
 use serde::Serialize;
@@ -22,7 +23,7 @@ impl Run for LoginOpt {
         let pass = cnsl
             .get_env_or_prompt_and_read(pass_env, "password: ", true)
             .context("Could not read password")?;
-        writeln!(cnsl.stderr)?;
+        writeln!(cnsl)?;
 
         let service = conf.build_service();
         let outcome = service.login(user, pass, cnsl)?;
