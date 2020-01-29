@@ -11,10 +11,8 @@ use crate::{Config, Context, Result};
 pub struct ShowOpt {}
 
 impl Run for ShowOpt {
-    fn run(&self, ctx: &mut Context) -> Result<Box<dyn Outcome>> {
-        Ok(Box::new(ShowOutcome {
-            conf: ctx.conf.clone(),
-        }))
+    fn run(&self, conf: &Config, _ctx: &mut Context) -> Result<Box<dyn Outcome>> {
+        Ok(Box::new(ShowOutcome { conf: conf.clone() }))
     }
 }
 

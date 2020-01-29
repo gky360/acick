@@ -5,7 +5,7 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::service::scrape::{select, ElementRefExt as _, Fetch, Scrape};
-use crate::{Context, Error, Result};
+use crate::{Config, Context, Error, Result};
 
 mod login;
 mod settings;
@@ -58,19 +58,24 @@ pub trait HasHeader: Scrape {
 }
 
 pub trait FetchMaybeNotFound: Fetch {
-    fn fetch_maybe_not_found(&self, client: &Client, ctx: &mut Context) -> Result<Html> {
-        let (status, html) = self.fetch(client, ctx)?;
+    fn fetch_maybe_not_found(
+        &self,
+        client: &Client,
+        conf: &Config,
+        ctx: &mut Context,
+    ) -> Result<Html> {
+        let (status, html) = self.fetch(client, conf, ctx)?;
         match status {
             StatusCode::OK => Ok(html),
             StatusCode::NOT_FOUND if NotFoundPage(&html).is_not_found() => Err(anyhow!(
                 "Could not find contest : {} .
 Check if the contest id is correct.",
-                ctx.conf.global_opt().contest_id
+                conf.global_opt().contest_id
             )),
             StatusCode::NOT_FOUND if NotFoundPage(&html).is_permission_denied() => Err(anyhow!(
                 "Found not participated or not started contest : {} .
 Participate in the contest and wait until the contest starts.",
-                ctx.conf.global_opt().contest_id
+                conf.global_opt().contest_id
             )),
             _ => Err(Error::msg("Received invalid response")),
         }

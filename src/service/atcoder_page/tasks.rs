@@ -6,20 +6,20 @@ use scraper::{ElementRef, Html};
 use crate::model::{Problem, ProblemId};
 use crate::service::atcoder_page::{FetchMaybeNotFound, HasHeader, BASE_URL};
 use crate::service::scrape::{select, ElementRefExt as _, HasUrl, Scrape};
-use crate::{Context, Result};
+use crate::{Config, Context, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPageBuilder<'a> {
-    contest_id: &'a str,
+    conf: &'a Config,
 }
 
 impl<'a> TasksPageBuilder<'a> {
-    pub fn new(contest_id: &'a str) -> Self {
-        Self { contest_id }
+    pub fn new(conf: &'a Config) -> Self {
+        Self { conf }
     }
 
     pub fn build(self, client: &Client, ctx: &mut Context) -> Result<TasksPage<'a>> {
-        self.fetch_maybe_not_found(client, ctx)
+        self.fetch_maybe_not_found(client, self.conf, ctx)
             .map(|html| TasksPage {
                 builder: self,
                 content: html,
@@ -29,7 +29,8 @@ impl<'a> TasksPageBuilder<'a> {
 
 impl HasUrl for TasksPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
-        let path = format!("/contests/{}/tasks", self.contest_id);
+        let contest_id = &self.conf.global_opt().contest_id;
+        let path = format!("/contests/{}/tasks", contest_id);
         BASE_URL
             .join(&path)
             .context(format!("Could not parse url path: {}", path))

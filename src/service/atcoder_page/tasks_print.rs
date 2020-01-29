@@ -12,20 +12,20 @@ use crate::service::atcoder_page::{FetchMaybeNotFound, BASE_URL};
 use crate::service::scrape::{
     parse_zenkaku_digits, regex, select, ElementRefExt as _, HasUrl, Scrape,
 };
-use crate::{Context, Result};
+use crate::{Config, Context, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPrintPageBuilder<'a> {
-    contest_id: &'a str,
+    conf: &'a Config,
 }
 
 impl<'a> TasksPrintPageBuilder<'a> {
-    pub fn new(contest_id: &'a str) -> Self {
-        Self { contest_id }
+    pub fn new(conf: &'a Config) -> Self {
+        Self { conf }
     }
 
     pub fn build(self, client: &Client, ctx: &mut Context) -> Result<TasksPrintPage<'a>> {
-        self.fetch_maybe_not_found(client, ctx)
+        self.fetch_maybe_not_found(client, self.conf, ctx)
             .map(|html| TasksPrintPage {
                 builder: self,
                 content: html,
@@ -35,7 +35,8 @@ impl<'a> TasksPrintPageBuilder<'a> {
 
 impl HasUrl for TasksPrintPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
-        let path = format!("/contests/{}/tasks_print", self.contest_id);
+        let contest_id = &self.conf.global_opt().contest_id;
+        let path = format!("/contests/{}/tasks_print", contest_id);
         BASE_URL
             .join(&path)
             .context(format!("Could not parse url path: {}", path))
