@@ -9,10 +9,12 @@ use crate::{Config, Console, OutputFormat, Result};
 mod fetch;
 mod login;
 mod show;
+mod test;
 
 pub use fetch::FetchOpt;
 pub use login::{LoginOpt, LoginOutcome};
 pub use show::{ShowOpt, ShowOutcome};
+pub use test::{TestOpt, TestOutcome};
 
 pub trait Outcome: OutcomeSerialize {
     fn is_error(&self) -> bool;
@@ -59,7 +61,8 @@ pub enum Cmd {
     // Participate(ParticipateOpt),
     /// Fetches problems from service
     Fetch(FetchOpt),
-    // Test(TestOpt), // test samples
+    /// Tests source code with sample inputs and outputs
+    Test(TestOpt),
     // Judge(JudgeOpt), // test full testcases, for AtCoder only
     // Submit(SubmitOpt),
 }
@@ -70,6 +73,7 @@ impl Run for Cmd {
             Self::Show(opt) => opt.run(conf, cnsl),
             Self::Login(opt) => opt.run(conf, cnsl),
             Self::Fetch(opt) => opt.run(conf, cnsl),
+            Self::Test(opt) => opt.run(conf, cnsl),
         }
     }
 }
