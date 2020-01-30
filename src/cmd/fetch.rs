@@ -37,7 +37,7 @@ impl Run for FetchOpt {
 
         // save problem data file
         for problem in problems.iter() {
-            conf.save_problem(service.id(), contest.id(), problem, overwrite, cnsl)
+            conf.save_problem(problem, overwrite, cnsl)
                 .context("Could not save problem data file")?;
         }
 

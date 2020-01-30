@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
-use crate::model::{string, Contest, ContestId, Problem, ProblemId, Service, ServiceKind};
+use crate::model::{string, Contest, Problem, ProblemId, Service, ServiceKind};
 use crate::service::{Act, AtcoderActor, CookieStorage};
 use crate::{Console, GlobalOpt, Result};
 use template::{ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
@@ -83,13 +83,11 @@ Fix version in the config file so that it matches the acick version."#,
 
     pub fn save_problem(
         &self,
-        service_id: ServiceKind,
-        contest_id: &ContestId,
         problem: &Problem,
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let problem_abs_path = self.problem_abs_path(service_id, contest_id, problem.id())?;
+        let problem_abs_path = self.problem_abs_path(problem.id())?;
         problem_abs_path.save_pretty(
             &self.base_dir,
             overwrite,
@@ -106,7 +104,12 @@ Fix version in the config file so that it matches the acick version."#,
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let source_abs_path = self.source_abs_path(service.id(), contest.id(), problem.id())?;
+        let service_id = self.global_opt.service_id;
+        let contest_id = &self.global_opt.contest_id;
+        if service.id() != service_id || contest.id() != contest_id {
+            return Err(anyhow!("Found mismatching service id or contest id"));
+        }
+        let source_abs_path = self.source_abs_path(problem.id())?;
         let template = &self.body.services.get(service.id()).template;
         let template_expanded = template.expand_with(service, contest, problem)?;
         source_abs_path.save_pretty(
@@ -122,40 +125,31 @@ Fix version in the config file so that it matches the acick version."#,
         let contest_id = &self.global_opt.contest_id;
         let compile = &self.body.services.get(service_id).compile;
         let target_context = TargetContext::new(service_id, contest_id, problem_id);
-        let working_abs_dir = self.working_abs_dir(service_id, contest_id, problem_id)?;
+        let working_abs_dir = self.working_abs_dir(problem_id)?;
         let mut command = self.body.shell.exec_templ_arr(compile, &target_context)?;
         command.current_dir(working_abs_dir.as_ref());
         Ok(command)
     }
 
-    fn problem_abs_path(
-        &self,
-        service_id: ServiceKind,
-        contest_id: &ContestId,
-        problem_id: &ProblemId,
-    ) -> Result<AbsPathBuf> {
+    fn problem_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
+        let service_id = self.global_opt.service_id;
+        let contest_id = &self.global_opt.contest_id;
         let problem_path = &self.body.problem_path;
         let problem_path_expanded = problem_path.expand_with(service_id, contest_id, problem_id)?;
         Ok(self.base_dir.join(problem_path_expanded))
     }
 
-    fn working_abs_dir(
-        &self,
-        service_id: ServiceKind,
-        contest_id: &ContestId,
-        problem_id: &ProblemId,
-    ) -> Result<AbsPathBuf> {
+    fn working_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
+        let service_id = self.global_opt.service_id;
+        let contest_id = &self.global_opt.contest_id;
         let working_dir = &self.body.services.get(service_id).working_dir;
         let working_dir_expanded = working_dir.expand_with(service_id, contest_id, problem_id)?;
         Ok(self.base_dir.join(working_dir_expanded))
     }
 
-    fn source_abs_path(
-        &self,
-        service_id: ServiceKind,
-        contest_id: &ContestId,
-        problem_id: &ProblemId,
-    ) -> Result<AbsPathBuf> {
+    fn source_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
+        let service_id = self.global_opt.service_id;
+        let contest_id = &self.global_opt.contest_id;
         let source_path = &self.body.services.get(service_id).source_path;
         let source_path_expanded = source_path.expand_with(service_id, contest_id, problem_id)?;
         Ok(self.base_dir.join(source_path_expanded))
