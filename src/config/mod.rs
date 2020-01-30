@@ -14,10 +14,10 @@ use serde::{Deserialize, Serialize};
 mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
-use crate::model::{string, Contest, Problem, Service, ServiceKind};
+use crate::model::{string, Contest, ContestId, Problem, ProblemId, Service, ServiceKind};
 use crate::service::{Act, AtcoderActor, CookieStorage};
 use crate::{Console, GlobalOpt, Result};
-use template::{Expand as _, ProblemContext, ProblemTempl, Shell, TemplArray};
+use template::{ProblemTempl, Shell, TargetTempl, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[get = "pub"]
@@ -82,13 +82,13 @@ Fix version in the config file so that it matches the acick version."#,
 
     pub fn save_problem(
         &self,
-        service: &Service,
-        contest: &Contest,
+        service_id: ServiceKind,
+        contest_id: &ContestId,
         problem: &Problem,
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let problem_abs_path = self.problem_abs_path(service, contest, problem)?;
+        let problem_abs_path = self.problem_abs_path(service_id, contest_id, problem.id())?;
         problem_abs_path.save_pretty(
             &self.base_dir,
             overwrite,
@@ -105,7 +105,7 @@ Fix version in the config file so that it matches the acick version."#,
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let source_abs_path = self.source_abs_path(service, contest, problem)?;
+        let source_abs_path = self.source_abs_path(service.id(), contest.id(), problem.id())?;
         let template = &self.body.services.get(service.id()).template;
         let template_expanded = template.expand_with(service, contest, problem)?;
         source_abs_path.save_pretty(
@@ -118,25 +118,23 @@ Fix version in the config file so that it matches the acick version."#,
 
     fn problem_abs_path(
         &self,
-        service: &Service,
-        contest: &Contest,
-        problem: &Problem,
+        service_id: ServiceKind,
+        contest_id: &ContestId,
+        problem_id: &ProblemId,
     ) -> Result<AbsPathBuf> {
-        let problem_context = ProblemContext::new(service, contest, problem);
         let problem_path = &self.body.problem_path;
-        let problem_path_expanded = problem_path.expand(&problem_context)?;
+        let problem_path_expanded = problem_path.expand_with(service_id, contest_id, problem_id)?;
         Ok(self.base_dir.join(problem_path_expanded))
     }
 
     fn source_abs_path(
         &self,
-        service: &Service,
-        contest: &Contest,
-        problem: &Problem,
+        service_id: ServiceKind,
+        contest_id: &ContestId,
+        problem_id: &ProblemId,
     ) -> Result<AbsPathBuf> {
-        let problem_context = ProblemContext::new(service, contest, problem);
-        let source_path = &self.body.services.get(service.id()).source_path;
-        let source_path_expanded = source_path.expand(&problem_context)?;
+        let source_path = &self.body.services.get(service_id).source_path;
+        let source_path_expanded = source_path.expand_with(service_id, contest_id, problem_id)?;
         Ok(self.base_dir.join(source_path_expanded))
     }
 }
@@ -156,7 +154,7 @@ pub struct ConfigBody {
     version: Version,
     #[get = "pub"]
     shell: Shell,
-    problem_path: ProblemTempl,
+    problem_path: TargetTempl,
     #[get = "pub"]
     session: SessionConfig,
     #[get = "pub"]
@@ -169,8 +167,7 @@ impl Default for ConfigBody {
             version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
             shell: Shell::default(),
             problem_path:
-                "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/problem.yaml"
-                    .into(),
+                "/tmp/acick/{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml".into(),
             session: SessionConfig::default(),
             services: ServicesConfig::default(),
         }
@@ -256,10 +253,10 @@ impl Default for ServicesConfig {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
     language: String,
-    working_dir: ProblemTempl,
-    source_path: ProblemTempl,
-    compile: TemplArray<ProblemTempl>,
-    run: TemplArray<ProblemTempl>,
+    working_dir: TargetTempl,
+    source_path: TargetTempl,
+    compile: TemplArray<TargetTempl>,
+    run: TemplArray<TargetTempl>,
     template: ProblemTempl,
 }
 
@@ -280,11 +277,9 @@ int main() {
         match service_id {
             ServiceKind::Atcoder => Self {
                 language: "C++14 (GCC 5.4.1)".into(),
-                working_dir:
-                    "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}".into(),
+                working_dir: "/tmp/acick/{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path:
-                    "/tmp/acick/{{ service.id }}/{{ contest.id }}/{{ problem.id | lower }}/Main.cpp"
-                        .into(),
+                    "/tmp/acick/{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
                 compile: (&[
                     "g++",
                     "-std=gnu++1y",
@@ -306,7 +301,7 @@ int main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::template::ProblemContext;
+    use crate::config::template::TargetContext;
     use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
 
     #[test]
@@ -319,7 +314,11 @@ mod tests {
     fn exec_default_atcoder_compile() -> anyhow::Result<()> {
         let shell = Shell::default();
         let compile = ServiceConfig::default_for(ServiceKind::Atcoder).compile;
-        let context = ProblemContext::new(&DEFAULT_SERVICE, &DEFAULT_CONTEST, &DEFAULT_PROBLEM);
+        let context = TargetContext::new(
+            DEFAULT_SERVICE.id(),
+            &DEFAULT_CONTEST.id(),
+            &DEFAULT_PROBLEM.id(),
+        );
         let output = shell.exec_templ_arr(&compile, &context)?;
         println!("{:?}", output);
         // TODO: assert success

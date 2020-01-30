@@ -77,7 +77,28 @@ impl Contest {
     }
 }
 
-pub type ContestId = String;
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ContestId(String);
+
+impl<T: Into<String>> From<T> for ContestId {
+    fn from(id: T) -> Self {
+        Self(id.into())
+    }
+}
+
+impl FromStr for ContestId {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self::from(s))
+    }
+}
+
+impl fmt::Display for ContestId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
 
 #[derive(Serialize, Deserialize, Getters, Setters, Debug, Clone, PartialEq, Eq, Hash)]
 #[get = "pub"]

@@ -116,7 +116,7 @@ impl Act for AtcoderActor<'_> {
             }
         }
 
-        let contest = Contest::new(contest_id, contest_name);
+        let contest = Contest::new(contest_id.to_owned(), contest_name);
         Ok((contest, problems))
     }
 }

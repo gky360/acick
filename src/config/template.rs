@@ -10,7 +10,7 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
 
-use crate::model::{Contest, Problem, Service};
+use crate::model::{Contest, ContestId, Problem, ProblemId, Service, ServiceKind};
 use crate::Result;
 
 macro_rules! register_case_conversion {
@@ -102,6 +102,62 @@ impl<'a> Expand<'a> for CmdTempl {
 }
 
 impl<'a, T: Into<String>> From<T> for CmdTempl {
+    fn from(s: T) -> Self {
+        Self(s.into())
+    }
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TargetContext<'a> {
+    #[serde(rename = "service")]
+    service_id: ServiceKind,
+    #[serde(rename = "contest")]
+    contest_id: &'a ContestId,
+    #[serde(rename = "problem")]
+    problem_id: &'a ProblemId,
+}
+
+impl<'a> TargetContext<'a> {
+    pub fn new(
+        service_id: ServiceKind,
+        contest_id: &'a ContestId,
+        problem_id: &'a ProblemId,
+    ) -> Self {
+        Self {
+            service_id,
+            contest_id,
+            problem_id,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TargetTempl(String);
+
+impl TargetTempl {
+    pub fn expand_with(
+        &self,
+        service_id: ServiceKind,
+        contest_id: &ContestId,
+        problem_id: &ProblemId,
+    ) -> Result<String> {
+        self.expand(&TargetContext {
+            service_id,
+            contest_id,
+            problem_id,
+        })
+    }
+}
+
+impl<'a> Expand<'a> for TargetTempl {
+    type Context = TargetContext<'a>;
+
+    fn get_template(&self) -> &str {
+        &self.0
+    }
+}
+
+impl<T: Into<String>> From<T> for TargetTempl {
     fn from(s: T) -> Self {
         Self(s.into())
     }
