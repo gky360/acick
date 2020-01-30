@@ -1,6 +1,7 @@
 use std::fmt;
 use std::io::Write as _;
 use std::path::PathBuf;
+use std::process::Command;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context as _};
@@ -17,7 +18,7 @@ use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::model::{string, Contest, ContestId, Problem, ProblemId, Service, ServiceKind};
 use crate::service::{Act, AtcoderActor, CookieStorage};
 use crate::{Console, GlobalOpt, Result};
-use template::{ProblemTempl, Shell, TargetTempl, TemplArray};
+use template::{ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[get = "pub"]
@@ -116,6 +117,17 @@ Fix version in the config file so that it matches the acick version."#,
         )
     }
 
+    pub fn compile(&self, problem_id: &ProblemId) -> Result<Command> {
+        let service_id = self.global_opt.service_id;
+        let contest_id = &self.global_opt.contest_id;
+        let compile = &self.body.services.get(service_id).compile;
+        let target_context = TargetContext::new(service_id, contest_id, problem_id);
+        let working_abs_dir = self.working_abs_dir(service_id, contest_id, problem_id)?;
+        let mut command = self.body.shell.exec_templ_arr(compile, &target_context)?;
+        command.current_dir(working_abs_dir.as_ref());
+        Ok(command)
+    }
+
     fn problem_abs_path(
         &self,
         service_id: ServiceKind,
@@ -125,6 +137,17 @@ Fix version in the config file so that it matches the acick version."#,
         let problem_path = &self.body.problem_path;
         let problem_path_expanded = problem_path.expand_with(service_id, contest_id, problem_id)?;
         Ok(self.base_dir.join(problem_path_expanded))
+    }
+
+    fn working_abs_dir(
+        &self,
+        service_id: ServiceKind,
+        contest_id: &ContestId,
+        problem_id: &ProblemId,
+    ) -> Result<AbsPathBuf> {
+        let working_dir = &self.body.services.get(service_id).working_dir;
+        let working_dir_expanded = working_dir.expand_with(service_id, contest_id, problem_id)?;
+        Ok(self.base_dir.join(working_dir_expanded))
     }
 
     fn source_abs_path(
@@ -284,8 +307,8 @@ int main() {
                     "g++",
                     "-std=gnu++1y",
                     "-O2",
-                    "-I/opt/boost/gcc/include",
-                    "-L/opt/boost/gcc/lib",
+                    // "-I/opt/boost/gcc/include",
+                    // "-L/opt/boost/gcc/lib",
                     "-o",
                     "./a.out",
                     "./Main.cpp",

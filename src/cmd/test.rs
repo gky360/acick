@@ -4,15 +4,28 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::model::Service;
+use crate::model::{ProblemId, Service};
 use crate::{Config, Console, Result};
 
-#[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
-pub struct TestOpt {}
+pub struct TestOpt {
+    #[structopt(name = "problem")]
+    problem_id: ProblemId,
+}
+
+impl Default for TestOpt {
+    fn default() -> Self {
+        Self {
+            problem_id: "c".into(),
+        }
+    }
+}
 
 impl Run for TestOpt {
     fn run(&self, conf: &Config, _cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+        let mut command = conf.compile(&self.problem_id)?;
+        eprintln!("{:?}", command.output());
         Ok(Box::new(TestOutcome {
             service: Service::new(conf.global_opt().service_id),
         }))

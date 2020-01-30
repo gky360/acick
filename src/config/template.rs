@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process::{Command, Output};
+use std::process::Command;
 use std::sync::Mutex;
 use std::{env, fmt};
 
@@ -170,16 +170,6 @@ pub struct ProblemContext<'a> {
     problem: &'a Problem,
 }
 
-impl<'a> ProblemContext<'a> {
-    pub fn new(service: &'a Service, contest: &'a Contest, problem: &'a Problem) -> Self {
-        Self {
-            service,
-            contest,
-            problem,
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProblemTempl(String);
 
@@ -253,19 +243,14 @@ impl<T: fmt::Display> fmt::Display for TemplArray<T> {
 pub type Shell = TemplArray<CmdTempl>;
 
 impl Shell {
-    pub fn exec(&self, command: &str) -> Result<Output> {
-        let cmd_context = CmdContext::new(command);
-        let command = self
+    pub fn exec(&self, cmd: &str) -> Result<Command> {
+        let cmd_context = CmdContext::new(cmd);
+        let cmd_expanded = self
             .expand_all(&cmd_context)
             .context("Could not expand shell template")?;
-        let output = Command::new(&command[0])
-            .args(&command[1..])
-            .output()
-            .context(format!(
-                "Failed to execute command: \"{}\"",
-                command.join(" ")
-            ))?;
-        Ok(output)
+        let mut command = Command::new(&cmd_expanded[0]);
+        command.args(&cmd_expanded[1..]);
+        Ok(command)
     }
 
     #[allow(dead_code)]
@@ -273,11 +258,11 @@ impl Shell {
         &self,
         templ_arr: &TemplArray<T>,
         context: &<T as Expand<'a>>::Context,
-    ) -> Result<Output> {
-        let command = templ_arr
+    ) -> Result<Command> {
+        let cmd = templ_arr
             .expand_all_join(context)
             .context("Could not expand command template")?;
-        self.exec(&command)
+        self.exec(&cmd)
     }
 }
 
@@ -325,8 +310,11 @@ mod tests {
     #[test]
     fn expand_problem_templ() -> anyhow::Result<()> {
         let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
-        let problem_context =
-            ProblemContext::new(&DEFAULT_SERVICE, &DEFAULT_CONTEST, &DEFAULT_PROBLEM);
+        let problem_context = ProblemContext {
+            service: &DEFAULT_SERVICE,
+            contest: &DEFAULT_CONTEST,
+            problem: &DEFAULT_PROBLEM,
+        };
         templ.expand(&problem_context)?;
         Ok(())
     }
@@ -350,7 +338,8 @@ mod tests {
     #[test]
     fn exec_default_shell() -> anyhow::Result<()> {
         let shell = Shell::default();
-        let output = shell.exec("echo hello")?;
+        let mut command = shell.exec("echo hello")?;
+        let output = command.output()?;
         println!("{:?}", output);
         assert!(output.status.success());
         Ok(())
