@@ -129,16 +129,16 @@ Fix version in the config file so that it matches the acick version."#,
         )
     }
 
-    pub fn exec_compile(&self, problem_id: &ProblemId) -> Result<Command> {
+    pub fn exec_compile(&self, problem_id: &ProblemId, cnsl: &mut Console) -> Result<Command> {
         let service_id = self.global_opt.service_id;
         let compile = &self.body.services.get(service_id).compile;
-        self.exec_templ_arr(compile, problem_id)
+        self.exec_templ_arr(compile, problem_id, cnsl)
     }
 
-    pub fn exec_run(&self, problem_id: &ProblemId) -> Result<Command> {
+    pub fn exec_run(&self, problem_id: &ProblemId, cnsl: &mut Console) -> Result<Command> {
         let service_id = self.global_opt.service_id;
         let run = &self.body.services.get(service_id).run;
-        self.exec_templ_arr(run, problem_id)
+        self.exec_templ_arr(run, problem_id, cnsl)
     }
 
     fn problem_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
@@ -169,6 +169,7 @@ Fix version in the config file so that it matches the acick version."#,
         &'a self,
         templ_arr: &TemplArray<T>,
         problem_id: &'a ProblemId,
+        cnsl: &mut Console,
     ) -> Result<Command>
     where
         T: Expand<'a, Context = TargetContext<'a>>,
@@ -177,7 +178,10 @@ Fix version in the config file so that it matches the acick version."#,
         let contest_id = &self.global_opt.contest_id;
         let target_context = TargetContext::new(service_id, contest_id, problem_id);
         let working_abs_dir = self.working_abs_dir(problem_id)?;
-        let mut command = self.body.shell.exec_templ_arr(templ_arr, &target_context)?;
+        let mut command = self
+            .body
+            .shell
+            .exec_templ_arr(templ_arr, &target_context, cnsl)?;
         command.current_dir(working_abs_dir.as_ref());
         Ok(command)
     }
@@ -344,6 +348,8 @@ int main() {
 
 #[cfg(test)]
 mod tests {
+    use std::io;
+
     use super::*;
     use crate::config::template::TargetContext;
     use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
@@ -356,6 +362,8 @@ mod tests {
 
     #[test]
     fn exec_default_atcoder_compile() -> anyhow::Result<()> {
+        let (mut stdin, mut stderr) = (io::stdin(), io::stderr());
+        let mut cnsl = Console::new(&mut stdin, &mut stderr);
         let shell = Shell::default();
         let compile = ServiceConfig::default_for(ServiceKind::Atcoder).compile;
         let context = TargetContext::new(
@@ -363,7 +371,7 @@ mod tests {
             &DEFAULT_CONTEST.id(),
             &DEFAULT_PROBLEM.id(),
         );
-        let output = shell.exec_templ_arr(&compile, &context)?;
+        let output = shell.exec_templ_arr(&compile, &context, &mut cnsl)?;
         println!("{:?}", output);
         // TODO: assert success
         Ok(())

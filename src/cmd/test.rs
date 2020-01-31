@@ -31,9 +31,9 @@ impl Run for TestOpt {
             Make sure the problem id is correct and the problem file is created by `fetch` command.")?;
         eprintln!("{:?}", problem);
 
-        let mut compile = conf.exec_compile(&self.problem_id)?;
+        let mut compile = conf.exec_compile(&self.problem_id, cnsl)?;
         eprintln!("{:?}", compile.output());
-        let mut run = conf.exec_run(&self.problem_id)?;
+        let mut run = conf.exec_run(&self.problem_id, cnsl)?;
         eprintln!("{:?}", run.output());
 
         Ok(Box::new(TestOutcome {

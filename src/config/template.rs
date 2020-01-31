@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
@@ -11,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tera::Tera;
 
 use crate::model::{Contest, ContestId, Problem, ProblemId, Service, ServiceKind};
-use crate::Result;
+use crate::{Console, Result};
 
 macro_rules! register_case_conversion {
     ($renderer:ident, $case_name:expr, $func:ident) => {
@@ -107,6 +108,12 @@ impl<'a, T: Into<String>> From<T> for CmdTempl {
     }
 }
 
+impl fmt::Display for CmdTempl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TargetContext<'a> {
     #[serde(rename = "service")]
@@ -163,6 +170,12 @@ impl<T: Into<String>> From<T> for TargetTempl {
     }
 }
 
+impl fmt::Display for TargetTempl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProblemContext<'a> {
     service: &'a Service,
@@ -199,6 +212,12 @@ impl<'a> Expand<'a> for ProblemTempl {
 impl<T: Into<String>> From<T> for ProblemTempl {
     fn from(s: T) -> Self {
         Self(s.into())
+    }
+}
+
+impl fmt::Display for ProblemTempl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -243,11 +262,12 @@ impl<T: fmt::Display> fmt::Display for TemplArray<T> {
 pub type Shell = TemplArray<CmdTempl>;
 
 impl Shell {
-    pub fn exec(&self, cmd: &str) -> Result<Command> {
+    pub fn exec_pretty(&self, cmd: &str, cnsl: &mut Console) -> Result<Command> {
         let cmd_context = CmdContext::new(cmd);
         let cmd_expanded = self
             .expand_all(&cmd_context)
             .context("Could not expand shell template")?;
+        writeln!(cnsl, "{}", cmd_expanded.join(" "))?;
         let mut command = Command::new(&cmd_expanded[0]);
         command.args(&cmd_expanded[1..]);
         Ok(command)
@@ -257,11 +277,12 @@ impl Shell {
         &self,
         templ_arr: &TemplArray<T>,
         context: &<T as Expand<'a>>::Context,
+        cnsl: &mut Console,
     ) -> Result<Command> {
         let cmd = templ_arr
             .expand_all_join(context)
             .context("Could not expand command template")?;
-        self.exec(&cmd)
+        self.exec_pretty(&cmd, cnsl)
     }
 }
 
@@ -295,6 +316,8 @@ impl Default for Shell {
 
 #[cfg(test)]
 mod tests {
+    use std::io;
+
     use super::*;
     use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
 
@@ -336,8 +359,10 @@ mod tests {
 
     #[test]
     fn exec_default_shell() -> anyhow::Result<()> {
+        let (mut stdin, mut stderr) = (io::stdin(), io::stderr());
+        let mut cnsl = Console::new(&mut stdin, &mut stderr);
         let shell = Shell::default();
-        let mut command = shell.exec("echo hello")?;
+        let mut command = shell.exec_pretty("echo hello", &mut cnsl)?;
         let output = command.output()?;
         println!("{:?}", output);
         assert!(output.status.success());
