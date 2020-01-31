@@ -92,9 +92,8 @@ mod tests {
                 AbsPathBuf::cwd().expect("Could not get current working directory"),
             )
             .expect("Could not load config");
-            let mut input_buf = &b""[..];
             let mut output_buf = Vec::new();
-            let mut cnsl = Console::new(&mut input_buf, &mut output_buf);
+            let mut cnsl = Console::new(&mut output_buf);
 
             let result = opt.run(&conf, &mut cnsl);
             eprintln!("{}", String::from_utf8_lossy(&output_buf));

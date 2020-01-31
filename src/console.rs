@@ -1,16 +1,15 @@
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::{env, fmt};
 
 use rpassword::read_password;
 
 pub struct Console<'a> {
-    stdin: &'a mut dyn Read,
     stderr: &'a mut dyn Write,
 }
 
 impl<'a> Console<'a> {
-    pub fn new(stdin: &'a mut dyn Read, stderr: &'a mut dyn Write) -> Self {
-        Self { stdin, stderr }
+    pub fn new(stderr: &'a mut dyn Write) -> Self {
+        Self { stderr }
     }
 
     pub fn get_env_or_prompt_and_read(
@@ -59,13 +58,6 @@ impl<'a> Console<'a> {
     fn prompt_and_read(&mut self, prompt: &str, is_password: bool) -> io::Result<String> {
         self.prompt(prompt)?;
         self.read_user(is_password)
-    }
-}
-
-impl Read for Console<'_> {
-    #[inline(always)]
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.stdin.read(buf)
     }
 }
 

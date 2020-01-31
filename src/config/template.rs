@@ -316,8 +316,6 @@ impl Default for Shell {
 
 #[cfg(test)]
 mod tests {
-    use std::io;
-
     use super::*;
     use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
 
@@ -359,8 +357,8 @@ mod tests {
 
     #[test]
     fn exec_default_shell() -> anyhow::Result<()> {
-        let (mut stdin, mut stderr) = (io::stdin(), io::stderr());
-        let mut cnsl = Console::new(&mut stdin, &mut stderr);
+        let mut output_buf = Vec::new();
+        let mut cnsl = Console::new(&mut output_buf);
         let shell = Shell::default();
         let mut command = shell.exec_pretty("echo hello", &mut cnsl)?;
         let output = command.output()?;

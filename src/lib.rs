@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate strum;
 
-use std::io::{Read, Write};
+use std::io::Write;
 
 use anyhow::Context as _;
 use serde::Serialize;
@@ -88,15 +88,10 @@ pub struct Opt {
 }
 
 impl Opt {
-    pub fn run(
-        &self,
-        stdin: &mut dyn Read,
-        stdout: &mut dyn Write,
-        stderr: &mut dyn Write,
-    ) -> Result<()> {
+    pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
         let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
         let conf = Config::load(self.global_opt.clone(), cwd).context("Could not load config")?;
-        let mut cnsl = Console::new(stdin, stderr);
+        let mut cnsl = Console::new(stderr);
         let outcome = self.cmd.run(&conf, &mut cnsl)?;
 
         cnsl.flush()?;
