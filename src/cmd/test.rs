@@ -43,8 +43,9 @@ impl Run for TestOpt {
         for sample in problem.samples() {
             let run = conf.exec_run(&self.problem_id)?;
             let judge = Judge::new(sample, std::time::Duration::from_secs(1));
-            let status = judge.run(run);
+            let status = judge.test(run);
             eprintln!("{}", status);
+            status.kind.describe(cnsl)?;
         }
 
         Ok(Box::new(TestOutcome {
