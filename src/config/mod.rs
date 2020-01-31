@@ -98,11 +98,19 @@ Fix version in the config file so that it matches the acick version."#,
 
     pub fn load_problem(&self, problem_id: &ProblemId, cnsl: &mut Console) -> Result<Problem> {
         let problem_abs_path = self.problem_abs_path(problem_id)?;
-        problem_abs_path.load_pretty(
+        let problem: Problem = problem_abs_path.load_pretty(
             &self.base_dir,
             |file| serde_yaml::from_reader(file).context("Could not read problem as yaml"),
             cnsl,
-        )
+        )?;
+        if problem.id() != problem_id {
+            Err(anyhow!(
+                "Found mismatching problem id in problem file : {}",
+                problem.id()
+            ))
+        } else {
+            Ok(problem)
+        }
     }
 
     pub fn expand_and_save_source(
