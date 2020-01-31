@@ -1,5 +1,6 @@
 use std::fmt;
 
+use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
@@ -24,7 +25,12 @@ impl Default for TestOpt {
 }
 
 impl Run for TestOpt {
-    fn run(&self, conf: &Config, _cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+        let problem = conf.load_problem(&self.problem_id, cnsl)
+            .context("Could not load problem file. \
+            Make sure the problem id is correct and the problem file is created by `fetch` command.")?;
+        eprintln!("{:?}", problem);
+
         let mut compile = conf.exec_compile(&self.problem_id)?;
         eprintln!("{:?}", compile.output());
         let mut run = conf.exec_run(&self.problem_id)?;

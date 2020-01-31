@@ -253,7 +253,6 @@ impl Shell {
         Ok(command)
     }
 
-    #[allow(dead_code)]
     pub fn exec_templ_arr<'a, T: Expand<'a>>(
         &self,
         templ_arr: &TemplArray<T>,

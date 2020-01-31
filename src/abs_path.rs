@@ -45,25 +45,53 @@ impl AbsPathBuf {
             self.strip_prefix(base_dir).display()
         )?;
         let is_existed = self.as_ref().is_file();
-        let is_saved = if !overwrite && is_existed {
-            false
+        let result = if !overwrite && is_existed {
+            Ok(false)
         } else {
             self.create_dir_all_and_open(false, true)
                 .with_context(|| format!("Could not create file : {}", self))
-                .and_then(save)?;
-            true
+                .and_then(save)
+                .map(|_| true)
         };
-        let msg = if is_saved {
-            if is_existed {
-                "overwritten"
+        let msg = if let Ok(is_saved) = result {
+            if is_saved {
+                if is_existed {
+                    "overwritten"
+                } else {
+                    "saved"
+                }
             } else {
-                "saved"
+                "already exists"
             }
         } else {
-            "already exists"
+            "failed"
         };
         writeln!(cnsl, "{}", msg)?;
-        Ok(is_saved)
+        result
+    }
+
+    pub fn load_pretty<T>(
+        &self,
+        base_dir: &AbsPathBuf,
+        load: impl FnOnce(File) -> Result<T>,
+        cnsl: &mut Console,
+    ) -> Result<T> {
+        write!(
+            cnsl,
+            "Loading {} ... ",
+            self.strip_prefix(base_dir).display()
+        )?;
+        let result = OpenOptions::new()
+            .read(true)
+            .open(&self.0)
+            .with_context(|| format!("Could not open file : {}", self))
+            .and_then(load);
+        let msg = match result {
+            Ok(_) => "loaded",
+            Err(_) => "failed",
+        };
+        writeln!(cnsl, "{}", msg)?;
+        result
     }
 
     pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
