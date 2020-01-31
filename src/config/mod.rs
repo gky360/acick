@@ -1,7 +1,6 @@
 use std::fmt;
 use std::io::Write as _;
 use std::path::PathBuf;
-use std::process::Command;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context as _};
@@ -11,6 +10,7 @@ use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
 use semver::Version;
 use serde::{Deserialize, Serialize};
+use tokio::process::Command;
 
 mod template;
 

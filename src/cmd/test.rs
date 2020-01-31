@@ -1,6 +1,7 @@
 use std::fmt;
+use std::process::ExitStatus;
 
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use serde::Serialize;
 use structopt::StructOpt;
 
@@ -16,6 +17,14 @@ pub struct TestOpt {
     problem_id: ProblemId,
 }
 
+impl TestOpt {
+    #[tokio::main]
+    async fn compile(&self, conf: &Config) -> Result<ExitStatus> {
+        let mut compile = conf.exec_compile(&self.problem_id)?;
+        Ok(compile.status().await?)
+    }
+}
+
 impl Run for TestOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         let problem = conf.load_problem(&self.problem_id, cnsl)
@@ -23,15 +32,19 @@ impl Run for TestOpt {
             Make sure the problem id is correct and the problem file is created by `fetch` command.")?;
         eprintln!("{:?}", problem);
 
-        let mut compile = conf.exec_compile(&self.problem_id)?;
-        eprintln!("{:?}", compile.output());
+        let compile_status = self.compile(conf)?;
+        if !compile_status.success() {
+            return Err(anyhow!(
+                "Compile command returned non-zero status : {}",
+                compile_status
+            ));
+        }
 
         for sample in problem.samples() {
             let run = conf.exec_run(&self.problem_id)?;
-            let judge = Judge::new(sample, std::time::Duration::from_secs(1), run);
-            let result = judge.run();
-            eprintln!("{:?}", result);
-            eprintln!("{}", result?.status);
+            let judge = Judge::new(sample, std::time::Duration::from_secs(1));
+            let status = judge.run(run);
+            eprintln!("{}", status);
         }
 
         Ok(Box::new(TestOutcome {

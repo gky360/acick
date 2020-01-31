@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process::Command;
 use std::sync::Mutex;
 use std::{env, fmt};
 
@@ -9,6 +8,7 @@ use heck::{CamelCase as _, KebabCase as _, MixedCase as _, SnakeCase as _};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
+use tokio::process::Command;
 
 use crate::model::{Contest, ContestId, Problem, ProblemId, Service, ServiceKind};
 use crate::Result;
@@ -267,7 +267,7 @@ impl Shell {
             .expand_all(&cmd_context)
             .context("Could not expand shell template")?;
         let mut command = Command::new(&cmd_expanded[0]);
-        command.args(&cmd_expanded[1..]);
+        command.args(&cmd_expanded[1..]).kill_on_drop(true);
         Ok(command)
     }
 
@@ -352,11 +352,11 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn exec_default_shell() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn exec_default_shell() -> anyhow::Result<()> {
         let shell = Shell::default();
         let mut command = shell.exec("echo hello")?;
-        let output = command.output()?;
+        let output = command.output().await?;
         println!("{:?}", output);
         assert!(output.status.success());
         Ok(())
