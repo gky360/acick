@@ -180,7 +180,8 @@ impl fmt::Display for ProblemId {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
+#[get = "pub"]
 pub struct Sample {
     name: String,
     input: String,

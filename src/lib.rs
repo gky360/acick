@@ -14,6 +14,7 @@ mod abs_path;
 mod cmd;
 mod config;
 mod console;
+mod judge;
 mod model;
 mod service;
 

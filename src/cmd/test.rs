@@ -5,6 +5,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
+use crate::judge::Judge;
 use crate::model::{ProblemId, Service};
 use crate::{Config, Console, Result};
 
@@ -24,8 +25,14 @@ impl Run for TestOpt {
 
         let mut compile = conf.exec_compile(&self.problem_id)?;
         eprintln!("{:?}", compile.output());
-        let mut run = conf.exec_run(&self.problem_id)?;
-        eprintln!("{:?}", run.output());
+
+        for sample in problem.samples() {
+            let run = conf.exec_run(&self.problem_id)?;
+            let judge = Judge::new(sample, std::time::Duration::from_secs(1), run);
+            let result = judge.run();
+            eprintln!("{:?}", result);
+            eprintln!("{}", result?.status);
+        }
 
         Ok(Box::new(TestOutcome {
             service: Service::new(conf.global_opt().service_id),
