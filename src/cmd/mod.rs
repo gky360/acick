@@ -48,6 +48,25 @@ impl<T: Serialize + fmt::Display + fmt::Debug> OutcomeSerialize for T {
 
 pub trait Run {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>>;
+
+    #[cfg(test)]
+    fn run_default(&self) -> Result<Box<dyn Outcome>> {
+        use crate::abs_path::AbsPathBuf;
+        use crate::GlobalOpt;
+
+        let global_opt = GlobalOpt::default();
+        let conf = Config::load(
+            global_opt,
+            AbsPathBuf::cwd().expect("Could not get current working directory"),
+        )
+        .expect("Could not load config");
+        let mut output_buf = Vec::new();
+        let mut cnsl = Console::new(&mut output_buf);
+
+        let result = self.run(&conf, &mut cnsl);
+        eprintln!("{}", String::from_utf8_lossy(&output_buf));
+        result
+    }
 }
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -76,29 +95,4 @@ impl Run for Cmd {
             Self::Test(opt) => opt.run(conf, cnsl),
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    macro_rules! run_default {
-        ($opt:ident) => {{
-            use crate::abs_path::AbsPathBuf;
-            use crate::{Config, GlobalOpt};
-
-            let opt = $opt::default();
-            let global_opt = GlobalOpt::default();
-            let conf = Config::load(
-                global_opt,
-                AbsPathBuf::cwd().expect("Could not get current working directory"),
-            )
-            .expect("Could not load config");
-            let mut output_buf = Vec::new();
-            let mut cnsl = Console::new(&mut output_buf);
-
-            let result = opt.run(&conf, &mut cnsl);
-            eprintln!("{}", String::from_utf8_lossy(&output_buf));
-            result
-        }};
-    }
-    pub(crate) use run_default;
 }

@@ -15,15 +15,6 @@ pub struct TestOpt {
     problem_id: ProblemId,
 }
 
-#[cfg(test)]
-impl Default for TestOpt {
-    fn default() -> Self {
-        Self {
-            problem_id: "c".into(),
-        }
-    }
-}
-
 impl Run for TestOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         let problem = conf.load_problem(&self.problem_id, cnsl)
@@ -62,11 +53,16 @@ impl Outcome for TestOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cmd::tests::run_default;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        run_default!(TestOpt)?;
+        let opt = crate::cmd::fetch::FetchOpt::default();
+        opt.run_default()?;
+
+        let opt = TestOpt {
+            problem_id: "c".into(),
+        };
+        opt.run_default()?;
         Ok(())
     }
 }

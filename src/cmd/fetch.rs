@@ -72,11 +72,11 @@ impl Outcome for FetchOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cmd::tests::run_default;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        run_default!(FetchOpt)?;
+        let opt = FetchOpt::default();
+        opt.run_default()?;
         Ok(())
     }
 }

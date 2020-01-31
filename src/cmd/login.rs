@@ -71,7 +71,6 @@ mod tests {
     use std::env;
 
     use super::*;
-    use crate::cmd::tests::run_default;
 
     fn check_envs_for_user_and_pass() -> anyhow::Result<()> {
         assert!(!env::var("ACICK_ATCODER_USERNAME")?.is_empty());
@@ -82,7 +81,8 @@ mod tests {
     #[test]
     fn run_default() -> anyhow::Result<()> {
         check_envs_for_user_and_pass()?;
-        run_default!(LoginOpt)?;
+        let opt = LoginOpt::default();
+        opt.run_default()?;
         Ok(())
     }
 }

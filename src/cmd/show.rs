@@ -36,11 +36,11 @@ impl Outcome for ShowOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cmd::tests::run_default;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        run_default!(ShowOpt)?;
+        let opt = ShowOpt::default();
+        opt.run_default()?;
         Ok(())
     }
 }
