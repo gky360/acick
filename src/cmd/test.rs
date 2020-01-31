@@ -14,6 +14,7 @@ pub struct TestOpt {
     problem_id: ProblemId,
 }
 
+#[cfg(test)]
 impl Default for TestOpt {
     fn default() -> Self {
         Self {

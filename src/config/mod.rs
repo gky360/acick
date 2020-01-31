@@ -18,7 +18,7 @@ use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::model::{string, Contest, Problem, ProblemId, Service, ServiceKind};
 use crate::service::{Act, AtcoderActor, CookieStorage};
 use crate::{Console, GlobalOpt, Result};
-use template::{ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
+use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[get = "pub"]
@@ -122,37 +122,49 @@ Fix version in the config file so that it matches the acick version."#,
 
     pub fn compile(&self, problem_id: &ProblemId) -> Result<Command> {
         let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
         let compile = &self.body.services.get(service_id).compile;
-        let target_context = TargetContext::new(service_id, contest_id, problem_id);
-        let working_abs_dir = self.working_abs_dir(problem_id)?;
-        let mut command = self.body.shell.exec_templ_arr(compile, &target_context)?;
-        command.current_dir(working_abs_dir.as_ref());
-        Ok(command)
+        self.exec_templ_arr(compile, problem_id)
     }
 
     fn problem_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
         let problem_path = &self.body.problem_path;
-        let problem_path_expanded = problem_path.expand_with(service_id, contest_id, problem_id)?;
-        Ok(self.base_dir.join(problem_path_expanded))
+        self.expand_to_abs(problem_path, problem_id)
     }
 
     fn working_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
         let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
         let working_dir = &self.body.services.get(service_id).working_dir;
-        let working_dir_expanded = working_dir.expand_with(service_id, contest_id, problem_id)?;
-        Ok(self.base_dir.join(working_dir_expanded))
+        self.expand_to_abs(working_dir, problem_id)
     }
 
     fn source_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
         let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
         let source_path = &self.body.services.get(service_id).source_path;
-        let source_path_expanded = source_path.expand_with(service_id, contest_id, problem_id)?;
-        Ok(self.base_dir.join(source_path_expanded))
+        self.expand_to_abs(source_path, problem_id)
+    }
+
+    fn expand_to_abs(&self, path: &TargetTempl, problem_id: &ProblemId) -> Result<AbsPathBuf> {
+        let service_id = self.global_opt.service_id;
+        let contest_id = &self.global_opt.contest_id;
+        path.expand_with(service_id, contest_id, problem_id)
+            .map(|path_expanded| self.base_dir.join(path_expanded))
+    }
+
+    fn exec_templ_arr<'a, T>(
+        &'a self,
+        templ_arr: &TemplArray<T>,
+        problem_id: &'a ProblemId,
+    ) -> Result<Command>
+    where
+        T: Expand<'a, Context = TargetContext<'a>>,
+    {
+        let service_id = self.global_opt.service_id;
+        let contest_id = &self.global_opt.contest_id;
+        let target_context = TargetContext::new(service_id, contest_id, problem_id);
+        let working_abs_dir = self.working_abs_dir(problem_id)?;
+        let mut command = self.body.shell.exec_templ_arr(templ_arr, &target_context)?;
+        command.current_dir(working_abs_dir.as_ref());
+        Ok(command)
     }
 }
 
