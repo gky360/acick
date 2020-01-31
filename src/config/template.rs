@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Mutex;
@@ -12,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tera::Tera;
 
 use crate::model::{Contest, ContestId, Problem, ProblemId, Service, ServiceKind};
-use crate::{Console, Result};
+use crate::Result;
 
 macro_rules! register_case_conversion {
     ($renderer:ident, $case_name:expr, $func:ident) => {
@@ -262,12 +261,11 @@ impl<T: fmt::Display> fmt::Display for TemplArray<T> {
 pub type Shell = TemplArray<CmdTempl>;
 
 impl Shell {
-    pub fn exec_pretty(&self, cmd: &str, cnsl: &mut Console) -> Result<Command> {
+    pub fn exec(&self, cmd: &str) -> Result<Command> {
         let cmd_context = CmdContext::new(cmd);
         let cmd_expanded = self
             .expand_all(&cmd_context)
             .context("Could not expand shell template")?;
-        writeln!(cnsl, "{}", cmd_expanded.join(" "))?;
         let mut command = Command::new(&cmd_expanded[0]);
         command.args(&cmd_expanded[1..]);
         Ok(command)
@@ -277,12 +275,11 @@ impl Shell {
         &self,
         templ_arr: &TemplArray<T>,
         context: &<T as Expand<'a>>::Context,
-        cnsl: &mut Console,
     ) -> Result<Command> {
         let cmd = templ_arr
             .expand_all_join(context)
             .context("Could not expand command template")?;
-        self.exec_pretty(&cmd, cnsl)
+        self.exec(&cmd)
     }
 }
 
@@ -357,10 +354,8 @@ mod tests {
 
     #[test]
     fn exec_default_shell() -> anyhow::Result<()> {
-        let mut output_buf = Vec::new();
-        let mut cnsl = Console::new(&mut output_buf);
         let shell = Shell::default();
-        let mut command = shell.exec_pretty("echo hello", &mut cnsl)?;
+        let mut command = shell.exec("echo hello")?;
         let output = command.output()?;
         println!("{:?}", output);
         assert!(output.status.success());
