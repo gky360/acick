@@ -25,8 +25,11 @@ impl Default for TestOpt {
 
 impl Run for TestOpt {
     fn run(&self, conf: &Config, _cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
-        let mut command = conf.compile(&self.problem_id)?;
-        eprintln!("{:?}", command.output());
+        let mut compile = conf.exec_compile(&self.problem_id)?;
+        eprintln!("{:?}", compile.output());
+        let mut run = conf.exec_run(&self.problem_id)?;
+        eprintln!("{:?}", run.output());
+
         Ok(Box::new(TestOutcome {
             service: Service::new(conf.global_opt().service_id),
         }))

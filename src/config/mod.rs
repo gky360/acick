@@ -120,10 +120,16 @@ Fix version in the config file so that it matches the acick version."#,
         )
     }
 
-    pub fn compile(&self, problem_id: &ProblemId) -> Result<Command> {
+    pub fn exec_compile(&self, problem_id: &ProblemId) -> Result<Command> {
         let service_id = self.global_opt.service_id;
         let compile = &self.body.services.get(service_id).compile;
         self.exec_templ_arr(compile, problem_id)
+    }
+
+    pub fn exec_run(&self, problem_id: &ProblemId) -> Result<Command> {
+        let service_id = self.global_opt.service_id;
+        let run = &self.body.services.get(service_id).run;
+        self.exec_templ_arr(run, problem_id)
     }
 
     fn problem_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
