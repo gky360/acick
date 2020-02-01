@@ -6,26 +6,38 @@ use tokio::io::AsyncWriteExt as _;
 use tokio::process::Command;
 use tokio::time::{timeout, Instant};
 
-use crate::model::Sample;
+use crate::model::{Compare, Sample};
 use crate::Result;
 
+mod diff;
 mod status;
 
+use diff::TextDiff;
 pub use status::{Status, StatusKind};
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Judge<'a> {
     sample: &'a Sample,
     time_limit: Duration,
+    cmp: Compare,
 }
 
 impl<'a> Judge<'a> {
-    pub fn new(sample: &'a Sample, time_limit: Duration) -> Self {
-        Self { sample, time_limit }
+    pub fn new(sample: &'a Sample, time_limit: Duration, cmp: Compare) -> Self {
+        Self {
+            sample,
+            time_limit,
+            cmp,
+        }
     }
 
     #[tokio::main]
     pub async fn test(&self, command: Command) -> Status {
-        let Self { sample, time_limit } = *self;
+        let Self {
+            sample,
+            time_limit,
+            cmp,
+        } = *self;
         let input = sample.input().as_bytes();
 
         let started_at = Instant::now();
@@ -41,8 +53,13 @@ impl<'a> Judge<'a> {
             },
             Ok(Ok(output)) => {
                 if output.status.success() {
-                    // TODO: check output
-                    Status { kind: Ac, elapsed }
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let diff = TextDiff::new(&stdout, &sample.output(), cmp);
+                    if diff.is_any() {
+                        Status { kind: Wa, elapsed }
+                    } else {
+                        Status { kind: Ac, elapsed }
+                    }
                 } else {
                     Status {
                         kind: StatusKind::re(anyhow!("{}", output.status)),

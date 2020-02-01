@@ -128,7 +128,7 @@ mod tests {
             Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
             Duration::from_secs(2),
             "1024 MB".parse().unwrap(),
-            Compare::Exact,
+            Compare::Default,
             Vec::new()
         );
     }

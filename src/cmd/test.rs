@@ -27,9 +27,9 @@ impl TestOpt {
 
 impl Run for TestOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
-        let problem = conf.load_problem(&self.problem_id, cnsl)
-            .context("Could not load problem file. \
-            Make sure the problem id is correct and the problem file is created by `fetch` command.")?;
+        let problem = conf
+            .load_problem(&self.problem_id, cnsl)
+            .context("Could not load problem file.")?;
         eprintln!("{:?}", problem);
 
         let compile_status = self.compile(conf)?;
@@ -42,7 +42,7 @@ impl Run for TestOpt {
 
         for sample in problem.samples() {
             let run = conf.exec_run(&self.problem_id)?;
-            let judge = Judge::new(sample, problem.time_limit());
+            let judge = Judge::new(sample, problem.time_limit(), problem.compare());
             let status = judge.test(run);
             eprintln!("{}", status);
             status.kind.describe(cnsl)?;

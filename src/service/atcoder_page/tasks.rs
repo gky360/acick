@@ -109,7 +109,7 @@ impl ProblemRowElem<'_> {
             url,
             time_limit,
             memory_limit,
-            Compare::Exact, // TODO: suppord float
+            Compare::Default, // TODO: suppord float
             Vec::new(),
         ))
     }

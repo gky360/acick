@@ -217,12 +217,24 @@ impl fmt::Display for ProblemId {
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
 pub enum Compare {
-    Exact,
+    Default,
     // TODO: support float
     // Float {
     //     relative_error: Option<f64>,
     //     absolute_error: Option<f64>,
     // },
+}
+
+impl Compare {
+    pub fn compare(self, a: &str, b: &str) -> bool {
+        match self {
+            Self::Default => Self::compare_default(a, b),
+        }
+    }
+
+    fn compare_default(a: &str, b: &str) -> bool {
+        a.trim_end() == b.trim_end() // ignore spaces at the end of lines
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]
