@@ -109,14 +109,16 @@ pub struct Problem {
     id: ProblemId,
     #[get = "pub"]
     name: String,
+    #[serde(with = "string")]
+    #[get = "pub"]
+    url: Url,
     #[serde(with = "humantime_serde")]
     #[get_copy = "pub"]
     time_limit: Duration,
     #[get_copy = "pub"]
     memory_limit: Byte,
-    #[serde(with = "string")]
-    #[get = "pub"]
-    url: Url,
+    #[get_copy = "pub"]
+    compare: Compare,
     #[set = "pub"]
     #[get = "pub"]
     samples: Vec<Sample>,
@@ -126,17 +128,19 @@ impl Problem {
     pub fn new(
         id: impl Into<ProblemId>,
         name: impl Into<String>,
+        url: Url,
         time_limit: Duration,
         memory_limit: Byte,
-        url: Url,
+        compare: Compare,
         samples: Vec<Sample>,
     ) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
+            url,
             time_limit,
             memory_limit,
-            url,
+            compare,
             samples,
         }
     }
@@ -193,6 +197,32 @@ impl fmt::Display for ProblemId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(&self.0)
     }
+}
+
+#[derive(
+    Serialize,
+    Deserialize,
+    EnumString,
+    EnumVariantNames,
+    IntoStaticStr,
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+)]
+#[serde(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab-case")]
+pub enum Compare {
+    Exact,
+    // TODO: support float
+    // Float {
+    //     relative_error: Option<f64>,
+    //     absolute_error: Option<f64>,
+    // },
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]

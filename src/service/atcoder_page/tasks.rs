@@ -4,7 +4,7 @@ use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::{ElementRef, Html};
 
-use crate::model::{Problem, ProblemId};
+use crate::model::{Compare, Problem, ProblemId};
 use crate::service::atcoder_page::{FetchMaybeNotFound, HasHeader, BASE_URL};
 use crate::service::scrape::{select, ElementRefExt as _, HasUrl, Scrape};
 use crate::{Config, Console, Error, Result};
@@ -106,9 +106,10 @@ impl ProblemRowElem<'_> {
         Ok(Problem::new(
             id,
             name,
+            url,
             time_limit,
             memory_limit,
-            url,
+            Compare::Exact, // TODO: suppord float
             Vec::new(),
         ))
     }

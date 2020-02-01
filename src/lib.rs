@@ -116,7 +116,7 @@ mod tests {
     use reqwest::Url;
 
     use super::*;
-    use crate::model::{Contest, Problem, Service};
+    use crate::model::{Compare, Contest, Problem, Service};
 
     lazy_static! {
         pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
@@ -125,9 +125,10 @@ mod tests {
         pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
             "C",
             "Linear Approximation",
+            Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
             Duration::from_secs(2),
             "1024 MB".parse().unwrap(),
-            Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
+            Compare::Exact,
             Vec::new()
         );
     }
