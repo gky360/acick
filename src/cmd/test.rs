@@ -1,4 +1,5 @@
 use std::fmt;
+use std::io::Write as _;
 use std::process::ExitStatus;
 
 use anyhow::{anyhow, Context as _};
@@ -42,10 +43,19 @@ impl Run for TestOpt {
 
         let time_limit = problem.time_limit();
         let compare = problem.compare();
-        for sample in problem.take_samples().into_iter() {
+        let samples = problem.take_samples();
+        let n_samples = samples.len();
+        for (i, sample) in samples.into_iter().enumerate() {
             let run = conf.exec_run(&self.problem_id)?;
+            write!(
+                cnsl,
+                "({:>2}/{:>2}) Testing sample {} ... ",
+                i + 1,
+                n_samples,
+                sample.name
+            )?;
             let status = Judge::new(sample, time_limit, compare).test(run);
-            eprintln!("{}", status);
+            writeln!(cnsl, "{}", status)?;
             status.kind.describe(cnsl)?;
         }
 

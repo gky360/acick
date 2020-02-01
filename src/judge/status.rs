@@ -30,7 +30,7 @@ impl StatusKind {
 
     pub fn re(err: Error) -> Self {
         Self::Re {
-            reason: err.to_string(),
+            reason: format!("{:?}\n", err),
         }
     }
 
@@ -54,6 +54,7 @@ impl fmt::Display for StatusKind {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Status {
     pub kind: StatusKind,
+    pub sample_name: String,
     pub elapsed: Duration,
 }
 
