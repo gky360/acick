@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::convert::Infallible;
+use std::convert::{Infallible, TryFrom};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -112,6 +112,8 @@ pub struct Problem {
     #[serde(with = "humantime_serde")]
     #[get_copy = "pub"]
     time_limit: Duration,
+    #[get_copy = "pub"]
+    memory_limit: Byte,
     #[serde(with = "string")]
     #[get = "pub"]
     url: Url,
@@ -125,6 +127,7 @@ impl Problem {
         id: impl Into<ProblemId>,
         name: impl Into<String>,
         time_limit: Duration,
+        memory_limit: Byte,
         url: Url,
         samples: Vec<Sample>,
     ) -> Self {
@@ -132,6 +135,7 @@ impl Problem {
             id: id.into(),
             name: name.into(),
             time_limit,
+            memory_limit,
             url,
             samples,
         }
@@ -188,6 +192,38 @@ impl FromStr for ProblemId {
 impl fmt::Display for ProblemId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[serde(try_from = "String", into = "String")]
+pub struct Byte(u64);
+
+impl FromStr for Byte {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self(bytefmt::parse(s)?))
+    }
+}
+
+impl TryFrom<String> for Byte {
+    type Error = &'static str;
+
+    fn try_from(s: String) -> std::result::Result<Self, Self::Error> {
+        Self::from_str(&s)
+    }
+}
+
+impl From<Byte> for String {
+    fn from(byte: Byte) -> Self {
+        bytefmt::format_to(byte.0, bytefmt::Unit::MB)
+    }
+}
+
+impl fmt::Display for Byte {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&String::from(*self))
     }
 }
 

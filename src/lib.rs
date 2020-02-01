@@ -126,6 +126,7 @@ mod tests {
             "C",
             "Linear Approximation",
             Duration::from_secs(2),
+            "1024 MB".parse().unwrap(),
             Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
             Vec::new()
         );

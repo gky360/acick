@@ -78,7 +78,6 @@ impl HasHeader for TasksPage<'_> {}
 struct ProblemRowElem<'a>(ElementRef<'a>);
 
 impl ProblemRowElem<'_> {
-    // TODO: extract memory limits
     fn extract_problem(&self) -> Result<Problem> {
         let mut iter = self.0.select(select!("td"));
         let id = iter
@@ -93,6 +92,10 @@ impl ProblemRowElem<'_> {
             .next()
             .and_then(|td| parse_duration(td.inner_text().trim()).ok())
             .ok_or_else(|| Error::msg("Could not parse time limit"))?;
+        let memory_limit = iter
+            .next()
+            .and_then(|td| td.inner_text().trim().parse().ok())
+            .ok_or_else(|| Error::msg("Could not parse memory limit"))?;
         let url = self
             .find_first(select!("a"))
             .context("Could not find link to a task")?
@@ -100,7 +103,14 @@ impl ProblemRowElem<'_> {
             .attr("href")
             .and_then(|href| BASE_URL.join(href).ok())
             .context("Could not parse task url")?;
-        Ok(Problem::new(id, name, time_limit, url, Vec::new()))
+        Ok(Problem::new(
+            id,
+            name,
+            time_limit,
+            memory_limit,
+            url,
+            Vec::new(),
+        ))
     }
 }
 
