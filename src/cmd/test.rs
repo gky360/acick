@@ -7,7 +7,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::judge::Judge;
+use crate::judge::{Judge, Status};
 use crate::model::{ProblemId, Service};
 use crate::{Config, Console, Result};
 
@@ -31,7 +31,6 @@ impl Run for TestOpt {
         let problem = conf
             .load_problem(&self.problem_id, cnsl)
             .context("Could not load problem file.")?;
-        eprintln!("{:?}", problem);
 
         let compile_status = self.compile(conf)?;
         if !compile_status.success() {
@@ -45,6 +44,7 @@ impl Run for TestOpt {
         let compare = problem.compare();
         let samples = problem.take_samples();
         let n_samples = samples.len();
+        let mut statuses = Vec::new();
         for (i, sample) in samples.into_iter().enumerate() {
             let run = conf.exec_run(&self.problem_id)?;
             write!(
@@ -56,11 +56,13 @@ impl Run for TestOpt {
             )?;
             let status = Judge::new(sample, time_limit, compare).test(run);
             writeln!(cnsl, "{}", status)?;
-            status.kind.describe(cnsl)?;
+            status.describe(cnsl)?;
+            statuses.push(status);
         }
 
         Ok(Box::new(TestOutcome {
             service: Service::new(conf.global_opt().service_id),
+            statuses,
         }))
     }
 }
@@ -68,6 +70,7 @@ impl Run for TestOpt {
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TestOutcome {
     service: Service,
+    statuses: Vec<Status>,
 }
 
 impl fmt::Display for TestOutcome {

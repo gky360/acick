@@ -13,7 +13,7 @@ mod diff;
 mod status;
 
 use diff::TextDiff;
-pub use status::{Status, StatusKind};
+pub use status::Status;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Judge {
@@ -45,43 +45,19 @@ impl Judge {
         let result = timeout(time_limit, Self::exec_child(command, input)).await;
         let elapsed = started_at.elapsed();
 
-        use StatusKind::*;
         match result {
-            Err(_) => Status {
-                kind: Tle,
-                sample_name,
-                elapsed,
-            },
-            Ok(Err(err)) => Status {
-                kind: StatusKind::re(err),
-                sample_name,
-                elapsed,
-            },
-            Ok(Ok(output)) => {
-                if output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-                    let diff = TextDiff::new("expected", "actual", stdout, sample.output, cmp);
-                    if diff.is_any() {
-                        Status {
-                            kind: StatusKind::wa(diff),
-                            sample_name,
-                            elapsed,
-                        }
-                    } else {
-                        Status {
-                            kind: StatusKind::ac(diff),
-                            sample_name,
-                            elapsed,
-                        }
-                    }
+            Err(_) => Status::tle(sample_name, elapsed),
+            Ok(Err(err)) => Status::re(sample_name, elapsed, err),
+            Ok(Ok(output)) if output.status.success() => {
+                let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+                let diff = TextDiff::new("expected", "actual", stdout, sample.output, cmp);
+                if diff.is_any() {
+                    Status::wa(sample_name, elapsed, diff)
                 } else {
-                    Status {
-                        kind: StatusKind::re(anyhow!("{}", output.status)),
-                        sample_name,
-                        elapsed,
-                    }
+                    Status::ac(sample_name, elapsed, diff)
                 }
             }
+            Ok(Ok(output)) => Status::re(sample_name, elapsed, anyhow!("{}", output.status)),
         }
     }
 
