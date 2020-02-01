@@ -3,6 +3,7 @@ use std::convert::Infallible;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
+use std::time::Duration;
 
 use getset::{CopyGetters, Getters, Setters};
 use reqwest::Url;
@@ -100,14 +101,22 @@ impl fmt::Display for ContestId {
     }
 }
 
-#[derive(Serialize, Deserialize, Getters, Setters, Debug, Clone, PartialEq, Eq, Hash)]
-#[get = "pub"]
+#[derive(
+    Serialize, Deserialize, Getters, CopyGetters, Setters, Debug, Clone, PartialEq, Eq, Hash,
+)]
 pub struct Problem {
+    #[get = "pub"]
     id: ProblemId,
+    #[get = "pub"]
     name: String,
+    #[serde(with = "humantime_serde")]
+    #[get_copy = "pub"]
+    time_limit: Duration,
     #[serde(with = "string")]
+    #[get = "pub"]
     url: Url,
     #[set = "pub"]
+    #[get = "pub"]
     samples: Vec<Sample>,
 }
 
@@ -115,12 +124,14 @@ impl Problem {
     pub fn new(
         id: impl Into<ProblemId>,
         name: impl Into<String>,
+        time_limit: Duration,
         url: Url,
         samples: Vec<Sample>,
     ) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
+            time_limit,
             url,
             samples,
         }

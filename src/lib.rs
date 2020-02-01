@@ -110,6 +110,8 @@ impl Opt {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use lazy_static::lazy_static;
     use reqwest::Url;
 
@@ -123,6 +125,7 @@ mod tests {
         pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
             "C",
             "Linear Approximation",
+            Duration::from_secs(2),
             Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
             Vec::new()
         );

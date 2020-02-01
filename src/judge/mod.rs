@@ -15,21 +15,21 @@ pub use status::{Status, StatusKind};
 
 pub struct Judge<'a> {
     sample: &'a Sample,
-    timelimit: Duration,
+    time_limit: Duration,
 }
 
 impl<'a> Judge<'a> {
-    pub fn new(sample: &'a Sample, timelimit: Duration) -> Self {
-        Self { sample, timelimit }
+    pub fn new(sample: &'a Sample, time_limit: Duration) -> Self {
+        Self { sample, time_limit }
     }
 
     #[tokio::main]
     pub async fn test(&self, command: Command) -> Status {
-        let Self { sample, timelimit } = *self;
+        let Self { sample, time_limit } = *self;
         let input = sample.input().as_bytes();
 
         let started_at = Instant::now();
-        let result = timeout(timelimit, Self::exec_child(command, input)).await;
+        let result = timeout(time_limit, Self::exec_child(command, input)).await;
         let elapsed = started_at.elapsed();
 
         use StatusKind::*;
