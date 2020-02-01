@@ -54,7 +54,7 @@ impl Judge {
             Ok(Ok(output)) => {
                 if output.status.success() {
                     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-                    let diff = TextDiff::new(stdout, sample.output, cmp);
+                    let diff = TextDiff::new("expected", "actual", stdout, sample.output, cmp);
                     if diff.is_any() {
                         Status {
                             kind: StatusKind::wa(diff),

@@ -37,7 +37,7 @@ impl StatusKind {
     pub fn describe(&self, cnsl: &mut Console) -> Result<()> {
         match self {
             Self::Ac { .. } => {}
-            Self::Wa { diff } => writeln!(cnsl, "{:?}", diff)?,
+            Self::Wa { diff } => writeln!(cnsl, "{}", diff)?,
             Self::Tle => {}
             Self::Re { reason } => writeln!(cnsl, "{}", reason)?,
         }
