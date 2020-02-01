@@ -182,7 +182,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             global_opt: GlobalOpt::default(),
-            base_dir: AbsPathBuf::try_new("/tmp/acick".parse().unwrap()).unwrap(),
+            base_dir: AbsPathBuf::try_new(std::env::temp_dir()).unwrap(),
             body: ConfigBody::default(),
         }
     }
@@ -258,8 +258,7 @@ impl Default for ConfigBody {
         Self {
             version: VERSION.clone(),
             shell: Shell::default(),
-            problem_path:
-                "/tmp/acick/{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml".into(),
+            problem_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml".into(),
             session: SessionConfig::default(),
             services: ServicesConfig::default(),
         }
@@ -369,9 +368,8 @@ int main() {
         match service_id {
             ServiceKind::Atcoder => Self {
                 language: "C++14 (GCC 5.4.1)".into(),
-                working_dir: "/tmp/acick/{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
-                source_path:
-                    "/tmp/acick/{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
+                working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
+                source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
                 compile: (&[
                     "g++",
                     "-std=gnu++1y",
