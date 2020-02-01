@@ -8,7 +8,7 @@ use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
 use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
@@ -17,7 +17,7 @@ mod template;
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
 use crate::model::{string, Contest, Problem, ProblemId, Service, ServiceKind};
 use crate::service::{Act, AtcoderActor, CookieStorage};
-use crate::{Console, GlobalOpt, Result};
+use crate::{Console, GlobalOpt, Result, VERSION};
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
@@ -32,24 +32,12 @@ impl Config {
     pub fn load(global_opt: GlobalOpt, base_dir: AbsPathBuf) -> Result<Self> {
         // TODO: load from file
         let body = ConfigBody::default();
-        let version_str = body.version.to_string();
-        let pkg_version = env!("CARGO_PKG_VERSION");
-        if version_str != pkg_version {
-            Err(anyhow!(
-                r#"Found mismatched version in config file.
-    config version: {}
-    acick version : {}
-Fix version in the config file so that it matches the acick version."#,
-                version_str,
-                pkg_version
-            ))
-        } else {
-            Ok(Self {
-                global_opt,
-                base_dir,
-                body,
-            })
-        }
+        body.validate()?;
+        Ok(Self {
+            global_opt,
+            base_dir,
+            body,
+        })
     }
 
     pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
@@ -213,10 +201,28 @@ pub struct ConfigBody {
     services: ServicesConfig,
 }
 
+impl ConfigBody {
+    fn validate(&self) -> Result<()> {
+        let version_req =
+            VersionReq::parse(&self.version.to_string()).context("Could not parse version")?;
+        if !version_req.matches(&VERSION) {
+            return Err(anyhow!(
+                r#"Found mismatched version in config file.
+    config version: {}
+    acick version : {}
+Fix the config file so that it is compatible with the current version of acick."#,
+                self.version,
+                &*VERSION
+            ));
+        }
+        Ok(())
+    }
+}
+
 impl Default for ConfigBody {
     fn default() -> Self {
         Self {
-            version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
+            version: VERSION.clone(),
             shell: Shell::default(),
             problem_path:
                 "/tmp/acick/{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml".into(),

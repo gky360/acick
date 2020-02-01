@@ -6,6 +6,8 @@ extern crate strum;
 use std::io::Write;
 
 use anyhow::Context as _;
+use lazy_static::lazy_static;
+use semver::Version;
 use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
@@ -26,6 +28,10 @@ use model::{ContestId, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
+
+lazy_static! {
+    pub static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+}
 
 #[derive(
     Serialize, EnumString, EnumVariantNames, IntoStaticStr, Debug, Copy, Clone, PartialEq, Eq, Hash,
