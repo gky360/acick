@@ -29,10 +29,8 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load(global_opt: GlobalOpt, base_dir: AbsPathBuf) -> Result<Self> {
-        // TODO: load from file
-        let body = ConfigBody::default();
-        body.validate()?;
+    pub fn search(global_opt: GlobalOpt, cnsl: &mut Console) -> Result<Self> {
+        let (body, base_dir) = ConfigBody::search(cnsl)?;
         Ok(Self {
             global_opt,
             base_dir,
@@ -77,9 +75,9 @@ impl Config {
     ) -> Result<bool> {
         let problem_abs_path = self.problem_abs_path(problem.id())?;
         problem_abs_path.save_pretty(
-            &self.base_dir,
-            overwrite,
             |file| serde_yaml::to_writer(file, &problem).context("Could not save problem as yaml"),
+            overwrite,
+            Some(&self.base_dir),
             cnsl,
         )
     }
@@ -87,8 +85,8 @@ impl Config {
     pub fn load_problem(&self, problem_id: &ProblemId, cnsl: &mut Console) -> Result<Problem> {
         let problem_abs_path = self.problem_abs_path(problem_id)?;
         let problem: Problem = problem_abs_path.load_pretty(
-            &self.base_dir,
             |file| serde_yaml::from_reader(file).context("Could not read problem as yaml"),
+            Some(&self.base_dir),
             cnsl,
         )?;
         if problem.id() != problem_id {
@@ -118,9 +116,9 @@ impl Config {
         let template = &self.body.services.get(service.id()).template;
         let template_expanded = template.expand_with(service, contest, problem)?;
         source_abs_path.save_pretty(
-            &self.base_dir,
-            overwrite,
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
+            overwrite,
+            Some(&self.base_dir),
             cnsl,
         )
     }
@@ -179,6 +177,17 @@ impl Config {
     }
 }
 
+#[cfg(test)]
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            global_opt: GlobalOpt::default(),
+            base_dir: AbsPathBuf::try_new("/tmp/acick".parse().unwrap()).unwrap(),
+            body: ConfigBody::default(),
+        }
+    }
+}
+
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let yaml_str = serde_yaml::to_string(self).map_err(|_| fmt::Error)?;
@@ -202,6 +211,31 @@ pub struct ConfigBody {
 }
 
 impl ConfigBody {
+    pub const FILE_NAME: &'static str = "acick.yaml";
+
+    fn search(cnsl: &mut Console) -> Result<(Self, AbsPathBuf)> {
+        let cwd = AbsPathBuf::cwd()?;
+        let base_dir = cwd.search_dir_contains(Self::FILE_NAME).with_context(|| {
+            format!(
+                "Could not find config file ({}) in {} or any of the parent directories. \
+                 Create config file first by `init` command.",
+                Self::FILE_NAME,
+                cwd
+            )
+        })?;
+        Ok((Self::load(&base_dir, cnsl)?, base_dir))
+    }
+
+    fn load(base_dir: &AbsPathBuf, cnsl: &mut Console) -> Result<Self> {
+        let body: Self = base_dir.join(Self::FILE_NAME).load_pretty(
+            |file| serde_yaml::from_reader(file).context("Could not read config file as yaml"),
+            None,
+            cnsl,
+        )?;
+        body.validate()?;
+        Ok(body)
+    }
+
     fn validate(&self) -> Result<()> {
         let version_req =
             VersionReq::parse(&self.version.to_string()).context("Could not parse version")?;
@@ -364,7 +398,7 @@ mod tests {
 
     #[test]
     fn serialize_default() -> anyhow::Result<()> {
-        serde_yaml::to_string(&Config::load(GlobalOpt::default(), AbsPathBuf::cwd()?)?)?;
+        serde_yaml::to_string(&Config::default())?;
         Ok(())
     }
 

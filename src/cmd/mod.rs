@@ -51,19 +51,12 @@ pub trait Run {
 
     #[cfg(test)]
     fn run_default(&self) -> Result<Box<dyn Outcome>> {
-        use crate::abs_path::AbsPathBuf;
-        use crate::GlobalOpt;
+        let conf = Config::default();
 
-        let global_opt = GlobalOpt::default();
-        let conf = Config::load(
-            global_opt,
-            AbsPathBuf::cwd().expect("Could not get current working directory"),
-        )
-        .expect("Could not load config");
         let mut output_buf = Vec::new();
-        let mut cnsl = Console::new(&mut output_buf);
+        let cnsl = &mut Console::new(&mut output_buf);
 
-        let result = self.run(&conf, &mut cnsl);
+        let result = self.run(&conf, cnsl);
         eprintln!("{}", String::from_utf8_lossy(&output_buf));
         result
     }

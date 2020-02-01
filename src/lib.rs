@@ -20,7 +20,6 @@ mod judge;
 mod model;
 mod service;
 
-use abs_path::AbsPathBuf;
 use cmd::{Cmd, Run as _};
 use config::Config;
 use console::Console;
@@ -96,10 +95,10 @@ pub struct Opt {
 
 impl Opt {
     pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
-        let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
-        let conf = Config::load(self.global_opt.clone(), cwd).context("Could not load config")?;
-        let mut cnsl = Console::new(stderr);
-        let outcome = self.cmd.run(&conf, &mut cnsl)?;
+        let cnsl = &mut Console::new(stderr);
+        let conf =
+            Config::search(self.global_opt.clone(), cnsl).context("Could not load config")?;
+        let outcome = self.cmd.run(&conf, cnsl)?;
 
         cnsl.flush()?;
         writeln!(stdout)?;

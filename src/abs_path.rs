@@ -32,17 +32,28 @@ impl AbsPathBuf {
         Self(self.0.join(path))
     }
 
+    pub fn search_dir_contains(&self, file_name: &str) -> Option<Self> {
+        for dir in self.0.ancestors() {
+            let mut file_path = dir.join(file_name);
+            if file_path.is_file() {
+                file_path.pop();
+                return Some(Self(file_path));
+            }
+        }
+        None
+    }
+
     pub fn save_pretty(
         &self,
-        base_dir: &AbsPathBuf,
-        overwrite: bool,
         save: impl FnOnce(File) -> Result<()>,
+        overwrite: bool,
+        base_dir: Option<&AbsPathBuf>,
         cnsl: &mut Console,
     ) -> Result<bool> {
         write!(
             cnsl,
             "Saving {} ... ",
-            self.strip_prefix(base_dir).display()
+            self.strip_prefix_if(base_dir).display()
         )?;
         let is_existed = self.as_ref().is_file();
         let result = if !overwrite && is_existed {
@@ -72,14 +83,14 @@ impl AbsPathBuf {
 
     pub fn load_pretty<T>(
         &self,
-        base_dir: &AbsPathBuf,
         load: impl FnOnce(File) -> Result<T>,
+        base_dir: Option<&AbsPathBuf>,
         cnsl: &mut Console,
     ) -> Result<T> {
         write!(
             cnsl,
             "Loading {} ... ",
-            self.strip_prefix(base_dir).display()
+            self.strip_prefix_if(base_dir).display()
         )?;
         let result = OpenOptions::new()
             .read(true)
@@ -110,6 +121,14 @@ impl AbsPathBuf {
         self.0
             .strip_prefix(&base.0)
             .unwrap_or_else(|_| self.0.as_path())
+    }
+
+    fn strip_prefix_if(&self, base: Option<&AbsPathBuf>) -> &Path {
+        if let Some(base) = base {
+            self.strip_prefix(base)
+        } else {
+            self.0.as_path()
+        }
     }
 }
 
