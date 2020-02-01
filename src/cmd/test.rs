@@ -16,6 +16,7 @@ use crate::{Config, Console, Result};
 pub struct TestOpt {
     #[structopt(name = "problem")]
     problem_id: ProblemId,
+    sample_name: Option<String>,
 }
 
 impl TestOpt {
@@ -42,7 +43,15 @@ impl Run for TestOpt {
 
         let time_limit = problem.time_limit();
         let compare = problem.compare();
-        let samples = problem.take_samples();
+        let samples = if let Some(sample_name) = &self.sample_name {
+            problem
+                .take_samples()
+                .into_iter()
+                .filter(|sample| &sample.name == sample_name)
+                .collect()
+        } else {
+            problem.take_samples()
+        };
         let n_samples = samples.len();
         let mut statuses = Vec::new();
         for (i, sample) in samples.into_iter().enumerate() {
@@ -98,6 +107,7 @@ mod tests {
 
         let opt = TestOpt {
             problem_id: "c".into(),
+            sample_name: None,
         };
         opt.run_default()?;
         Ok(())
