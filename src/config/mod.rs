@@ -156,7 +156,7 @@ impl Config {
         let service_id = self.global_opt.service_id;
         let contest_id = &self.global_opt.contest_id;
         path.expand_with(service_id, contest_id, problem_id)
-            .map(|path_expanded| self.base_dir.join(path_expanded))
+            .and_then(|path_expanded| self.base_dir.join_expand(path_expanded))
     }
 
     fn exec_templ_arr<'a, T>(

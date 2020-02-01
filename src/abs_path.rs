@@ -13,8 +13,8 @@ use crate::{Console, Result};
 pub struct AbsPathBuf(PathBuf);
 
 impl AbsPathBuf {
+    #[allow(dead_code)]
     pub fn try_new(path: PathBuf) -> Result<Self> {
-        // TODO: use shellexpand, follow symlinks
         if path.is_absolute() {
             Ok(Self(path))
         } else {
@@ -22,9 +22,16 @@ impl AbsPathBuf {
         }
     }
 
+    fn expand<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
+        Ok(shellexpand::full(&path.as_ref().to_string_lossy())?.parse()?)
+    }
+
     pub fn cwd() -> Result<Self> {
-        let dir = current_dir()?;
-        Self::try_new(dir)
+        Ok(Self(current_dir()?))
+    }
+
+    pub fn join_expand<P: AsRef<Path>>(&self, path: P) -> Result<Self> {
+        Ok(self.join(Self::expand(path)?))
     }
 
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
