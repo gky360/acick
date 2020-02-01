@@ -92,15 +92,6 @@ jobs:
           target: ${{ matrix.target_triple }}
           default: true
 
-      - name: "`rustup component add clippy`"
-        run: rustup component add clippy
-
-      - name: "`cargo clippy`"
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --all-targets --all-features --target ${{ matrix.target_triple }} -- -D warnings
-
       - name: Determine `cargo test` targets
         id: cargo_test_targets
         run: |
@@ -120,6 +111,15 @@ jobs:
           RUST_BACKTRACE: full
           ACICK_ATCODER_USERNAME: ${{ secrets.ACICK_ATCODER_USERNAME }}
           ACICK_ATCODER_PASSWORD: ${{ secrets.ACICK_ATCODER_PASSWORD }}
+
+      - name: "`rustup component add clippy`"
+        run: rustup component add clippy
+
+      - name: "`cargo clippy`"
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace --all-targets --all-features --target ${{ matrix.target_triple }} -- -D warnings
 
   release:
     strategy:
