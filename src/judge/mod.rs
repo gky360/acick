@@ -1,3 +1,4 @@
+use std::io;
 use std::process::{Output, Stdio};
 use std::time::Duration;
 
@@ -69,12 +70,23 @@ impl Judge {
             .spawn()
             .context("Failed to start run command")?;
         let mut stdin = BufWriter::new(child.stdin.as_mut().unwrap());
-        stdin
-            .write_all(input)
-            .await
+
+        // async write to stdin may cause broken pipe error
+        // when write is performed after the child exited
+        Self::ignore_broken_pipe(stdin.write_all(input).await)
             .context("Could not write input to stdin")?;
-        stdin.flush().await.context("Could not flush stdin")?;
+        Self::ignore_broken_pipe(stdin.flush().await).context("Could not flush stdin")?;
+
         let output = child.wait_with_output().await.context("Failed to run")?;
         Ok(output)
+    }
+
+    fn ignore_broken_pipe(
+        result: std::result::Result<(), io::Error>,
+    ) -> std::result::Result<(), io::Error> {
+        result.or_else(|err| match err.kind() {
+            io::ErrorKind::BrokenPipe => Ok(()),
+            _ => Err(err),
+        })
     }
 }
