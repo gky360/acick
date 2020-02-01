@@ -144,6 +144,10 @@ impl Problem {
             samples,
         }
     }
+
+    pub fn take_samples(self) -> Vec<Sample> {
+        self.samples
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
@@ -270,11 +274,10 @@ impl fmt::Display for Byte {
 }
 
 #[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
-#[get = "pub"]
 pub struct Sample {
-    name: String,
-    input: String,
-    output: String,
+    pub name: String,
+    pub input: String,
+    pub output: String,
 }
 
 impl Sample {

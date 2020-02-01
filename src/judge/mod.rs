@@ -16,14 +16,14 @@ use diff::TextDiff;
 pub use status::{Status, StatusKind};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Judge<'a> {
-    sample: &'a Sample,
+pub struct Judge {
+    sample: Sample,
     time_limit: Duration,
     cmp: Compare,
 }
 
-impl<'a> Judge<'a> {
-    pub fn new(sample: &'a Sample, time_limit: Duration, cmp: Compare) -> Self {
+impl Judge {
+    pub fn new(sample: Sample, time_limit: Duration, cmp: Compare) -> Self {
         Self {
             sample,
             time_limit,
@@ -32,13 +32,13 @@ impl<'a> Judge<'a> {
     }
 
     #[tokio::main]
-    pub async fn test(&self, command: Command) -> Status {
+    pub async fn test(self, command: Command) -> Status {
         let Self {
             sample,
             time_limit,
             cmp,
-        } = *self;
-        let input = sample.input().as_bytes();
+        } = self;
+        let input = sample.input.as_bytes();
 
         let started_at = Instant::now();
         let result = timeout(time_limit, Self::exec_child(command, input)).await;
@@ -53,12 +53,18 @@ impl<'a> Judge<'a> {
             },
             Ok(Ok(output)) => {
                 if output.status.success() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let diff = TextDiff::new(&stdout, &sample.output(), cmp);
+                    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+                    let diff = TextDiff::new(stdout, sample.output, cmp);
                     if diff.is_any() {
-                        Status { kind: Wa, elapsed }
+                        Status {
+                            kind: StatusKind::wa(diff),
+                            elapsed,
+                        }
                     } else {
-                        Status { kind: Ac, elapsed }
+                        Status {
+                            kind: StatusKind::ac(diff),
+                            elapsed,
+                        }
                     }
                 } else {
                     Status {

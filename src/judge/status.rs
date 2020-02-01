@@ -4,32 +4,30 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use crate::judge::diff::TextDiff;
 use crate::{Console, Error, Result};
 
 #[derive(
-    Serialize,
-    Deserialize,
-    EnumString,
-    EnumVariantNames,
-    IntoStaticStr,
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
+    Serialize, Deserialize, EnumVariantNames, IntoStaticStr, Debug, Clone, PartialEq, Eq, Hash,
 )]
 #[serde(rename_all = "UPPERCASE")]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum StatusKind {
-    Ac,
-    Wa,
+    Ac { diff: TextDiff },
+    Wa { diff: TextDiff },
     Tle,
     Re { reason: String },
 }
 
 impl StatusKind {
+    pub fn ac(diff: TextDiff) -> Self {
+        Self::Ac { diff }
+    }
+
+    pub fn wa(diff: TextDiff) -> Self {
+        Self::Wa { diff }
+    }
+
     pub fn re(err: Error) -> Self {
         Self::Re {
             reason: err.to_string(),
@@ -38,7 +36,9 @@ impl StatusKind {
 
     pub fn describe(&self, cnsl: &mut Console) -> Result<()> {
         match self {
-            Self::Ac | Self::Wa | Self::Tle => {}
+            Self::Ac { .. } => {}
+            Self::Wa { diff } => writeln!(cnsl, "{:?}", diff)?,
+            Self::Tle => {}
             Self::Re { reason } => writeln!(cnsl, "{}", reason)?,
         }
         Ok(())

@@ -40,10 +40,11 @@ impl Run for TestOpt {
             ));
         }
 
-        for sample in problem.samples() {
+        let time_limit = problem.time_limit();
+        let compare = problem.compare();
+        for sample in problem.take_samples().into_iter() {
             let run = conf.exec_run(&self.problem_id)?;
-            let judge = Judge::new(sample, problem.time_limit(), problem.compare());
-            let status = judge.test(run);
+            let status = Judge::new(sample, time_limit, compare).test(run);
             eprintln!("{}", status);
             status.kind.describe(cnsl)?;
         }
