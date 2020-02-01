@@ -391,12 +391,33 @@ int main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::abs_path::AbsPathBuf;
     use crate::config::template::TargetContext;
     use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
 
     #[test]
     fn serialize_default() -> anyhow::Result<()> {
         serde_yaml::to_string(&Config::default())?;
+        Ok(())
+    }
+
+    #[test]
+    fn deserialize_example() -> anyhow::Result<()> {
+        // ignore difference on cookies_path because it varies depending on environments
+        fn ignore_env_dependency(mut body: ConfigBody) -> ConfigBody {
+            body.shell = (&[""]).into();
+            body.session.cookies_path = PathBuf::new();
+            body
+        }
+
+        let mut output_buf = Vec::new();
+        let cnsl = &mut Console::new(&mut output_buf);
+
+        let example_body = ignore_env_dependency(ConfigBody::load(&AbsPathBuf::cwd()?, cnsl)?);
+        let default_body = ignore_env_dependency(ConfigBody::default());
+        eprintln!("{}", String::from_utf8_lossy(&output_buf));
+
+        assert_eq!(example_body, default_body);
         Ok(())
     }
 
