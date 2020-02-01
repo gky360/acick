@@ -32,7 +32,6 @@ impl Judge {
         }
     }
 
-    #[tokio::main]
     pub async fn test(self, command: Command) -> Status {
         let Self {
             sample,

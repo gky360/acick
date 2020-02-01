@@ -145,8 +145,15 @@ impl Problem {
         }
     }
 
-    pub fn take_samples(self) -> Vec<Sample> {
-        self.samples
+    pub fn take_samples(self, sample_name: &Option<String>) -> Vec<Sample> {
+        if let Some(sample_name) = sample_name {
+            self.samples
+                .into_iter()
+                .filter(|sample| &sample.name == sample_name)
+                .collect()
+        } else {
+            self.samples
+        }
     }
 }
 
