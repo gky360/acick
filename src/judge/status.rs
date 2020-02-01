@@ -1,3 +1,4 @@
+use std::cmp::max;
 use std::fmt;
 use std::io::Write as _;
 use std::time::Duration;
@@ -125,26 +126,75 @@ impl fmt::Display for Status {
     }
 }
 
-// #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-// pub struct TotalStatus {
-//     kind: TotalStatusKind,
-//     statuses: Vec<Status>,
-// }
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+struct StatusCount {
+    ac: usize,
+    wa: usize,
+    tle: usize,
+    re: usize,
+}
 
-// impl TotalStatus {
-//     pub fn new(statuses: Vec<Status>) -> Self {
+impl StatusCount {
+    fn new() -> Self {
+        Self {
+            ac: 0,
+            wa: 0,
+            tle: 0,
+            re: 0,
+        }
+    }
 
-//     }
-// }
+    fn add(&mut self, kind: StatusKind) -> &mut Self {
+        match kind {
+            StatusKind::Ac => self.ac += 1,
+            StatusKind::Wa => self.wa += 1,
+            StatusKind::Tle => self.tle += 1,
+            StatusKind::Re => self.re += 1,
+        }
+        self
+    }
 
-// #[derive(
-//     Serialize, Deserialize, EnumVariantNames, IntoStaticStr, Debug, Copy, Clone, PartialEq, Eq, Hash,
-// )]
-// #[serde(rename_all = "UPPERCASE")]
-// #[strum(serialize_all = "UPPERCASE")]
-// pub enum TotalStatusKind {
-//     Ac,
-//     Wa,
-//     Tle,
-//     Re,
-// }
+    fn total(&self) -> usize {
+        self.ac + self.wa + self.tle + self.re
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TotalStatus {
+    kind: StatusKind,
+    count: StatusCount,
+    statuses: Vec<Status>,
+}
+
+impl TotalStatus {
+    pub fn new(statuses: Vec<Status>) -> Self {
+        let (kind, count) = statuses.iter().fold(
+            (StatusKind::Ac, StatusCount::new()),
+            |(kind, mut count), status| {
+                count.add(status.kind());
+                (max(kind, status.kind()), count)
+            },
+        );
+
+        Self {
+            kind,
+            count,
+            statuses,
+        }
+    }
+}
+
+impl fmt::Display for TotalStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{:3} (AC: {:>2}/{t:>2}, WA: {:>2}/{t:>2}, TLE: {:>2}/{t:>2}, RE: {:>2}/{t:>2})",
+            Into::<&'static str>::into(self.kind),
+            self.count.ac,
+            self.count.wa,
+            self.count.tle,
+            self.count.re,
+            t = self.count.total()
+        )
+    }
+}

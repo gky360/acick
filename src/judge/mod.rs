@@ -13,7 +13,7 @@ mod diff;
 mod status;
 
 use diff::TextDiff;
-pub use status::Status;
+pub use status::{Status, StatusKind, TotalStatus};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Judge {

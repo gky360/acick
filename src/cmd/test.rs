@@ -7,7 +7,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::judge::{Judge, Status};
+use crate::judge::{Judge, TotalStatus};
 use crate::model::{ProblemId, Service};
 use crate::{Config, Console, Result};
 
@@ -60,9 +60,11 @@ impl Run for TestOpt {
             statuses.push(status);
         }
 
+        let total = TotalStatus::new(statuses);
+
         Ok(Box::new(TestOutcome {
             service: Service::new(conf.global_opt().service_id),
-            statuses,
+            total,
         }))
     }
 }
@@ -70,12 +72,12 @@ impl Run for TestOpt {
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TestOutcome {
     service: Service,
-    statuses: Vec<Status>,
+    total: TotalStatus,
 }
 
 impl fmt::Display for TestOutcome {
-    fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-        Ok(())
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.total)
     }
 }
 
