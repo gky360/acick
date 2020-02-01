@@ -32,9 +32,6 @@ impl Run for FetchOpt {
 
         let service = Service::new(conf.global_opt().service_id);
 
-        // save contest
-        // TODO: save contest
-
         // save problem data file
         for problem in problems.iter() {
             conf.save_problem(problem, overwrite, cnsl)
