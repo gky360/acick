@@ -2,7 +2,7 @@ use std::process::{Output, Stdio};
 use std::time::Duration;
 
 use anyhow::{anyhow, Context as _};
-use tokio::io::AsyncWriteExt as _;
+use tokio::io::{AsyncWriteExt as _, BufWriter};
 use tokio::process::Command;
 use tokio::time::{timeout, Instant};
 
@@ -38,6 +38,7 @@ impl Judge {
             time_limit,
             cmp,
         } = self;
+        let sample_name = sample.name;
         let input = sample.input.as_bytes();
 
         let started_at = Instant::now();
@@ -46,9 +47,14 @@ impl Judge {
 
         use StatusKind::*;
         match result {
-            Err(_) => Status { kind: Tle, elapsed },
+            Err(_) => Status {
+                kind: Tle,
+                sample_name,
+                elapsed,
+            },
             Ok(Err(err)) => Status {
                 kind: StatusKind::re(err),
+                sample_name,
                 elapsed,
             },
             Ok(Ok(output)) => {
@@ -58,17 +64,20 @@ impl Judge {
                     if diff.is_any() {
                         Status {
                             kind: StatusKind::wa(diff),
+                            sample_name,
                             elapsed,
                         }
                     } else {
                         Status {
                             kind: StatusKind::ac(diff),
+                            sample_name,
                             elapsed,
                         }
                     }
                 } else {
                     Status {
                         kind: StatusKind::re(anyhow!("{}", output.status)),
+                        sample_name,
                         elapsed,
                     }
                 }
@@ -83,11 +92,12 @@ impl Judge {
             .kill_on_drop(true)
             .spawn()
             .context("Failed to start run command")?;
-        let stdin = child.stdin.as_mut().unwrap();
+        let mut stdin = BufWriter::new(child.stdin.as_mut().unwrap());
         stdin
             .write_all(input)
             .await
             .context("Could not write input to stdin")?;
+        stdin.flush().await.context("Could not flush stdin")?;
         let output = child.wait_with_output().await.context("Failed to run")?;
         Ok(output)
     }
