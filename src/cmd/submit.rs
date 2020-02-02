@@ -4,12 +4,15 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::model::Service;
+use crate::model::{ProblemId, Service};
 use crate::{Config, Console, Result};
 
-#[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
-pub struct SubmitOpt {}
+pub struct SubmitOpt {
+    #[structopt(name = "problem")]
+    problem_id: ProblemId,
+}
 
 impl Run for SubmitOpt {
     fn run(&self, conf: &Config, _cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
@@ -43,7 +46,7 @@ mod tests {
     #[test]
     #[ignore]
     fn run_default() -> anyhow::Result<()> {
-        let opt = SubmitOpt::default();
+        let opt = SubmitOpt { problem_id: "c".into() };
         opt.run_default()?;
         Ok(())
     }
