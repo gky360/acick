@@ -1,5 +1,5 @@
 ---
-version: 0.0.2
+version: 0.0.3
 shell: ["/bin/bash", "-c", "{{ command }}"]
 problem_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml"
 session:
