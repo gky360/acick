@@ -49,7 +49,7 @@ impl TestOpt {
             let run = conf.exec_run(&self.problem_id)?;
             write!(
                 cnsl,
-                "({:>2}/{:>2}) Testing sample {} ... ",
+                "[{:>2}/{:>2}] Testing sample {} ... ",
                 i + 1,
                 n_samples,
                 sample.name

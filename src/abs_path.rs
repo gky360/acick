@@ -152,10 +152,16 @@ impl fmt::Display for AbsPathBuf {
 }
 
 pub trait ToAbs {
+    fn to_abs_expand(&self, base: &AbsPathBuf) -> Result<AbsPathBuf>;
+
     fn to_abs(&self, base: &AbsPathBuf) -> AbsPathBuf;
 }
 
 impl<T: AsRef<Path>> ToAbs for T {
+    fn to_abs_expand(&self, base: &AbsPathBuf) -> Result<AbsPathBuf> {
+        base.join_expand(self)
+    }
+
     fn to_abs(&self, base: &AbsPathBuf) -> AbsPathBuf {
         base.join(self)
     }

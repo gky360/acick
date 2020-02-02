@@ -64,7 +64,7 @@ impl Config {
 
     pub fn open_cookie_storage(&self) -> Result<CookieStorage> {
         let cookies_path = &self.body.session.cookies_path;
-        CookieStorage::open(&cookies_path.to_abs(&self.base_dir))
+        CookieStorage::open(&cookies_path.to_abs_expand(&self.base_dir)?)
     }
 
     pub fn save_problem(
