@@ -6,7 +6,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::judge::{Judge, TotalStatus};
+use crate::judge::{Judge, StatusKind, TotalStatus};
 use crate::model::{Problem, ProblemId, Service};
 use crate::{Config, Console, Result};
 
@@ -107,7 +107,7 @@ impl fmt::Display for TestOutcome {
 
 impl Outcome for TestOutcome {
     fn is_error(&self) -> bool {
-        false
+        self.total.kind() != StatusKind::Ac
     }
 }
 
