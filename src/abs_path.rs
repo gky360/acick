@@ -13,8 +13,8 @@ use crate::{Console, Result};
 pub struct AbsPathBuf(PathBuf);
 
 impl AbsPathBuf {
+    #[allow(dead_code)]
     pub fn try_new(path: PathBuf) -> Result<Self> {
-        // TODO: use shellexpand, follow symlinks
         if path.is_absolute() {
             Ok(Self(path))
         } else {
@@ -22,9 +22,16 @@ impl AbsPathBuf {
         }
     }
 
+    fn expand<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
+        Ok(shellexpand::full(&path.as_ref().to_string_lossy())?.parse()?)
+    }
+
     pub fn cwd() -> Result<Self> {
-        let dir = current_dir()?;
-        Self::try_new(dir)
+        Ok(Self(current_dir()?))
+    }
+
+    pub fn join_expand<P: AsRef<Path>>(&self, path: P) -> Result<Self> {
+        Ok(self.join(Self::expand(path)?))
     }
 
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
@@ -32,38 +39,77 @@ impl AbsPathBuf {
         Self(self.0.join(path))
     }
 
+    pub fn search_dir_contains(&self, file_name: &str) -> Option<Self> {
+        for dir in self.0.ancestors() {
+            let mut file_path = dir.join(file_name);
+            if file_path.is_file() {
+                file_path.pop();
+                return Some(Self(file_path));
+            }
+        }
+        None
+    }
+
     pub fn save_pretty(
         &self,
-        base_dir: &AbsPathBuf,
-        overwrite: bool,
         save: impl FnOnce(File) -> Result<()>,
+        overwrite: bool,
+        base_dir: Option<&AbsPathBuf>,
         cnsl: &mut Console,
     ) -> Result<bool> {
         write!(
             cnsl,
             "Saving {} ... ",
-            self.strip_prefix(base_dir).display()
+            self.strip_prefix_if(base_dir).display()
         )?;
         let is_existed = self.as_ref().is_file();
-        let is_saved = if !overwrite && is_existed {
-            false
+        let result = if !overwrite && is_existed {
+            Ok(false)
         } else {
             self.create_dir_all_and_open(false, true)
                 .with_context(|| format!("Could not create file : {}", self))
-                .and_then(save)?;
-            true
+                .and_then(save)
+                .map(|_| true)
         };
-        let msg = if is_saved {
-            if is_existed {
-                "overwritten"
+        let msg = if let Ok(is_saved) = result {
+            if is_saved {
+                if is_existed {
+                    "overwritten"
+                } else {
+                    "saved"
+                }
             } else {
-                "saved"
+                "already exists"
             }
         } else {
-            "already exists"
+            "failed"
         };
         writeln!(cnsl, "{}", msg)?;
-        Ok(is_saved)
+        result
+    }
+
+    pub fn load_pretty<T>(
+        &self,
+        load: impl FnOnce(File) -> Result<T>,
+        base_dir: Option<&AbsPathBuf>,
+        cnsl: &mut Console,
+    ) -> Result<T> {
+        write!(
+            cnsl,
+            "Loading {} ... ",
+            self.strip_prefix_if(base_dir).display()
+        )?;
+        let result = OpenOptions::new()
+            .read(true)
+            .open(&self.0)
+            .with_context(|| format!("Could not open file : {}", self))
+            .and_then(load);
+        let msg = match result {
+            Ok(_) => "loaded",
+            Err(_) => "failed",
+        };
+        writeln!(cnsl, "{}", msg)?;
+        result
     }
 
     pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
@@ -83,6 +129,14 @@ impl AbsPathBuf {
             .strip_prefix(&base.0)
             .unwrap_or_else(|_| self.0.as_path())
     }
+
+    fn strip_prefix_if(&self, base: Option<&AbsPathBuf>) -> &Path {
+        if let Some(base) = base {
+            self.strip_prefix(base)
+        } else {
+            self.0.as_path()
+        }
+    }
 }
 
 impl AsRef<PathBuf> for AbsPathBuf {
@@ -98,10 +152,16 @@ impl fmt::Display for AbsPathBuf {
 }
 
 pub trait ToAbs {
+    fn to_abs_expand(&self, base: &AbsPathBuf) -> Result<AbsPathBuf>;
+
     fn to_abs(&self, base: &AbsPathBuf) -> AbsPathBuf;
 }
 
 impl<T: AsRef<Path>> ToAbs for T {
+    fn to_abs_expand(&self, base: &AbsPathBuf) -> Result<AbsPathBuf> {
+        base.join_expand(self)
+    }
+
     fn to_abs(&self, base: &AbsPathBuf) -> AbsPathBuf {
         base.join(self)
     }

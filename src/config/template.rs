@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::process::{Command, Output};
 use std::sync::Mutex;
 use std::{env, fmt};
 
@@ -9,8 +8,9 @@ use heck::{CamelCase as _, KebabCase as _, MixedCase as _, SnakeCase as _};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tera::Tera;
+use tokio::process::Command;
 
-use crate::model::{Contest, Problem, Service};
+use crate::model::{Contest, ContestId, Problem, ProblemId, Service, ServiceKind};
 use crate::Result;
 
 macro_rules! register_case_conversion {
@@ -107,21 +107,79 @@ impl<'a, T: Into<String>> From<T> for CmdTempl {
     }
 }
 
+impl fmt::Display for CmdTempl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TargetContext<'a> {
+    #[serde(rename = "service")]
+    service_id: ServiceKind,
+    #[serde(rename = "contest")]
+    contest_id: &'a ContestId,
+    #[serde(rename = "problem")]
+    problem_id: &'a ProblemId,
+}
+
+impl<'a> TargetContext<'a> {
+    pub fn new(
+        service_id: ServiceKind,
+        contest_id: &'a ContestId,
+        problem_id: &'a ProblemId,
+    ) -> Self {
+        Self {
+            service_id,
+            contest_id,
+            problem_id,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TargetTempl(String);
+
+impl TargetTempl {
+    pub fn expand_with(
+        &self,
+        service_id: ServiceKind,
+        contest_id: &ContestId,
+        problem_id: &ProblemId,
+    ) -> Result<String> {
+        self.expand(&TargetContext {
+            service_id,
+            contest_id,
+            problem_id,
+        })
+    }
+}
+
+impl<'a> Expand<'a> for TargetTempl {
+    type Context = TargetContext<'a>;
+
+    fn get_template(&self) -> &str {
+        &self.0
+    }
+}
+
+impl<T: Into<String>> From<T> for TargetTempl {
+    fn from(s: T) -> Self {
+        Self(s.into())
+    }
+}
+
+impl fmt::Display for TargetTempl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProblemContext<'a> {
     service: &'a Service,
     contest: &'a Contest,
     problem: &'a Problem,
-}
-
-impl<'a> ProblemContext<'a> {
-    pub fn new(service: &'a Service, contest: &'a Contest, problem: &'a Problem) -> Self {
-        Self {
-            service,
-            contest,
-            problem,
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -153,6 +211,12 @@ impl<'a> Expand<'a> for ProblemTempl {
 impl<T: Into<String>> From<T> for ProblemTempl {
     fn from(s: T) -> Self {
         Self(s.into())
+    }
+}
+
+impl fmt::Display for ProblemTempl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -197,31 +261,25 @@ impl<T: fmt::Display> fmt::Display for TemplArray<T> {
 pub type Shell = TemplArray<CmdTempl>;
 
 impl Shell {
-    pub fn exec(&self, command: &str) -> Result<Output> {
-        let cmd_context = CmdContext::new(command);
-        let command = self
+    pub fn exec(&self, cmd: &str) -> Result<Command> {
+        let cmd_context = CmdContext::new(cmd);
+        let cmd_expanded = self
             .expand_all(&cmd_context)
             .context("Could not expand shell template")?;
-        let output = Command::new(&command[0])
-            .args(&command[1..])
-            .output()
-            .context(format!(
-                "Failed to execute command: \"{}\"",
-                command.join(" ")
-            ))?;
-        Ok(output)
+        let mut command = Command::new(&cmd_expanded[0]);
+        command.args(&cmd_expanded[1..]).kill_on_drop(true);
+        Ok(command)
     }
 
-    #[allow(dead_code)]
     pub fn exec_templ_arr<'a, T: Expand<'a>>(
         &self,
         templ_arr: &TemplArray<T>,
         context: &<T as Expand<'a>>::Context,
-    ) -> Result<Output> {
-        let command = templ_arr
+    ) -> Result<Command> {
+        let cmd = templ_arr
             .expand_all_join(context)
             .context("Could not expand command template")?;
-        self.exec(&command)
+        self.exec(&cmd)
     }
 }
 
@@ -269,8 +327,11 @@ mod tests {
     #[test]
     fn expand_problem_templ() -> anyhow::Result<()> {
         let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
-        let problem_context =
-            ProblemContext::new(&DEFAULT_SERVICE, &DEFAULT_CONTEST, &DEFAULT_PROBLEM);
+        let problem_context = ProblemContext {
+            service: &DEFAULT_SERVICE,
+            contest: &DEFAULT_CONTEST,
+            problem: &DEFAULT_PROBLEM,
+        };
         templ.expand(&problem_context)?;
         Ok(())
     }
@@ -291,10 +352,11 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn exec_default_shell() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn exec_default_shell() -> anyhow::Result<()> {
         let shell = Shell::default();
-        let output = shell.exec("echo hello")?;
+        let mut command = shell.exec("echo hello")?;
+        let output = command.output().await?;
         println!("{:?}", output);
         assert!(output.status.success());
         Ok(())

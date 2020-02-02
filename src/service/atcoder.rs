@@ -3,30 +3,29 @@ use maplit::hashmap;
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 
-use crate::cmd::LoginOutcome;
 use crate::model::{Contest, Problem, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPageBuilder, TasksPrintPageBuilder,
 };
 use crate::service::scrape::{HasUrl as _, Scrape as _};
-use crate::service::serve::Serve;
 use crate::service::session::WithRetry as _;
+use crate::service::Act;
 use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]
-pub struct AtcoderService<'a> {
+pub struct AtcoderActor<'a> {
     client: Client,
     conf: &'a Config,
 }
 
-impl<'a> AtcoderService<'a> {
+impl<'a> AtcoderActor<'a> {
     pub fn new(client: Client, conf: &'a Config) -> Self {
-        Self { client, conf }
+        AtcoderActor { client, conf }
     }
 }
 
-impl Serve for AtcoderService<'_> {
-    fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<LoginOutcome> {
+impl Act for AtcoderActor<'_> {
+    fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool> {
         let Self { client, conf } = self;
         let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
 
@@ -36,11 +35,7 @@ impl Serve for AtcoderService<'_> {
             if current_user != user {
                 return Err(anyhow!("Logged in as another user: {}", current_user));
             }
-            return Ok(LoginOutcome {
-                service_id: conf.global_opt().service_id,
-                username: user,
-                is_already: true,
-            });
+            return Ok(false);
         }
 
         // Post form data to log in to service
@@ -65,14 +60,14 @@ impl Serve for AtcoderService<'_> {
             return Err(anyhow!("Logged in as another user: {}", current_user));
         }
 
-        Ok(LoginOutcome {
-            service_id: conf.global_opt().service_id,
-            username: user,
-            is_already: false,
-        })
+        Ok(true)
     }
 
-    fn fetch(&self, problem_id: &Option<ProblemId>, cnsl: &mut Console) -> Result<Contest> {
+    fn fetch(
+        &self,
+        problem_id: &Option<ProblemId>,
+        cnsl: &mut Console,
+    ) -> Result<(Contest, Vec<Problem>)> {
         let Self { client, conf } = self;
         let contest_id = &conf.global_opt().contest_id;
 
@@ -121,7 +116,7 @@ impl Serve for AtcoderService<'_> {
             }
         }
 
-        let contest = Contest::new(contest_id, contest_name, problems);
-        Ok(contest)
+        let contest = Contest::new(contest_id.to_owned(), contest_name);
+        Ok((contest, problems))
     }
 }

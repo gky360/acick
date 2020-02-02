@@ -3,9 +3,11 @@
 #[macro_use]
 extern crate strum;
 
-use std::io::{Read, Write};
+use std::io::Write;
 
 use anyhow::Context as _;
+use lazy_static::lazy_static;
+use semver::Version;
 use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
@@ -14,10 +16,10 @@ mod abs_path;
 mod cmd;
 mod config;
 mod console;
+mod judge;
 mod model;
 mod service;
 
-use abs_path::AbsPathBuf;
 use cmd::{Cmd, Run as _};
 use config::Config;
 use console::Console;
@@ -25,6 +27,10 @@ use model::{ContestId, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
+
+lazy_static! {
+    pub static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+}
 
 #[derive(
     Serialize, EnumString, EnumVariantNames, IntoStaticStr, Debug, Copy, Clone, PartialEq, Eq, Hash,
@@ -88,16 +94,11 @@ pub struct Opt {
 }
 
 impl Opt {
-    pub fn run(
-        &self,
-        stdin: &mut dyn Read,
-        stdout: &mut dyn Write,
-        stderr: &mut dyn Write,
-    ) -> Result<()> {
-        let cwd = AbsPathBuf::cwd().context("Could not get current working directory")?; // TODO: search config fie
-        let conf = Config::load(self.global_opt.clone(), cwd).context("Could not load config")?;
-        let mut cnsl = Console::new(stdin, stderr);
-        let outcome = self.cmd.run(&conf, &mut cnsl)?;
+    pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
+        let cnsl = &mut Console::new(stderr);
+        let conf =
+            Config::search(self.global_opt.clone(), cnsl).context("Could not load config")?;
+        let outcome = self.cmd.run(&conf, cnsl)?;
 
         cnsl.flush()?;
         writeln!(stdout)?;
@@ -114,20 +115,25 @@ impl Opt {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use lazy_static::lazy_static;
     use reqwest::Url;
 
     use super::*;
-    use crate::model::{Contest, Problem, Service};
+    use crate::model::{Compare, Contest, Problem, Service};
 
     lazy_static! {
         pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
         pub static ref DEFAULT_CONTEST: Contest =
-            Contest::new("arc100", "AtCoder Regular Contest 100", Vec::new());
+            Contest::new("arc100", "AtCoder Regular Contest 100");
         pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
             "C",
             "Linear Approximation",
             Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
+            Duration::from_secs(2),
+            "1024 MB".parse().unwrap(),
+            Compare::Default,
             Vec::new()
         );
     }

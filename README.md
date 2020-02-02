@@ -22,13 +22,13 @@ WIP project
 
 ## Installation
 
-You can use [`install.sh`](https://github.com/gky360/acick/blob/master/install.sh) to install binary release.
+Use [`install.sh`](https://github.com/gky360/acick/blob/master/install.sh) to install binary release.
 
 ```
 $ curl -sSf -L https://raw.githubusercontent.com/gky360/acick/master/install.sh | sh
 ```
 
-Or you can install acick using cargo.
+Or use `cargo` to build from source.
 
 ```
 $ cargo install acick

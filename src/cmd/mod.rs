@@ -9,10 +9,12 @@ use crate::{Config, Console, OutputFormat, Result};
 mod fetch;
 mod login;
 mod show;
+mod test;
 
 pub use fetch::FetchOpt;
 pub use login::{LoginOpt, LoginOutcome};
 pub use show::{ShowOpt, ShowOutcome};
+pub use test::{TestOpt, TestOutcome};
 
 pub trait Outcome: OutcomeSerialize {
     fn is_error(&self) -> bool;
@@ -46,6 +48,18 @@ impl<T: Serialize + fmt::Display + fmt::Debug> OutcomeSerialize for T {
 
 pub trait Run {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>>;
+
+    #[cfg(test)]
+    fn run_default(&self) -> Result<Box<dyn Outcome>> {
+        let conf = Config::default();
+
+        let mut output_buf = Vec::new();
+        let cnsl = &mut Console::new(&mut output_buf);
+
+        let result = self.run(&conf, cnsl);
+        eprintln!("{}", String::from_utf8_lossy(&output_buf));
+        result
+    }
 }
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -59,7 +73,8 @@ pub enum Cmd {
     // Participate(ParticipateOpt),
     /// Fetches problems from service
     Fetch(FetchOpt),
-    // Test(TestOpt), // test samples
+    /// Tests source code with sample inputs and outputs
+    Test(TestOpt),
     // Judge(JudgeOpt), // test full testcases, for AtCoder only
     // Submit(SubmitOpt),
 }
@@ -70,32 +85,7 @@ impl Run for Cmd {
             Self::Show(opt) => opt.run(conf, cnsl),
             Self::Login(opt) => opt.run(conf, cnsl),
             Self::Fetch(opt) => opt.run(conf, cnsl),
+            Self::Test(opt) => opt.run(conf, cnsl),
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    macro_rules! run_default {
-        ($opt:ident) => {{
-            use crate::abs_path::AbsPathBuf;
-            use crate::{Config, GlobalOpt};
-
-            let opt = $opt::default();
-            let global_opt = GlobalOpt::default();
-            let conf = Config::load(
-                global_opt,
-                AbsPathBuf::cwd().expect("Could not get current working directory"),
-            )
-            .expect("Could not load config");
-            let mut input_buf = &b""[..];
-            let mut output_buf = Vec::new();
-            let mut cnsl = Console::new(&mut input_buf, &mut output_buf);
-
-            let result = opt.run(&conf, &mut cnsl);
-            eprintln!("{}", String::from_utf8_lossy(&output_buf));
-            result
-        }};
-    }
-    pub(crate) use run_default;
 }

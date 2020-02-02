@@ -1,10 +1,11 @@
 use std::fmt;
 
+use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
-use crate::model::{Contest, ProblemId};
+use crate::model::{Contest, ProblemId, Service};
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -20,17 +21,36 @@ pub struct FetchOpt {
 
 impl Run for FetchOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
-        let service = conf.build_service();
-        let contest = service.fetch(&self.problem_id, cnsl)?;
+        let Self {
+            ref problem_id,
+            overwrite,
+        } = *self;
 
-        conf.save_problems_files(&contest, self.overwrite, cnsl)?;
+        // fetch data from service
+        let actor = conf.build_actor();
+        let (contest, problems) = actor.fetch(problem_id, cnsl)?;
 
-        Ok(Box::new(FetchOutcome { contest }))
+        let service = Service::new(conf.global_opt().service_id);
+
+        // save problem data file
+        for problem in problems.iter() {
+            conf.save_problem(problem, overwrite, cnsl)
+                .context("Could not save problem data file")?;
+        }
+
+        // expand source template and save source file
+        for problem in problems.iter() {
+            conf.expand_and_save_source(&service, &contest, problem, overwrite, cnsl)
+                .context("Could not save source file from template")?;
+        }
+
+        Ok(Box::new(FetchOutcome { service, contest }))
     }
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FetchOutcome {
+    service: Service,
     contest: Contest,
 }
 
@@ -49,11 +69,11 @@ impl Outcome for FetchOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cmd::tests::run_default;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        run_default!(FetchOpt)?;
+        let opt = FetchOpt::default();
+        opt.run_default()?;
         Ok(())
     }
 }

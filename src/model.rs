@@ -1,8 +1,9 @@
 use std::cmp::Ordering;
-use std::convert::Infallible;
+use std::convert::{Infallible, TryFrom};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
+use std::time::Duration;
 
 use getset::{CopyGetters, Getters, Setters};
 use reqwest::Url;
@@ -66,29 +67,60 @@ impl fmt::Display for ServiceKind {
 pub struct Contest {
     id: ContestId,
     name: String,
-    problems: Vec<Problem>,
 }
 
 impl Contest {
-    pub fn new(id: impl Into<ContestId>, name: impl Into<String>, problems: Vec<Problem>) -> Self {
+    pub fn new(id: impl Into<ContestId>, name: impl Into<String>) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
-            problems,
         }
     }
 }
 
-pub type ContestId = String;
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ContestId(String);
 
-#[derive(Serialize, Deserialize, Getters, Setters, Debug, Clone, PartialEq, Eq, Hash)]
-#[get = "pub"]
+impl<T: Into<String>> From<T> for ContestId {
+    fn from(id: T) -> Self {
+        Self(id.into())
+    }
+}
+
+impl FromStr for ContestId {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self::from(s))
+    }
+}
+
+impl fmt::Display for ContestId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+#[derive(
+    Serialize, Deserialize, Getters, CopyGetters, Setters, Debug, Clone, PartialEq, Eq, Hash,
+)]
 pub struct Problem {
+    #[get = "pub"]
     id: ProblemId,
+    #[get = "pub"]
     name: String,
     #[serde(with = "string")]
+    #[get = "pub"]
     url: Url,
+    #[serde(with = "humantime_serde")]
+    #[get_copy = "pub"]
+    time_limit: Duration,
+    #[get_copy = "pub"]
+    memory_limit: Byte,
+    #[get_copy = "pub"]
+    compare: Compare,
     #[set = "pub"]
+    #[get = "pub"]
     samples: Vec<Sample>,
 }
 
@@ -97,13 +129,30 @@ impl Problem {
         id: impl Into<ProblemId>,
         name: impl Into<String>,
         url: Url,
+        time_limit: Duration,
+        memory_limit: Byte,
+        compare: Compare,
         samples: Vec<Sample>,
     ) -> Self {
         Self {
             id: id.into(),
             name: name.into(),
             url,
+            time_limit,
+            memory_limit,
+            compare,
             samples,
+        }
+    }
+
+    pub fn take_samples(self, sample_name: &Option<String>) -> Vec<Sample> {
+        if let Some(sample_name) = sample_name {
+            self.samples
+                .into_iter()
+                .filter(|sample| &sample.name == sample_name)
+                .collect()
+        } else {
+            self.samples
         }
     }
 }
@@ -161,11 +210,81 @@ impl fmt::Display for ProblemId {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(
+    Serialize,
+    Deserialize,
+    EnumString,
+    EnumVariantNames,
+    IntoStaticStr,
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+)]
+#[serde(rename_all = "kebab-case")]
+#[strum(serialize_all = "kebab-case")]
+pub enum Compare {
+    Default,
+    // TODO: support float
+    // Float {
+    //     relative_error: Option<f64>,
+    //     absolute_error: Option<f64>,
+    // },
+}
+
+impl Compare {
+    pub fn compare(self, a: &str, b: &str) -> bool {
+        match self {
+            Self::Default => Self::compare_default(a, b),
+        }
+    }
+
+    fn compare_default(a: &str, b: &str) -> bool {
+        a.trim_end() == b.trim_end() // ignore spaces at the end of lines
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[serde(try_from = "String", into = "String")]
+pub struct Byte(u64);
+
+impl FromStr for Byte {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(Self(bytefmt::parse(s)?))
+    }
+}
+
+impl TryFrom<String> for Byte {
+    type Error = &'static str;
+
+    fn try_from(s: String) -> std::result::Result<Self, Self::Error> {
+        Self::from_str(&s)
+    }
+}
+
+impl From<Byte> for String {
+    fn from(byte: Byte) -> Self {
+        bytefmt::format_to(byte.0, bytefmt::Unit::MB)
+    }
+}
+
+impl fmt::Display for Byte {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&String::from(*self))
+    }
+}
+
+#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Sample {
-    name: String,
-    input: String,
-    output: String,
+    pub name: String,
+    pub input: String,
+    pub output: String,
 }
 
 impl Sample {
