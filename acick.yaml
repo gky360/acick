@@ -3,7 +3,6 @@ version: 0.0.2
 shell: ["/bin/bash", "-c", "{{ command }}"]
 problem_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml"
 session:
-  user_agent: "acick-0.0.2 (https://github.com/gky360/acick)"
   timeout: 30s
   retry_limit: 4
   retry_interval: 2s

@@ -52,13 +52,12 @@ impl Config {
 
     fn get_client_builder(&self) -> ClientBuilder {
         let session = &self.body.session;
-        let user_agent = &session.user_agent;
         let timeout = session.timeout;
         // TODO : switch client by service
         Client::builder()
             .referer(false)
             .redirect(Policy::none()) // redirects manually
-            .user_agent(user_agent)
+            .user_agent(SessionConfig::USER_AGENT)
             .timeout(Some(timeout))
     }
 
@@ -268,8 +267,6 @@ impl Default for ConfigBody {
 #[derive(Serialize, Deserialize, Getters, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
 pub struct SessionConfig {
-    #[get = "pub"]
-    user_agent: String,
     #[serde(with = "humantime_serde")]
     #[get_copy = "pub"]
     timeout: Duration,
@@ -285,14 +282,14 @@ pub struct SessionConfig {
 impl SessionConfig {
     const COOKIES_FILE_NAME: &'static str = "cookies.json";
 
-    fn default_user_agent() -> String {
-        format!(
-            "{}-{} ({})",
-            env!("CARGO_PKG_NAME"),
-            env!("CARGO_PKG_VERSION"),
-            env!("CARGO_PKG_REPOSITORY")
-        )
-    }
+    const USER_AGENT: &'static str = concat!(
+        env!("CARGO_PKG_NAME"),
+        "-",
+        env!("CARGO_PKG_VERSION"),
+        " (",
+        env!("CARGO_PKG_REPOSITORY"),
+        ")"
+    );
 
     fn default_cookies_path() -> PathBuf {
         data_local_dir()
@@ -310,7 +307,6 @@ impl SessionConfig {
 impl Default for SessionConfig {
     fn default() -> Self {
         Self {
-            user_agent: Self::default_user_agent(),
             timeout: Duration::from_secs(30),
             retry_limit: 4,
             retry_interval: Duration::from_secs(2),
