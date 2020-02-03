@@ -3,9 +3,9 @@ use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::{ElementRef, Html};
 
-use crate::model::{LangId, LangName, Langs};
+use crate::model::{LangId, LangIdRef, LangName, LangNameRef};
 use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{select, ElementRefExt as _, ExtractLangs, HasUrl, Scrape};
+use crate::service::scrape::{select, ElementRefExt as _, ExtractLangId, HasUrl, Scrape};
 use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,13 +67,17 @@ impl Scrape for SubmitPage<'_> {
 
 impl HasHeader for SubmitPage<'_> {}
 
-impl ExtractLangs for SubmitPage<'_> {
-    fn extract_langs(&self) -> Result<Langs> {
-        let mut langs = Langs::new();
-        for opt in self.select_lang_options() {
-            langs.insert(opt.extract_lang_name(), opt.extract_lang_id()?);
-        }
-        Ok(langs)
+impl ExtractLangId for SubmitPage<'_> {
+    fn extract_lang_id(&self, lang_name: LangNameRef) -> Result<LangId> {
+        self.select_lang_options()
+            .find_map(|opt| {
+                if opt.extract_lang_name() == lang_name {
+                    opt.extract_lang_id().map(Into::into)
+                } else {
+                    None
+                }
+            })
+            .context(format!("Could not find language : {}", lang_name))
     }
 }
 
@@ -81,12 +85,8 @@ impl ExtractLangs for SubmitPage<'_> {
 struct LangOptElem<'a>(ElementRef<'a>);
 
 impl LangOptElem<'_> {
-    fn extract_lang_id(&self) -> Result<LangId> {
-        self.0
-            .value()
-            .attr("value")
-            .map(Into::into)
-            .context("Could not extract language id")
+    fn extract_lang_id(&self) -> Option<LangIdRef> {
+        self.0.value().attr("value")
     }
 
     fn extract_lang_name(&self) -> LangName {

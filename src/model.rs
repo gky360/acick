@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::convert::{Infallible, TryFrom};
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -333,5 +332,3 @@ pub type LangIdRef<'a> = &'a str;
 pub type LangName = String;
 
 pub type LangNameRef<'a> = &'a str;
-
-pub type Langs = HashMap<LangName, LangId>;

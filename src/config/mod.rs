@@ -15,7 +15,9 @@ use tokio::process::Command;
 mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
-use crate::model::{string, Contest, LangName, Problem, ProblemId, Service, ServiceKind};
+use crate::model::{
+    string, Contest, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
+};
 use crate::service::{Act, AtcoderActor, CookieStorage};
 use crate::{Console, GlobalOpt, Result, VERSION};
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
@@ -36,6 +38,11 @@ impl Config {
             base_dir,
             body,
         })
+    }
+
+    pub fn service(&self) -> &ServiceConfig {
+        let service_id = self.global_opt.service_id;
+        self.body.services.get(service_id)
     }
 
     pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
@@ -323,7 +330,7 @@ pub struct ServicesConfig {
 }
 
 impl ServicesConfig {
-    pub fn get(&self, service_id: ServiceKind) -> &ServiceConfig {
+    fn get(&self, service_id: ServiceKind) -> &ServiceConfig {
         match service_id {
             ServiceKind::Atcoder => &self.atcoder,
         }
@@ -338,7 +345,7 @@ impl Default for ServicesConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
     lang_name: LangName,
     working_dir: TargetTempl,
@@ -382,6 +389,10 @@ int main() {
                 template: Self::DEFAULT_TEMPLATE.into(),
             },
         }
+    }
+
+    pub fn lang_name(&self) -> LangNameRef {
+        &self.lang_name
     }
 }
 

@@ -5,7 +5,7 @@ use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
-use crate::model::Langs;
+use crate::model::{LangId, LangNameRef};
 use crate::service::session::WithRetry as _;
 use crate::{Config, Console, Error, Result};
 
@@ -126,6 +126,6 @@ pub trait ExtractCsrfToken: Scrape {
     }
 }
 
-pub trait ExtractLangs {
-    fn extract_langs(&self) -> Result<Langs>;
+pub trait ExtractLangId {
+    fn extract_lang_id(&self, lang_name: LangNameRef) -> Result<LangId>;
 }

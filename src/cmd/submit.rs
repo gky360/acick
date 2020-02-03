@@ -15,7 +15,17 @@ pub struct SubmitOpt {
 }
 
 impl Run for SubmitOpt {
-    fn run(&self, conf: &Config, _cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+        let service_conf = conf.service();
+        let lang_name = service_conf.lang_name();
+
+        // TODO: load source
+        let source = "";
+
+        let actor = conf.build_actor();
+        // TODO: receive submission
+        let _submission = actor.submit(&self.problem_id, lang_name, source, cnsl)?;
+
         Ok(Box::new(SubmitOutcome {
             service: Service::new(conf.global_opt().service_id),
         }))

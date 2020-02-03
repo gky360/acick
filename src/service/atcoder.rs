@@ -5,10 +5,10 @@ use reqwest::StatusCode;
 
 use crate::model::{Contest, LangNameRef, Problem, ProblemId};
 use crate::service::atcoder_page::{
-    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPage, SubmitPageBuilder,
-    TasksPageBuilder, TasksPrintPageBuilder,
+    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
+    TasksPrintPageBuilder,
 };
-use crate::service::scrape::{ExtractCsrfToken as _, HasUrl as _};
+use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
 use crate::service::Act;
 use crate::{Config, Console, Error, Result};
@@ -123,14 +123,17 @@ impl Act for AtcoderActor<'_> {
 
     fn submit(
         &self,
-        problem_id: &ProblemId,
+        _problem_id: &ProblemId,
         lang_name: LangNameRef,
-        source: &str,
+        _source: &str,
         cnsl: &mut Console,
     ) -> Result<()> {
         let Self { client, conf } = self;
 
-        let submit_page = SubmitPageBuilder::new(conf).build(client, cnsl);
+        let submit_page = SubmitPageBuilder::new(conf).build(client, cnsl)?;
+        let lang_id = submit_page.extract_lang_id(lang_name)?;
+
+        eprintln!("{}", lang_id);
 
         Ok(())
     }
