@@ -6,7 +6,6 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use getset::{CopyGetters, Getters, Setters};
-use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
@@ -109,9 +108,8 @@ pub struct Problem {
     id: ProblemId,
     #[get = "pub"]
     name: String,
-    #[serde(with = "string")]
     #[get = "pub"]
-    url: Url,
+    url_name: String,
     #[serde(with = "humantime_serde")]
     #[get_copy = "pub"]
     time_limit: Duration,
@@ -128,7 +126,7 @@ impl Problem {
     pub fn new(
         id: impl Into<ProblemId>,
         name: impl Into<String>,
-        url: Url,
+        url_name: impl Into<String>,
         time_limit: Duration,
         memory_limit: Byte,
         compare: Compare,
@@ -137,7 +135,7 @@ impl Problem {
         Self {
             id: id.into(),
             name: name.into(),
-            url,
+            url_name: url_name.into(),
             time_limit,
             memory_limit,
             compare,

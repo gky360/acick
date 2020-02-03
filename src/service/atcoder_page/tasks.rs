@@ -7,7 +7,7 @@ use scraper::{ElementRef, Html};
 use crate::model::{Compare, Problem, ProblemId};
 use crate::service::atcoder_page::{FetchMaybeNotFound, HasHeader, BASE_URL};
 use crate::service::scrape::{select, ElementRefExt as _, HasUrl, Scrape};
-use crate::{Config, Console, Error, Result};
+use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPageBuilder<'a> {
@@ -91,22 +91,26 @@ impl ProblemRowElem<'_> {
         let time_limit = iter
             .next()
             .and_then(|td| parse_duration(td.inner_text().trim()).ok())
-            .ok_or_else(|| Error::msg("Could not parse time limit"))?;
+            .context("Could not parse time limit")?;
         let memory_limit = iter
             .next()
             .and_then(|td| td.inner_text().trim().parse().ok())
-            .ok_or_else(|| Error::msg("Could not parse memory limit"))?;
-        let url = self
+            .context("Could not parse memory limit")?;
+        let task_url = self
             .find_first(select!("a"))
             .context("Could not find link to a task")?
             .value()
             .attr("href")
             .and_then(|href| BASE_URL.join(href).ok())
             .context("Could not parse task url")?;
+        let url_name = task_url
+            .path_segments()
+            .and_then(|segs| segs.last())
+            .context("Could not parse url_name")?;
         Ok(Problem::new(
             id,
             name,
-            url,
+            url_name,
             time_limit,
             memory_limit,
             Compare::Default, // TODO: suppord float
