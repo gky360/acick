@@ -101,7 +101,7 @@ impl Config {
             return Err(anyhow!("Found mismatching service id or contest id"));
         }
         let source_abs_path = self.source_abs_path(problem.id())?;
-        let template = &self.body.services.get(service.id()).template;
+        let template = &self.service().template;
         let template_expanded = template.expand_with(service, contest, problem)?;
         source_abs_path.save_pretty(
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
@@ -125,12 +125,12 @@ impl Config {
     }
 
     pub fn exec_compile(&self, problem_id: &ProblemId) -> Result<Command> {
-        let compile = &self.body.services.get(self.service_id).compile;
+        let compile = &self.service().compile;
         self.exec_templ_arr(compile, problem_id)
     }
 
     pub fn exec_run(&self, problem_id: &ProblemId) -> Result<Command> {
-        let run = &self.body.services.get(self.service_id).run;
+        let run = &self.service().run;
         self.exec_templ_arr(run, problem_id)
     }
 
@@ -140,12 +140,12 @@ impl Config {
     }
 
     fn working_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let working_dir = &self.body.services.get(self.service_id).working_dir;
+        let working_dir = &self.service().working_dir;
         self.expand_to_abs(working_dir, problem_id)
     }
 
     fn source_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let source_path = &self.body.services.get(self.service_id).source_path;
+        let source_path = &self.service().source_path;
         self.expand_to_abs(source_path, problem_id)
     }
 
