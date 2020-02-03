@@ -7,7 +7,7 @@ use crate::model::{Contest, Problem, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPageBuilder, TasksPrintPageBuilder,
 };
-use crate::service::scrape::{HasUrl as _, Scrape as _};
+use crate::service::scrape::{ExtractCsrfToken as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
 use crate::service::Act;
 use crate::{Config, Console, Error, Result};

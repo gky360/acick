@@ -3,7 +3,7 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
-use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
+use crate::service::scrape::{ExtractCsrfToken, Fetch as _, HasUrl, Scrape};
 use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,3 +53,5 @@ impl Scrape for LoginPage<'_> {
 }
 
 impl HasHeader for LoginPage<'_> {}
+
+impl ExtractCsrfToken for LoginPage<'_> {}

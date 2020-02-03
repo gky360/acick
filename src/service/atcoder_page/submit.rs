@@ -3,8 +3,9 @@ use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::{ElementRef, Html};
 
+use crate::model::{LangId, LangName, Langs};
 use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{HasUrl, Scrape};
+use crate::service::scrape::{select, ElementRefExt as _, ExtractLangs, HasUrl, Scrape};
 use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,6 +45,14 @@ pub struct SubmitPage<'a> {
     content: Html,
 }
 
+impl SubmitPage<'_> {
+    fn select_lang_options(&self) -> impl Iterator<Item = LangOptElem> {
+        self.content
+            .select(select!("#select-lang select option"))
+            .map(LangOptElem)
+    }
+}
+
 impl HasUrl for SubmitPage<'_> {
     fn url(&self) -> Result<Url> {
         self.builder.url()
@@ -57,3 +66,30 @@ impl Scrape for SubmitPage<'_> {
 }
 
 impl HasHeader for SubmitPage<'_> {}
+
+impl ExtractLangs for SubmitPage<'_> {
+    fn extract_langs(&self) -> Result<Langs> {
+        let mut langs = Langs::new();
+        for opt in self.select_lang_options() {
+            langs.insert(opt.extract_lang_name(), opt.extract_lang_id()?);
+        }
+        Ok(langs)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LangOptElem<'a>(ElementRef<'a>);
+
+impl LangOptElem<'_> {
+    fn extract_lang_id(&self) -> Result<LangId> {
+        self.0
+            .value()
+            .attr("value")
+            .map(Into::into)
+            .context("Could not extract language id")
+    }
+
+    fn extract_lang_name(&self) -> LangName {
+        self.0.inner_text()
+    }
+}

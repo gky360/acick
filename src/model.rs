@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::convert::{Infallible, TryFrom};
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -324,3 +325,9 @@ pub mod string {
             .map_err(de::Error::custom)
     }
 }
+
+pub type LangId = String;
+
+pub type LangName = String;
+
+pub type Langs = HashMap<LangName, LangId>;
