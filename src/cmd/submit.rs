@@ -90,11 +90,16 @@ mod tests {
     #[test]
     #[ignore]
     fn run_default() -> anyhow::Result<()> {
+        let test_dir = tempfile::tempdir()?;
+
+        let fetch_opt = crate::cmd::FetchOpt::default_test();
+        fetch_opt.run_default(&test_dir)?;
+
         let opt = SubmitOpt {
             problem_id: "c".into(),
             force: true,
         };
-        opt.run_default()?;
+        opt.run_default(&test_dir)?;
         Ok(())
     }
 }

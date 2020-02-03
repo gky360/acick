@@ -81,7 +81,7 @@ mod tests {
     fn run_default() -> anyhow::Result<()> {
         check_envs_for_user_and_pass()?;
         let opt = LoginOpt {};
-        opt.run_default()?;
+        opt.run_default(&tempfile::tempdir()?)?;
         Ok(())
     }
 }

@@ -174,7 +174,7 @@ impl Config {
 
 #[cfg(test)]
 impl Config {
-    pub fn default_test() -> Self {
+    pub fn default_test(test_dir: &tempfile::TempDir) -> Self {
         use crate::GlobalOpt;
 
         let GlobalOpt {
@@ -182,11 +182,11 @@ impl Config {
             contest_id,
             ..
         } = GlobalOpt::default();
+
         Self {
             service_id,
             contest_id,
-            base_dir: AbsPathBuf::try_new(std::env::temp_dir().join(env!("CARGO_PKG_NAME")))
-                .unwrap(),
+            base_dir: AbsPathBuf::try_new(test_dir.path().join(env!("CARGO_PKG_NAME"))).unwrap(),
             body: ConfigBody::default(),
         }
     }
@@ -350,7 +350,9 @@ mod tests {
 
     #[test]
     fn serialize_default() -> anyhow::Result<()> {
-        serde_yaml::to_string(&Config::default_test())?;
+        let test_dir = tempfile::tempdir()?;
+        let conf = Config::default_test(&test_dir);
+        serde_yaml::to_string(&conf)?;
         Ok(())
     }
 

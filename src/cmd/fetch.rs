@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn run_default() -> anyhow::Result<()> {
         let opt = FetchOpt::default_test();
-        opt.run_default()?;
+        opt.run_default(&tempfile::tempdir()?)?;
         Ok(())
     }
 }

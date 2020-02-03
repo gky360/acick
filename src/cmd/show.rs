@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn run_default() -> anyhow::Result<()> {
         let opt = ShowOpt {};
-        opt.run_default()?;
+        opt.run_default(&tempfile::tempdir()?)?;
         Ok(())
     }
 }

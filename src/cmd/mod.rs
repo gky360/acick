@@ -52,8 +52,8 @@ pub trait Run {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>>;
 
     #[cfg(test)]
-    fn run_default(&self) -> Result<Box<dyn Outcome>> {
-        let conf = Config::default_test();
+    fn run_default(&self, test_dir: &tempfile::TempDir) -> Result<Box<dyn Outcome>> {
+        let conf = Config::default_test(test_dir);
 
         let mut output_buf = Vec::new();
         let cnsl = &mut Console::new(&mut output_buf);
