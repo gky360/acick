@@ -358,7 +358,7 @@ impl Default for ServicesConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
     lang_name: LangName,
     working_dir: TargetTempl,
