@@ -56,21 +56,6 @@ pub trait Fetch: HasUrl {
         let html = res.text().map(|text| Html::parse_document(&text))?;
         Ok((status, html))
     }
-
-    fn fetch_if(
-        &self,
-        check: impl FnOnce(StatusCode) -> bool,
-        client: &Client,
-        conf: &Config,
-        cnsl: &mut Console,
-    ) -> Result<Html> {
-        let (status, html) = self.fetch(client, conf, cnsl)?;
-        if check(status) {
-            Ok(html)
-        } else {
-            Err(Error::msg("Received invalid response"))
-        }
-    }
 }
 
 impl<T: HasUrl> Fetch for T {}

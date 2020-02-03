@@ -4,7 +4,7 @@ use scraper::{ElementRef, Html};
 
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
 use crate::service::scrape::{ExtractCsrfToken, Fetch as _, HasUrl, Scrape};
-use crate::{Config, Console, Result};
+use crate::{Config, Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginPageBuilder<'a> {
@@ -19,10 +19,16 @@ impl<'a> LoginPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<LoginPage<'a>> {
-        self.fetch_if(|s| s == StatusCode::OK, client, self.conf, cnsl)
-            .map(|html| LoginPage {
-                builder: self,
-                content: html,
+        self.fetch(client, self.conf, cnsl)
+            .and_then(|(status, html)| {
+                if status == StatusCode::OK {
+                    Ok(LoginPage {
+                        builder: self,
+                        content: html,
+                    })
+                } else {
+                    Err(Error::msg("Received invalid response"))
+                }
             })
     }
 }
