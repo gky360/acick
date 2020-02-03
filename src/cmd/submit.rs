@@ -1,11 +1,12 @@
 use std::fmt;
 
+use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
 use crate::model::{ProblemId, Service};
-use crate::{Config, Console, Result};
+use crate::{Config, Console, Error, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
@@ -16,15 +17,20 @@ pub struct SubmitOpt {
 
 impl Run for SubmitOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
-        let service_conf = conf.service();
-        let lang_name = service_conf.lang_name();
+        // load problem file
+        let problem = conf
+            .load_problem(&self.problem_id, cnsl)
+            .context("Could not load problem file.")?;
 
         // TODO: load source
-        let source = "";
+        let source = " ";
+        if source.is_empty() {
+            return Err(Error::msg("Found empty source code"));
+        }
 
         let actor = conf.build_actor();
-        // TODO: receive submission
-        let _submission = actor.submit(&self.problem_id, lang_name, source, cnsl)?;
+        let lang_name = conf.service().lang_name();
+        actor.submit(&problem, lang_name, source, cnsl)?;
 
         Ok(Box::new(SubmitOutcome {
             service: Service::new(conf.global_opt().service_id),

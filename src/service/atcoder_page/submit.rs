@@ -5,7 +5,9 @@ use scraper::{ElementRef, Html};
 
 use crate::model::{LangId, LangIdRef, LangName, LangNameRef};
 use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{select, ElementRefExt as _, ExtractLangId, HasUrl, Scrape};
+use crate::service::scrape::{
+    select, ElementRefExt as _, ExtractCsrfToken, ExtractLangId, HasUrl, Scrape,
+};
 use crate::{Config, Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,6 +68,8 @@ impl Scrape for SubmitPage<'_> {
 }
 
 impl HasHeader for SubmitPage<'_> {}
+
+impl ExtractCsrfToken for SubmitPage<'_> {}
 
 impl ExtractLangId for SubmitPage<'_> {
     fn extract_lang_id(&self, lang_name: LangNameRef) -> Result<LangId> {

@@ -1,16 +1,16 @@
 use anyhow::{anyhow, Context as _};
 use maplit::hashmap;
-use reqwest::blocking::Client;
-use reqwest::StatusCode;
+use reqwest::blocking::{Client, Response};
+use reqwest::{StatusCode, Url};
 
 use crate::model::{Contest, LangNameRef, Problem, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
-    TasksPrintPageBuilder,
+    TasksPrintPageBuilder, BASE_URL,
 };
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
-use crate::service::Act;
+use crate::service::{Act, ResponseExt as _};
 use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]
@@ -22,6 +22,36 @@ pub struct AtcoderActor<'a> {
 impl<'a> AtcoderActor<'a> {
     pub fn new(client: Client, conf: &'a Config) -> Self {
         AtcoderActor { client, conf }
+    }
+}
+
+impl AtcoderActor<'_> {
+    fn submissions_me_url(&self) -> Result<Url> {
+        let contest_id = &self.conf.global_opt().contest_id;
+        let path = format!("/contests/{}/submissions/me", contest_id);
+        BASE_URL
+            .join(&path)
+            .context(format!("Could not parse url path: {}", path))
+    }
+
+    fn validate_login_response(&self, res: &Response) -> Result<()> {
+        if res.status() != StatusCode::FOUND {
+            return Err(Error::msg("Received invalid response code"));
+        }
+        Ok(())
+    }
+
+    fn validate_submit_response(&self, res: &Response) -> Result<()> {
+        if res.status() != StatusCode::FOUND {
+            return Err(Error::msg("Received invalid response code"));
+        }
+        let loc_url = res
+            .location_url(&BASE_URL)
+            .context("Could not extract redirection url from response")?;
+        if loc_url != self.submissions_me_url()? {
+            return Err(Error::msg("Found invalid redirection url"));
+        }
+        Ok(())
     }
 }
 
@@ -50,9 +80,8 @@ impl Act for AtcoderActor<'_> {
             .form(&payload)
             .with_retry(client, conf, cnsl)
             .retry_send()?;
-        if res.status() != StatusCode::FOUND {
-            return Err(Error::msg("Received invalid response"));
-        }
+        self.validate_login_response(&res)
+            .context("Login rejected by service")?;
 
         // Check if login succeeded
         let settings_page = SettingsPageBuilder::new(conf).build(client, cnsl)?;
@@ -123,17 +152,30 @@ impl Act for AtcoderActor<'_> {
 
     fn submit(
         &self,
-        _problem_id: &ProblemId,
+        problem: &Problem,
         lang_name: LangNameRef,
-        _source: &str,
+        source: &str,
         cnsl: &mut Console,
     ) -> Result<()> {
         let Self { client, conf } = self;
 
         let submit_page = SubmitPageBuilder::new(conf).build(client, cnsl)?;
+        let csrf_token = submit_page.extract_csrf_token()?;
         let lang_id = submit_page.extract_lang_id(lang_name)?;
+        let payload = hashmap!(
+            "csrf_token" => csrf_token.as_ref(),
+            "data.TaskScreenName" => problem.url_name().as_ref(),
+            "data.LanguageId" => lang_id.as_ref(),
+            "sourceCode" => source,
+        );
 
-        eprintln!("{}", lang_id);
+        let res = client
+            .post(submit_page.url()?)
+            .form(&payload)
+            .with_retry(client, conf, cnsl)
+            .retry_send()?;
+        self.validate_submit_response(&res)
+            .context("Submission rejected by service")?;
 
         Ok(())
     }

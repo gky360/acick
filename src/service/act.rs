@@ -12,7 +12,7 @@ pub trait Act {
 
     fn submit(
         &self,
-        problem_id: &ProblemId,
+        problem: &Problem,
         lang_name: LangNameRef,
         source: &str,
         cnsl: &mut Console,
