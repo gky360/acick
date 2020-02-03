@@ -1,11 +1,12 @@
-use anyhow::{anyhow, Context as _};
+use anyhow::Context as _;
 use lazy_static::lazy_static;
 use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
+use crate::config::SessionConfig;
 use crate::service::scrape::{select, ElementRefExt as _, Fetch, Scrape};
-use crate::{Config, Console, Error, Result};
+use crate::{Console, Error, Result};
 
 mod login;
 mod settings;
@@ -60,20 +61,21 @@ pub trait HasHeader: Scrape {
 }
 
 pub trait FetchRestricted: Fetch {
-    fn fetch_restricted(&self, client: &Client, conf: &Config, cnsl: &mut Console) -> Result<Html> {
-        let (status, html) = self.fetch(client, conf, cnsl)?;
+    fn fetch_restricted(
+        &self,
+        client: &Client,
+        session: &SessionConfig,
+        cnsl: &mut Console,
+    ) -> Result<Html> {
+        let (status, html) = self.fetch(client, session, cnsl)?;
         match status {
             StatusCode::OK => Ok(html),
             StatusCode::FOUND => Err(Error::msg("User not logged in")),
-            StatusCode::NOT_FOUND if NotFoundPage(&html).is_not_found() => Err(anyhow!(
-                "Could not find contest : {} .
-Check if the contest id is correct.",
-                conf.global_opt().contest_id
+            StatusCode::NOT_FOUND if NotFoundPage(&html).is_not_found() => Err(Error::msg(
+                "Could not find contest. Check if the contest id is correct.",
             )),
-            StatusCode::NOT_FOUND if NotFoundPage(&html).is_permission_denied() => Err(anyhow!(
-                "Found not participated or not started contest : {} .
-Participate in the contest and wait until the contest starts.",
-                conf.global_opt().contest_id
+            StatusCode::NOT_FOUND if NotFoundPage(&html).is_permission_denied() => Err(Error::msg(
+                "Found not participated or not started contest. Participate in the contest and wait until the contest starts.",
             )),
             _ => Err(Error::msg("Received invalid response")),
         }

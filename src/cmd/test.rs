@@ -87,7 +87,7 @@ impl Run for TestOpt {
 
         // build output
         Ok(Box::new(TestOutcome {
-            service: Service::new(conf.global_opt().service_id),
+            service: Service::new(conf.service_id),
             total,
         }))
     }
@@ -117,14 +117,16 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let opt = crate::cmd::fetch::FetchOpt::default();
-        opt.run_default()?;
+        let test_dir = tempfile::tempdir()?;
+
+        let fetch_opt = crate::cmd::FetchOpt::default_test();
+        fetch_opt.run_default(&test_dir)?;
 
         let opt = TestOpt {
             problem_id: "c".into(),
             sample_name: None,
         };
-        opt.run_default()?;
+        opt.run_default(&test_dir)?;
         Ok(())
     }
 }

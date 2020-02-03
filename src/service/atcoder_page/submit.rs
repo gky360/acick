@@ -3,25 +3,30 @@ use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::{ElementRef, Html};
 
-use crate::model::{LangId, LangIdRef, LangName, LangNameRef};
+use crate::config::SessionConfig;
+use crate::model::{ContestId, LangId, LangIdRef, LangName, LangNameRef};
 use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
 use crate::service::scrape::{
     select, ElementRefExt as _, ExtractCsrfToken, ExtractLangId, HasUrl, Scrape,
 };
-use crate::{Config, Console, Result};
+use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubmitPageBuilder<'a> {
-    conf: &'a Config,
+    contest_id: &'a ContestId,
+    session: &'a SessionConfig,
 }
 
 impl<'a> SubmitPageBuilder<'a> {
-    pub fn new(conf: &'a Config) -> Self {
-        Self { conf }
+    pub fn new(contest_id: &'a ContestId, session: &'a SessionConfig) -> Self {
+        Self {
+            contest_id,
+            session,
+        }
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<SubmitPage<'a>> {
-        self.fetch_restricted(client, self.conf, cnsl)
+        self.fetch_restricted(client, self.session, cnsl)
             .map(|html| SubmitPage {
                 builder: self,
                 content: html,
@@ -31,8 +36,7 @@ impl<'a> SubmitPageBuilder<'a> {
 
 impl HasUrl for SubmitPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
-        let contest_id = &self.conf.global_opt().contest_id;
-        let path = format!("/contests/{}/submit", contest_id);
+        let path = format!("/contests/{}/submit", self.contest_id);
         BASE_URL
             .join(&path)
             .context(format!("Could not parse url path: {}", path))

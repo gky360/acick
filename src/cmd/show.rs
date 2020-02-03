@@ -6,7 +6,7 @@ use structopt::StructOpt;
 use crate::cmd::{Outcome, Run};
 use crate::{Config, Console, Result};
 
-#[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct ShowOpt {}
 
@@ -39,8 +39,8 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let opt = ShowOpt::default();
-        opt.run_default()?;
+        let opt = ShowOpt {};
+        opt.run_default(&tempfile::tempdir()?)?;
         Ok(())
     }
 }

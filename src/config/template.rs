@@ -228,10 +228,6 @@ impl<'a, T: Expand<'a>> TemplArray<T> {
     pub fn expand_all(&self, context: &<T as Expand<'a>>::Context) -> Result<Vec<String>> {
         self.0.iter().map(|c| c.expand(context)).collect()
     }
-
-    pub fn expand_all_join(&self, context: &<T as Expand<'a>>::Context) -> Result<String> {
-        self.expand_all(context).map(|arr| arr.join(" "))
-    }
 }
 
 impl<'a, I, S, T> From<I> for TemplArray<T>
@@ -271,23 +267,20 @@ impl Shell {
         Ok(command)
     }
 
-    pub fn exec_templ_arr<'a, T: Expand<'a>>(
+    pub fn exec_templ<'a, T: Expand<'a>>(
         &self,
-        templ_arr: &TemplArray<T>,
+        templ: &T,
         context: &<T as Expand<'a>>::Context,
     ) -> Result<Command> {
-        let cmd = templ_arr
-            .expand_all_join(context)
+        let cmd = templ
+            .expand(context)
             .context("Could not expand command template")?;
         self.exec(&cmd)
     }
-}
 
-impl Default for Shell {
-    fn default() -> Self {
+    fn find_bash() -> PathBuf {
         let env_path = env::var_os("PATH").unwrap_or_default();
-
-        let bash = env::split_paths(&env_path)
+        env::split_paths(&env_path)
             .chain(if cfg!(windows) {
                 vec![
                     PathBuf::from(r"C:\tools\msys64\usr\bin"),
@@ -304,10 +297,15 @@ impl Default for Shell {
                     p.join("bash")
                 }
             })
-            .find(|p| p.exists() && p.to_str().is_some())
-            .unwrap_or_else(|| PathBuf::from("bash"));
+            .find(|p| p.is_file() && p.to_str().is_some())
+            .unwrap_or_else(|| PathBuf::from("bash"))
+    }
+}
 
-        (&[bash.to_str().unwrap(), "-c", "{{ command }}"]).into()
+impl Default for Shell {
+    fn default() -> Self {
+        let bash = Self::find_bash();
+        (&[bash.to_str().unwrap(), "-e", "-c", "{{ command }}"]).into()
     }
 }
 

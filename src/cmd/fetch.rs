@@ -8,7 +8,7 @@ use crate::cmd::{Outcome, Run};
 use crate::model::{Contest, ProblemId, Service};
 use crate::{Config, Console, Result};
 
-#[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct FetchOpt {
     /// If specified, fetches only one problem
@@ -17,6 +17,16 @@ pub struct FetchOpt {
     /// Overwrites existing problem files and source files
     #[structopt(long, short = "w")]
     overwrite: bool,
+}
+
+#[cfg(test)]
+impl FetchOpt {
+    pub fn default_test() -> Self {
+        Self {
+            problem_id: None,
+            overwrite: true,
+        }
+    }
 }
 
 impl Run for FetchOpt {
@@ -28,9 +38,9 @@ impl Run for FetchOpt {
 
         // fetch data from service
         let actor = conf.build_actor();
-        let (contest, problems) = actor.fetch(problem_id, cnsl)?;
+        let (contest, problems) = actor.fetch(&conf.contest_id, problem_id, cnsl)?;
 
-        let service = Service::new(conf.global_opt().service_id);
+        let service = Service::new(conf.service_id);
 
         // save problem data file
         for problem in problems.iter() {
@@ -72,8 +82,8 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let opt = FetchOpt::default();
-        opt.run_default()?;
+        let opt = FetchOpt::default_test();
+        opt.run_default(&tempfile::tempdir()?)?;
         Ok(())
     }
 }

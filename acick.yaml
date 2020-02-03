@@ -1,21 +1,18 @@
 ---
 version: 0.0.4
-shell: ["/bin/bash", "-c", "{{ command }}"]
+shell: ["/bin/bash", "-e", "-c", "{{ command }}"]
 problem_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml"
 session:
   timeout: 30s
   retry_limit: 4
   retry_interval: 2s
-  # cookies_path: ~/.local/share/acick/cookies.json # for Linux
-  cookies_path: ~/Library/Application Support/acick/cookies.json # for macOS
-  # cookies_path: C:\Users\Alice\AppData\Local\acick\cookies.json # for Windows
 services:
   atcoder:
     lang_name: C++14 (GCC 5.4.1)
     working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}"
     source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp"
-    compile: ["g++", "-std=gnu++1y", "-O2", "-o", "./a.out", "./Main.cpp"]
-    run: ["./a.out"]
+    compile: set -x && g++ -std=gnu++1y -O2 -o ./a.out ./Main.cpp
+    run: ./a.out
     template: |
       /*
       [{{ contest.id }}] {{ problem.id }} - {{ problem.name }}

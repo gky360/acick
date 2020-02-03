@@ -5,9 +5,10 @@ use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
+use crate::config::SessionConfig;
 use crate::model::{LangId, LangNameRef};
 use crate::service::session::WithRetry as _;
-use crate::{Config, Console, Error, Result};
+use crate::{Console, Error, Result};
 
 #[macro_export]
 macro_rules! regex {
@@ -45,31 +46,16 @@ pub trait Fetch: HasUrl {
     fn fetch(
         &self,
         client: &Client,
-        conf: &Config,
+        session: &SessionConfig,
         cnsl: &mut Console,
     ) -> Result<(StatusCode, Html)> {
         let res = client
             .get(self.url()?)
-            .with_retry(client, conf, cnsl)
+            .with_retry(client, session, cnsl)
             .retry_send()?;
         let status = res.status();
         let html = res.text().map(|text| Html::parse_document(&text))?;
         Ok((status, html))
-    }
-
-    fn fetch_if(
-        &self,
-        check: impl FnOnce(StatusCode) -> bool,
-        client: &Client,
-        conf: &Config,
-        cnsl: &mut Console,
-    ) -> Result<Html> {
-        let (status, html) = self.fetch(client, conf, cnsl)?;
-        if check(status) {
-            Ok(html)
-        } else {
-            Err(Error::msg("Received invalid response"))
-        }
     }
 }
 

@@ -1,76 +1,59 @@
 use std::fmt;
 use std::io::{Read as _, Write as _};
-use std::path::PathBuf;
-use std::time::Duration;
 
 use anyhow::{anyhow, Context as _};
-use dirs::{data_local_dir, home_dir};
-use getset::{CopyGetters, Getters};
-use reqwest::blocking::{Client, ClientBuilder};
-use reqwest::redirect::Policy;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
+mod session_config;
 mod template;
 
-use crate::abs_path::{AbsPathBuf, ToAbs as _};
+use crate::abs_path::AbsPathBuf;
 use crate::model::{
-    string, Contest, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
+    string, Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
 };
-use crate::service::{Act, AtcoderActor, CookieStorage};
-use crate::{Console, GlobalOpt, Result, VERSION};
-use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
+use crate::service::{Act, AtcoderActor};
+use crate::{Console, Result, VERSION};
+pub use session_config::SessionConfig;
+use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
 
-#[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
-#[get = "pub"]
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Config {
-    global_opt: GlobalOpt,
+    pub service_id: ServiceKind,
+    pub contest_id: ContestId,
     base_dir: AbsPathBuf,
     body: ConfigBody,
 }
 
 impl Config {
-    pub fn search(global_opt: GlobalOpt, cnsl: &mut Console) -> Result<Self> {
+    pub fn load(
+        service_id: ServiceKind,
+        contest_id: ContestId,
+        cnsl: &mut Console,
+    ) -> Result<Self> {
         let (body, base_dir) = ConfigBody::search(cnsl)?;
         Ok(Self {
-            global_opt,
+            service_id,
+            contest_id,
             base_dir,
             body,
         })
     }
 
     pub fn service(&self) -> &ServiceConfig {
-        let service_id = self.global_opt.service_id;
-        self.body.services.get(service_id)
+        self.body.services.get(self.service_id)
     }
 
     pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
-        let client = self
+        let client = self.body.session
             .get_client_builder()
             .build()
             .expect("Could not setup client. \
                 TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
-        let service_id = self.global_opt.service_id;
-        match service_id {
-            ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, self)),
+        match self.service_id {
+            ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, &self.body.session)),
         }
-    }
-
-    fn get_client_builder(&self) -> ClientBuilder {
-        let session = &self.body.session;
-        let timeout = session.timeout;
-        // TODO : switch client by service
-        Client::builder()
-            .referer(false)
-            .redirect(Policy::none()) // redirects manually
-            .user_agent(SessionConfig::USER_AGENT)
-            .timeout(Some(timeout))
-    }
-
-    pub fn open_cookie_storage(&self) -> Result<CookieStorage> {
-        let cookies_path = &self.body.session.cookies_path;
-        CookieStorage::open(&cookies_path.to_abs_expand(&self.base_dir)?)
     }
 
     pub fn save_problem(
@@ -113,13 +96,14 @@ impl Config {
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
-        if service.id() != service_id || contest.id() != contest_id {
+        if service.id() != self.service_id || contest.id() != &self.contest_id {
             return Err(anyhow!("Found mismatching service id or contest id"));
         }
         let source_abs_path = self.source_abs_path(problem.id())?;
-        let template = &self.body.services.get(service.id()).template;
+        let template = match &self.service().template {
+            Some(template) => template,
+            None => return Ok(false), // skip if template is empty
+        };
         let template_expanded = template.expand_with(service, contest, problem)?;
         source_abs_path.save_pretty(
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
@@ -143,15 +127,13 @@ impl Config {
     }
 
     pub fn exec_compile(&self, problem_id: &ProblemId) -> Result<Command> {
-        let service_id = self.global_opt.service_id;
-        let compile = &self.body.services.get(service_id).compile;
-        self.exec_templ_arr(compile, problem_id)
+        let compile = &self.service().compile;
+        self.exec_templ(compile, problem_id)
     }
 
     pub fn exec_run(&self, problem_id: &ProblemId) -> Result<Command> {
-        let service_id = self.global_opt.service_id;
-        let run = &self.body.services.get(service_id).run;
-        self.exec_templ_arr(run, problem_id)
+        let run = &self.service().run;
+        self.exec_templ(run, problem_id)
     }
 
     fn problem_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
@@ -160,49 +142,51 @@ impl Config {
     }
 
     fn working_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let service_id = self.global_opt.service_id;
-        let working_dir = &self.body.services.get(service_id).working_dir;
+        let working_dir = &self.service().working_dir;
         self.expand_to_abs(working_dir, problem_id)
     }
 
     fn source_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let service_id = self.global_opt.service_id;
-        let source_path = &self.body.services.get(service_id).source_path;
+        let source_path = &self.service().source_path;
         self.expand_to_abs(source_path, problem_id)
     }
 
     fn expand_to_abs(&self, path: &TargetTempl, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
-        path.expand_with(service_id, contest_id, problem_id)
+        path.expand_with(self.service_id, &self.contest_id, problem_id)
             .and_then(|path_expanded| self.base_dir.join_expand(path_expanded))
     }
 
-    fn exec_templ_arr<'a, T>(
+    fn exec_templ<'a, T: Expand<'a>>(
         &'a self,
-        templ_arr: &TemplArray<T>,
+        templ: &T,
         problem_id: &'a ProblemId,
     ) -> Result<Command>
     where
         T: Expand<'a, Context = TargetContext<'a>>,
     {
-        let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
-        let target_context = TargetContext::new(service_id, contest_id, problem_id);
+        let target_context = TargetContext::new(self.service_id, &self.contest_id, problem_id);
         let working_abs_dir = self.working_abs_dir(problem_id)?;
-        let mut command = self.body.shell.exec_templ_arr(templ_arr, &target_context)?;
+        let mut command = self.body.shell.exec_templ(templ, &target_context)?;
         command.current_dir(working_abs_dir.as_ref());
         Ok(command)
     }
 }
 
 #[cfg(test)]
-impl Default for Config {
-    fn default() -> Self {
+impl Config {
+    pub fn default_test(test_dir: &tempfile::TempDir) -> Self {
+        use crate::GlobalOpt;
+
+        let GlobalOpt {
+            service_id,
+            contest_id,
+            ..
+        } = GlobalOpt::default();
+
         Self {
-            global_opt: GlobalOpt::default(),
-            base_dir: AbsPathBuf::try_new(std::env::temp_dir().join(env!("CARGO_PKG_NAME")))
-                .unwrap(),
+            service_id,
+            contest_id,
+            base_dir: AbsPathBuf::try_new(test_dir.path().join(env!("CARGO_PKG_NAME"))).unwrap(),
             body: ConfigBody::default(),
         }
     }
@@ -215,41 +199,48 @@ impl fmt::Display for Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(default)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ConfigBody {
     #[serde(with = "string")]
-    #[get = "pub"]
     version: Version,
-    #[get = "pub"]
+    #[serde(default)]
     shell: Shell,
+    #[serde(default = "ConfigBody::default_problem_path")]
     problem_path: TargetTempl,
-    #[get = "pub"]
+    #[serde(default)]
     session: SessionConfig,
-    #[get = "pub"]
+    #[serde(default)]
     services: ServicesConfig,
 }
 
 impl ConfigBody {
     pub const FILE_NAME: &'static str = "acick.yaml";
 
+    const DEFAULT_PROBLEM_PATH: &'static str =
+        "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml";
+
+    fn default_problem_path() -> TargetTempl {
+        Self::DEFAULT_PROBLEM_PATH.into()
+    }
+
     fn search(cnsl: &mut Console) -> Result<(Self, AbsPathBuf)> {
         let cwd = AbsPathBuf::cwd()?;
         let base_dir = cwd.search_dir_contains(Self::FILE_NAME).with_context(|| {
             format!(
                 "Could not find config file ({}) in {} or any of the parent directories. \
-                 Create config file first by `init` command.",
+                 Create config file first by `acick init` command.",
                 Self::FILE_NAME,
                 cwd
             )
         })?;
+        writeln!(cnsl, "Found config file in base_dir: {}", base_dir)?;
         Ok((Self::load(&base_dir, cnsl)?, base_dir))
     }
 
     fn load(base_dir: &AbsPathBuf, cnsl: &mut Console) -> Result<Self> {
         let body: Self = base_dir.join(Self::FILE_NAME).load_pretty(
             |file| serde_yaml::from_reader(file).context("Could not read config file as yaml"),
-            None,
+            Some(base_dir),
             cnsl,
         )?;
         body.validate()?;
@@ -278,60 +269,9 @@ impl Default for ConfigBody {
         Self {
             version: VERSION.clone(),
             shell: Shell::default(),
-            problem_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml".into(),
+            problem_path: Self::DEFAULT_PROBLEM_PATH.into(),
             session: SessionConfig::default(),
             services: ServicesConfig::default(),
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Getters, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(default)]
-pub struct SessionConfig {
-    #[serde(with = "humantime_serde")]
-    #[get_copy = "pub"]
-    timeout: Duration,
-    #[get_copy = "pub"]
-    retry_limit: usize,
-    #[serde(with = "humantime_serde")]
-    #[get_copy = "pub"]
-    retry_interval: Duration,
-    #[get = "pub"]
-    cookies_path: PathBuf,
-}
-
-impl SessionConfig {
-    const COOKIES_FILE_NAME: &'static str = "cookies.json";
-
-    const USER_AGENT: &'static str = concat!(
-        env!("CARGO_PKG_NAME"),
-        "-",
-        env!("CARGO_PKG_VERSION"),
-        " (",
-        env!("CARGO_PKG_REPOSITORY"),
-        ")"
-    );
-
-    fn default_cookies_path() -> PathBuf {
-        data_local_dir()
-            .unwrap_or_else(|| {
-                home_dir()
-                    .expect("Could not get home dir")
-                    .join(".local")
-                    .join("share")
-            })
-            .join(env!("CARGO_PKG_NAME"))
-            .join(Self::COOKIES_FILE_NAME)
-    }
-}
-
-impl Default for SessionConfig {
-    fn default() -> Self {
-        Self {
-            timeout: Duration::from_secs(30),
-            retry_limit: 4,
-            retry_interval: Duration::from_secs(2),
-            cookies_path: Self::default_cookies_path(),
         }
     }
 }
@@ -358,14 +298,15 @@ impl Default for ServicesConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
     lang_name: LangName,
     working_dir: TargetTempl,
     source_path: TargetTempl,
-    compile: TemplArray<TargetTempl>,
-    run: TemplArray<TargetTempl>,
-    template: ProblemTempl,
+    compile: TargetTempl,
+    run: TargetTempl,
+    #[serde(default)]
+    template: Option<ProblemTempl>,
 }
 
 impl ServiceConfig {
@@ -387,19 +328,10 @@ int main() {
                 lang_name: "C++14 (GCC 5.4.1)".into(),
                 working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
-                compile: (&[
-                    "g++",
-                    "-std=gnu++1y",
-                    "-O2",
-                    // "-I/opt/boost/gcc/include",
-                    // "-L/opt/boost/gcc/lib",
-                    "-o",
-                    "./a.out",
-                    "./Main.cpp",
-                ])
-                    .into(),
-                run: (&["./a.out"]).into(),
-                template: Self::DEFAULT_TEMPLATE.into(),
+                compile: "set -x && g++ -std=gnu++1y -O2 -o ./a.out ./Main.cpp".into(),
+                // compile: "g++ -std=gnu++1y -O2 -I/opt/boost/gcc/include -L/opt/boost/gcc/lib -o ./a.out ./Main.cpp".into(),
+                run: "./a.out".into(),
+                template: Some(Self::DEFAULT_TEMPLATE.into()),
             },
         }
     }
@@ -418,24 +350,22 @@ mod tests {
 
     #[test]
     fn serialize_default() -> anyhow::Result<()> {
-        serde_yaml::to_string(&Config::default())?;
+        let test_dir = tempfile::tempdir()?;
+        let conf = Config::default_test(&test_dir);
+        serde_yaml::to_string(&conf)?;
         Ok(())
     }
 
     #[test]
     fn deserialize_example() -> anyhow::Result<()> {
-        // ignore difference on cookies_path because it varies depending on environments
-        fn ignore_env_dependency(mut body: ConfigBody) -> ConfigBody {
-            body.shell = (&[""]).into();
-            body.session.cookies_path = PathBuf::new();
-            body
-        }
-
         let mut output_buf = Vec::new();
         let cnsl = &mut Console::new(&mut output_buf);
 
-        let example_body = ignore_env_dependency(ConfigBody::load(&AbsPathBuf::cwd()?, cnsl)?);
-        let default_body = ignore_env_dependency(ConfigBody::default());
+        let default_body = ConfigBody::default();
+        let mut example_body = ConfigBody::load(&AbsPathBuf::cwd()?, cnsl)?;
+        // ignore difference on shell because it varies depending on environments
+        example_body.shell = Shell::default();
+
         eprintln!("{}", String::from_utf8_lossy(&output_buf));
 
         assert_eq!(example_body, default_body);
@@ -451,7 +381,7 @@ mod tests {
             &DEFAULT_CONTEST.id(),
             &DEFAULT_PROBLEM.id(),
         );
-        let output = shell.exec_templ_arr(&compile, &context)?;
+        let output = shell.exec_templ(&compile, &context)?;
         println!("{:?}", output);
         // TODO: assert success
         Ok(())

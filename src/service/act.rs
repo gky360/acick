@@ -1,4 +1,4 @@
-use crate::model::{Contest, LangNameRef, Problem, ProblemId};
+use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
 use crate::{Console, Result};
 
 pub trait Act {
@@ -6,12 +6,14 @@ pub trait Act {
 
     fn fetch(
         &self,
+        contest_id: &ContestId,
         problem_id: &Option<ProblemId>,
         cnsl: &mut Console,
     ) -> Result<(Contest, Vec<Problem>)>;
 
     fn submit(
         &self,
+        contest_id: &ContestId,
         problem: &Problem,
         lang_name: LangNameRef,
         source: &str,
