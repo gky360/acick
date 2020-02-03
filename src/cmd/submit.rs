@@ -92,6 +92,9 @@ mod tests {
     fn run_default() -> anyhow::Result<()> {
         let test_dir = tempfile::tempdir()?;
 
+        let login_opt = crate::cmd::LoginOpt {};
+        login_opt.run_default(&test_dir)?;
+
         let fetch_opt = crate::cmd::FetchOpt::default_test();
         fetch_opt.run_default(&test_dir)?;
 
