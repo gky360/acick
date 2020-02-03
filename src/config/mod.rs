@@ -233,13 +233,14 @@ impl ConfigBody {
                 cwd
             )
         })?;
+        writeln!(cnsl, "Found config file in base_dir: {}", base_dir)?;
         Ok((Self::load(&base_dir, cnsl)?, base_dir))
     }
 
     fn load(base_dir: &AbsPathBuf, cnsl: &mut Console) -> Result<Self> {
         let body: Self = base_dir.join(Self::FILE_NAME).load_pretty(
             |file| serde_yaml::from_reader(file).context("Could not read config file as yaml"),
-            None,
+            Some(base_dir),
             cnsl,
         )?;
         body.validate()?;

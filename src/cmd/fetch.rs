@@ -19,6 +19,16 @@ pub struct FetchOpt {
     overwrite: bool,
 }
 
+#[cfg(test)]
+impl FetchOpt {
+    pub fn default_test() -> Self {
+        Self {
+            problem_id: None,
+            overwrite: true,
+        }
+    }
+}
+
 impl Run for FetchOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         let Self {
@@ -72,10 +82,7 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let opt = FetchOpt {
-            problem_id: None,
-            overwrite: true,
-        };
+        let opt = FetchOpt::default_test();
         opt.run_default()?;
         Ok(())
     }

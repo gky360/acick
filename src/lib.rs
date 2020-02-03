@@ -103,6 +103,7 @@ impl Opt {
         let cnsl = &mut Console::new(stderr);
         let conf =
             Config::load(service_id, contest_id.clone(), cnsl).context("Could not load config")?;
+
         let outcome = self.cmd.run(&conf, cnsl)?;
 
         cnsl.flush()?;
