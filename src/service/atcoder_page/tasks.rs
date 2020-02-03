@@ -5,7 +5,7 @@ use reqwest::Url;
 use scraper::{ElementRef, Html};
 
 use crate::model::{Compare, Problem, ProblemId};
-use crate::service::atcoder_page::{FetchMaybeNotFound, HasHeader, BASE_URL};
+use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
 use crate::service::scrape::{select, ElementRefExt as _, HasUrl, Scrape};
 use crate::{Config, Console, Result};
 
@@ -20,7 +20,7 @@ impl<'a> TasksPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<TasksPage<'a>> {
-        self.fetch_maybe_not_found(client, self.conf, cnsl)
+        self.fetch_restricted(client, self.conf, cnsl)
             .map(|html| TasksPage {
                 builder: self,
                 content: html,
@@ -38,7 +38,7 @@ impl HasUrl for TasksPageBuilder<'_> {
     }
 }
 
-impl FetchMaybeNotFound for TasksPageBuilder<'_> {}
+impl FetchRestricted for TasksPageBuilder<'_> {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPage<'a> {

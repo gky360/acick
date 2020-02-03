@@ -46,7 +46,9 @@ mod tests {
     #[test]
     #[ignore]
     fn run_default() -> anyhow::Result<()> {
-        let opt = SubmitOpt { problem_id: "c".into() };
+        let opt = SubmitOpt {
+            problem_id: "c".into(),
+        };
         opt.run_default()?;
         Ok(())
     }

@@ -8,7 +8,7 @@ use reqwest::Url;
 use scraper::{ElementRef, Html, Selector};
 
 use crate::model::{ProblemId, Sample};
-use crate::service::atcoder_page::{FetchMaybeNotFound, BASE_URL};
+use crate::service::atcoder_page::{FetchRestricted, BASE_URL};
 use crate::service::scrape::{
     parse_zenkaku_digits, regex, select, ElementRefExt as _, HasUrl, Scrape,
 };
@@ -25,7 +25,7 @@ impl<'a> TasksPrintPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<TasksPrintPage<'a>> {
-        self.fetch_maybe_not_found(client, self.conf, cnsl)
+        self.fetch_restricted(client, self.conf, cnsl)
             .map(|html| TasksPrintPage {
                 builder: self,
                 content: html,
@@ -43,7 +43,7 @@ impl HasUrl for TasksPrintPageBuilder<'_> {
     }
 }
 
-impl FetchMaybeNotFound for TasksPrintPageBuilder<'_> {}
+impl FetchRestricted for TasksPrintPageBuilder<'_> {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPrintPage<'a> {
