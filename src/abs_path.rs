@@ -13,7 +13,6 @@ use crate::{Console, Result};
 pub struct AbsPathBuf(PathBuf);
 
 impl AbsPathBuf {
-    #[allow(dead_code)]
     pub fn try_new(path: PathBuf) -> Result<Self> {
         if path.is_absolute() {
             Ok(Self(path))

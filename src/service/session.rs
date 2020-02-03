@@ -13,6 +13,8 @@ trait ExecSession {
 impl ExecSession for Client {
     fn exec_session(&self, mut request: Request, conf: &Config) -> Result<Response> {
         let mut storage = conf
+            .body()
+            .session()
             .open_cookie_storage()
             .context("Could not open cookie storage")?;
         storage

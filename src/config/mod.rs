@@ -1,25 +1,22 @@
 use std::fmt;
 use std::io::{Read as _, Write as _};
-use std::path::PathBuf;
-use std::time::Duration;
 
 use anyhow::{anyhow, Context as _};
-use dirs::{data_local_dir, home_dir};
-use getset::{CopyGetters, Getters};
-use reqwest::blocking::{Client, ClientBuilder};
-use reqwest::redirect::Policy;
+use getset::Getters;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
+mod session_config;
 mod template;
 
-use crate::abs_path::{AbsPathBuf, ToAbs as _};
+use crate::abs_path::AbsPathBuf;
 use crate::model::{
     string, Contest, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
 };
-use crate::service::{Act, AtcoderActor, CookieStorage};
+use crate::service::{Act, AtcoderActor};
 use crate::{Console, GlobalOpt, Result, VERSION};
+pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
 
 #[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
@@ -46,7 +43,7 @@ impl Config {
     }
 
     pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
-        let client = self
+        let client = self.body.session
             .get_client_builder()
             .build()
             .expect("Could not setup client. \
@@ -55,22 +52,6 @@ impl Config {
         match service_id {
             ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, self)),
         }
-    }
-
-    fn get_client_builder(&self) -> ClientBuilder {
-        let session = &self.body.session;
-        let timeout = session.timeout;
-        // TODO : switch client by service
-        Client::builder()
-            .referer(false)
-            .redirect(Policy::none()) // redirects manually
-            .user_agent(SessionConfig::USER_AGENT)
-            .timeout(Some(timeout))
-    }
-
-    pub fn open_cookie_storage(&self) -> Result<CookieStorage> {
-        let cookies_path = &self.body.session.cookies_path;
-        CookieStorage::open(&cookies_path.to_abs_expand(&self.base_dir)?)
     }
 
     pub fn save_problem(
@@ -285,57 +266,6 @@ impl Default for ConfigBody {
     }
 }
 
-#[derive(Serialize, Deserialize, Getters, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(default)]
-pub struct SessionConfig {
-    #[serde(with = "humantime_serde")]
-    #[get_copy = "pub"]
-    timeout: Duration,
-    #[get_copy = "pub"]
-    retry_limit: usize,
-    #[serde(with = "humantime_serde")]
-    #[get_copy = "pub"]
-    retry_interval: Duration,
-    #[get = "pub"]
-    cookies_path: PathBuf,
-}
-
-impl SessionConfig {
-    const COOKIES_FILE_NAME: &'static str = "cookies.json";
-
-    const USER_AGENT: &'static str = concat!(
-        env!("CARGO_PKG_NAME"),
-        "-",
-        env!("CARGO_PKG_VERSION"),
-        " (",
-        env!("CARGO_PKG_REPOSITORY"),
-        ")"
-    );
-
-    fn default_cookies_path() -> PathBuf {
-        data_local_dir()
-            .unwrap_or_else(|| {
-                home_dir()
-                    .expect("Could not get home dir")
-                    .join(".local")
-                    .join("share")
-            })
-            .join(env!("CARGO_PKG_NAME"))
-            .join(Self::COOKIES_FILE_NAME)
-    }
-}
-
-impl Default for SessionConfig {
-    fn default() -> Self {
-        Self {
-            timeout: Duration::from_secs(30),
-            retry_limit: 4,
-            retry_interval: Duration::from_secs(2),
-            cookies_path: Self::default_cookies_path(),
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
 pub struct ServicesConfig {
@@ -424,18 +354,14 @@ mod tests {
 
     #[test]
     fn deserialize_example() -> anyhow::Result<()> {
-        // ignore difference on cookies_path because it varies depending on environments
-        fn ignore_env_dependency(mut body: ConfigBody) -> ConfigBody {
-            body.shell = (&[""]).into();
-            body.session.cookies_path = PathBuf::new();
-            body
-        }
-
         let mut output_buf = Vec::new();
         let cnsl = &mut Console::new(&mut output_buf);
 
-        let example_body = ignore_env_dependency(ConfigBody::load(&AbsPathBuf::cwd()?, cnsl)?);
-        let default_body = ignore_env_dependency(ConfigBody::default());
+        let default_body = ConfigBody::default();
+        let mut example_body = ConfigBody::load(&AbsPathBuf::cwd()?, cnsl)?;
+        // ignore difference on shell because it varies depending on environments
+        example_body.shell = Shell::default();
+
         eprintln!("{}", String::from_utf8_lossy(&output_buf));
 
         assert_eq!(example_body, default_body);
