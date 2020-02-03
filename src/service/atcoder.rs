@@ -1,15 +1,16 @@
 use anyhow::{anyhow, Context as _};
 use maplit::hashmap;
-use reqwest::blocking::Client;
-use reqwest::StatusCode;
+use reqwest::blocking::{Client, Response};
+use reqwest::{StatusCode, Url};
 
-use crate::model::{Contest, Problem, ProblemId};
+use crate::model::{Contest, LangNameRef, Problem, ProblemId};
 use crate::service::atcoder_page::{
-    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, TasksPageBuilder, TasksPrintPageBuilder,
+    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
+    TasksPrintPageBuilder, BASE_URL,
 };
-use crate::service::scrape::{HasUrl as _, Scrape as _};
+use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
-use crate::service::Act;
+use crate::service::{Act, ResponseExt as _};
 use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]
@@ -24,12 +25,42 @@ impl<'a> AtcoderActor<'a> {
     }
 }
 
+impl AtcoderActor<'_> {
+    fn submissions_me_url(&self) -> Result<Url> {
+        let contest_id = &self.conf.global_opt().contest_id;
+        let path = format!("/contests/{}/submissions/me", contest_id);
+        BASE_URL
+            .join(&path)
+            .context(format!("Could not parse url path: {}", path))
+    }
+
+    fn validate_login_response(&self, res: &Response) -> Result<()> {
+        if res.status() != StatusCode::FOUND {
+            return Err(Error::msg("Received invalid response code"));
+        }
+        Ok(())
+    }
+
+    fn validate_submit_response(&self, res: &Response) -> Result<()> {
+        if res.status() != StatusCode::FOUND {
+            return Err(Error::msg("Received invalid response code"));
+        }
+        let loc_url = res
+            .location_url(&BASE_URL)
+            .context("Could not extract redirection url from response")?;
+        if loc_url != self.submissions_me_url()? {
+            return Err(Error::msg("Found invalid redirection url"));
+        }
+        Ok(())
+    }
+}
+
 impl Act for AtcoderActor<'_> {
     fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool> {
         let Self { client, conf } = self;
-        let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
 
-        // Check if user is already logged in
+        // check if user is already logged in
+        let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
         if login_page.is_logged_in()? {
             let current_user = login_page.current_user()?;
             if current_user != user {
@@ -38,22 +69,24 @@ impl Act for AtcoderActor<'_> {
             return Ok(false);
         }
 
-        // Post form data to log in to service
+        // prepare payload
+        let csrf_token = login_page.extract_csrf_token()?;
         let payload = hashmap!(
-            "csrf_token" => login_page.extract_csrf_token()?,
-            "username" => user.to_owned(),
-            "password" => pass,
+            "csrf_token" => csrf_token.as_str(),
+            "username" => user.as_str(),
+            "password" => pass.as_str(),
         );
+
+        // post credentials
         let res = client
             .post(login_page.url()?)
             .form(&payload)
             .with_retry(client, conf, cnsl)
             .retry_send()?;
-        if res.status() != StatusCode::FOUND {
-            return Err(Error::msg("Received invalid response"));
-        }
 
-        // Check if login succeeded
+        // check if login succeeded
+        self.validate_login_response(&res)
+            .context("Login rejected by service")?;
         let settings_page = SettingsPageBuilder::new(conf).build(client, cnsl)?;
         let current_user = settings_page.current_user()?;
         if current_user != user {
@@ -118,5 +151,39 @@ impl Act for AtcoderActor<'_> {
 
         let contest = Contest::new(contest_id.to_owned(), contest_name);
         Ok((contest, problems))
+    }
+
+    fn submit(
+        &self,
+        problem: &Problem,
+        lang_name: LangNameRef,
+        source: &str,
+        cnsl: &mut Console,
+    ) -> Result<()> {
+        let Self { client, conf } = self;
+
+        // prepare payload
+        let submit_page = SubmitPageBuilder::new(conf).build(client, cnsl)?;
+        let csrf_token = submit_page.extract_csrf_token()?;
+        let lang_id = submit_page.extract_lang_id(lang_name)?;
+        let payload = hashmap!(
+            "csrf_token" => csrf_token.as_str(),
+            "data.TaskScreenName" => problem.url_name().as_str(),
+            "data.LanguageId" => lang_id.as_str(),
+            "sourceCode" => source,
+        );
+
+        // submit source code
+        let res = client
+            .post(submit_page.url()?)
+            .form(&payload)
+            .with_retry(client, conf, cnsl)
+            .retry_send()?;
+
+        // check response
+        self.validate_submit_response(&res)
+            .context("Submission rejected by service")?;
+
+        Ok(())
     }
 }

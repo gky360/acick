@@ -3,6 +3,7 @@ use std::fmt;
 use std::io::Write as _;
 use std::time::Duration;
 
+use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 
 use crate::judge::diff::TextDiff;
@@ -159,8 +160,9 @@ impl StatusCount {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TotalStatus {
+    #[get_copy = "pub"]
     kind: StatusKind,
     count: StatusCount,
     statuses: Vec<Status>,

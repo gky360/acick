@@ -118,7 +118,6 @@ mod tests {
     use std::time::Duration;
 
     use lazy_static::lazy_static;
-    use reqwest::Url;
 
     use super::*;
     use crate::model::{Compare, Contest, Problem, Service};
@@ -130,7 +129,7 @@ mod tests {
         pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
             "C",
             "Linear Approximation",
-            Url::parse("https://atcoder.jp/contests/arc100/tasks/arc100_a").unwrap(),
+            "arc100_a",
             Duration::from_secs(2),
             "1024 MB".parse().unwrap(),
             Compare::Default,

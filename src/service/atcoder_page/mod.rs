@@ -9,11 +9,13 @@ use crate::{Config, Console, Error, Result};
 
 mod login;
 mod settings;
+mod submit;
 mod tasks;
 mod tasks_print;
 
 pub use login::{LoginPage, LoginPageBuilder};
 pub use settings::{SettingsPage, SettingsPageBuilder};
+pub use submit::{SubmitPage, SubmitPageBuilder};
 pub use tasks::{TasksPage, TasksPageBuilder};
 pub use tasks_print::{TasksPrintPage, TasksPrintPageBuilder};
 
@@ -57,16 +59,12 @@ pub trait HasHeader: Scrape {
     }
 }
 
-pub trait FetchMaybeNotFound: Fetch {
-    fn fetch_maybe_not_found(
-        &self,
-        client: &Client,
-        conf: &Config,
-        cnsl: &mut Console,
-    ) -> Result<Html> {
+pub trait FetchRestricted: Fetch {
+    fn fetch_restricted(&self, client: &Client, conf: &Config, cnsl: &mut Console) -> Result<Html> {
         let (status, html) = self.fetch(client, conf, cnsl)?;
         match status {
             StatusCode::OK => Ok(html),
+            StatusCode::FOUND => Err(Error::msg("User not logged in")),
             StatusCode::NOT_FOUND if NotFoundPage(&html).is_not_found() => Err(anyhow!(
                 "Could not find contest : {} .
 Check if the contest id is correct.",

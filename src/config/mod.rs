@@ -1,5 +1,5 @@
 use std::fmt;
-use std::io::Write as _;
+use std::io::{Read as _, Write as _};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -15,7 +15,9 @@ use tokio::process::Command;
 mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
-use crate::model::{string, Contest, Problem, ProblemId, Service, ServiceKind};
+use crate::model::{
+    string, Contest, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
+};
 use crate::service::{Act, AtcoderActor, CookieStorage};
 use crate::{Console, GlobalOpt, Result, VERSION};
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
@@ -36,6 +38,11 @@ impl Config {
             base_dir,
             body,
         })
+    }
+
+    pub fn service(&self) -> &ServiceConfig {
+        let service_id = self.global_opt.service_id;
+        self.body.services.get(service_id)
     }
 
     pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
@@ -122,6 +129,19 @@ impl Config {
         )
     }
 
+    pub fn load_source(&self, problem_id: &ProblemId, cnsl: &mut Console) -> Result<String> {
+        let source_abs_path = self.source_abs_path(problem_id)?;
+        source_abs_path.load_pretty(
+            |mut file| {
+                let mut buf = String::new();
+                file.read_to_string(&mut buf)?;
+                Ok(buf)
+            },
+            Some(&self.base_dir),
+            cnsl,
+        )
+    }
+
     pub fn exec_compile(&self, problem_id: &ProblemId) -> Result<Command> {
         let service_id = self.global_opt.service_id;
         let compile = &self.body.services.get(service_id).compile;
@@ -181,7 +201,8 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             global_opt: GlobalOpt::default(),
-            base_dir: AbsPathBuf::try_new(std::env::temp_dir()).unwrap(),
+            base_dir: AbsPathBuf::try_new(std::env::temp_dir().join(env!("CARGO_PKG_NAME")))
+                .unwrap(),
             body: ConfigBody::default(),
         }
     }
@@ -322,7 +343,7 @@ pub struct ServicesConfig {
 }
 
 impl ServicesConfig {
-    pub fn get(&self, service_id: ServiceKind) -> &ServiceConfig {
+    fn get(&self, service_id: ServiceKind) -> &ServiceConfig {
         match service_id {
             ServiceKind::Atcoder => &self.atcoder,
         }
@@ -337,9 +358,9 @@ impl Default for ServicesConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
-    language: String,
+    lang_name: LangName,
     working_dir: TargetTempl,
     source_path: TargetTempl,
     compile: TemplArray<TargetTempl>,
@@ -363,7 +384,7 @@ int main() {
     fn default_for(service_id: ServiceKind) -> Self {
         match service_id {
             ServiceKind::Atcoder => Self {
-                language: "C++14 (GCC 5.4.1)".into(),
+                lang_name: "C++14 (GCC 5.4.1)".into(),
                 working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
                 compile: (&[
@@ -381,6 +402,10 @@ int main() {
                 template: Self::DEFAULT_TEMPLATE.into(),
             },
         }
+    }
+
+    pub fn lang_name(&self) -> LangNameRef {
+        &self.lang_name
     }
 }
 

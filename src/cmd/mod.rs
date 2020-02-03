@@ -9,11 +9,13 @@ use crate::{Config, Console, OutputFormat, Result};
 mod fetch;
 mod login;
 mod show;
+mod submit;
 mod test;
 
 pub use fetch::FetchOpt;
 pub use login::{LoginOpt, LoginOutcome};
 pub use show::{ShowOpt, ShowOutcome};
+pub use submit::{SubmitOpt, SubmitOutcome};
 pub use test::{TestOpt, TestOutcome};
 
 pub trait Outcome: OutcomeSerialize {
@@ -69,14 +71,19 @@ pub enum Cmd {
     /// Shows current config
     Show(ShowOpt),
     /// Logs in to service
+    #[structopt(visible_alias("l"))]
     Login(LoginOpt),
     // Participate(ParticipateOpt),
     /// Fetches problems from service
+    #[structopt(visible_alias("f"))]
     Fetch(FetchOpt),
     /// Tests source code with sample inputs and outputs
+    #[structopt(visible_alias("t"))]
     Test(TestOpt),
     // Judge(JudgeOpt), // test full testcases, for AtCoder only
-    // Submit(SubmitOpt),
+    /// Submits source code to service
+    #[structopt(visible_alias("s"))]
+    Submit(SubmitOpt),
 }
 
 impl Run for Cmd {
@@ -86,6 +93,7 @@ impl Run for Cmd {
             Self::Login(opt) => opt.run(conf, cnsl),
             Self::Fetch(opt) => opt.run(conf, cnsl),
             Self::Test(opt) => opt.run(conf, cnsl),
+            Self::Submit(opt) => opt.run(conf, cnsl),
         }
     }
 }

@@ -1,7 +1,7 @@
 use std::env::current_dir;
 use std::fmt;
 use std::fs::{create_dir_all, File, OpenOptions};
-use std::io::{self, Write as _};
+use std::io::{self, Seek as _, SeekFrom, Write as _};
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context as _};
@@ -35,7 +35,6 @@ impl AbsPathBuf {
     }
 
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
-        // TODO: use shellexpand, follow symlinks
         Self(self.0.join(path))
     }
 
@@ -67,7 +66,13 @@ impl AbsPathBuf {
             Ok(false)
         } else {
             self.create_dir_all_and_open(false, true)
-                .with_context(|| format!("Could not create file : {}", self))
+                .with_context(|| format!("Could not open file : {}", self))
+                .and_then(|mut file| {
+                    // truncate file before write
+                    file.seek(SeekFrom::Start(0))?;
+                    file.set_len(0)?;
+                    Ok(file)
+                })
                 .and_then(save)
                 .map(|_| true)
         };
