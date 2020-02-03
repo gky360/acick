@@ -58,9 +58,9 @@ impl AtcoderActor<'_> {
 impl Act for AtcoderActor<'_> {
     fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool> {
         let Self { client, conf } = self;
-        let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
 
-        // Check if user is already logged in
+        // check if user is already logged in
+        let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
         if login_page.is_logged_in()? {
             let current_user = login_page.current_user()?;
             if current_user != user {
@@ -69,21 +69,24 @@ impl Act for AtcoderActor<'_> {
             return Ok(false);
         }
 
-        // Post form data to log in to service
+        // prepare payload
+        let csrf_token = login_page.extract_csrf_token()?;
         let payload = hashmap!(
-            "csrf_token" => login_page.extract_csrf_token()?,
-            "username" => user.to_owned(),
-            "password" => pass,
+            "csrf_token" => csrf_token.as_str(),
+            "username" => user.as_str(),
+            "password" => pass.as_str(),
         );
+
+        // post credentials
         let res = client
             .post(login_page.url()?)
             .form(&payload)
             .with_retry(client, conf, cnsl)
             .retry_send()?;
+
+        // check if login succeeded
         self.validate_login_response(&res)
             .context("Login rejected by service")?;
-
-        // Check if login succeeded
         let settings_page = SettingsPageBuilder::new(conf).build(client, cnsl)?;
         let current_user = settings_page.current_user()?;
         if current_user != user {
@@ -159,21 +162,25 @@ impl Act for AtcoderActor<'_> {
     ) -> Result<()> {
         let Self { client, conf } = self;
 
+        // prepare payload
         let submit_page = SubmitPageBuilder::new(conf).build(client, cnsl)?;
         let csrf_token = submit_page.extract_csrf_token()?;
         let lang_id = submit_page.extract_lang_id(lang_name)?;
         let payload = hashmap!(
-            "csrf_token" => csrf_token.as_ref(),
-            "data.TaskScreenName" => problem.url_name().as_ref(),
-            "data.LanguageId" => lang_id.as_ref(),
+            "csrf_token" => csrf_token.as_str(),
+            "data.TaskScreenName" => problem.url_name().as_str(),
+            "data.LanguageId" => lang_id.as_str(),
             "sourceCode" => source,
         );
 
+        // submit source code
         let res = client
             .post(submit_page.url()?)
             .form(&payload)
             .with_retry(client, conf, cnsl)
             .retry_send()?;
+
+        // check response
         self.validate_submit_response(&res)
             .context("Submission rejected by service")?;
 

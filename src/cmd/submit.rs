@@ -14,10 +14,19 @@ use crate::{Config, Console, Error, Result};
 pub struct SubmitOpt {
     #[structopt(name = "problem")]
     problem_id: ProblemId,
+    #[structopt(long, short)]
+    force: bool,
 }
 
 impl Run for SubmitOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+        // confirm
+        let contest_id = &conf.global_opt().contest_id;
+        let message = format!("submit problem {} to {}?", &self.problem_id, contest_id);
+        if !self.force && !cnsl.confirm(&message, false)? {
+            return Err(Error::msg("Not submitted"));
+        }
+
         // load problem file
         let problem = conf
             .load_problem(&self.problem_id, cnsl)
@@ -81,6 +90,7 @@ mod tests {
     fn run_default() -> anyhow::Result<()> {
         let opt = SubmitOpt {
             problem_id: "c".into(),
+            force: true,
         };
         opt.run_default()?;
         Ok(())

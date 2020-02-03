@@ -12,6 +12,16 @@ impl<'a> Console<'a> {
         Self { stderr }
     }
 
+    pub fn confirm(&mut self, message: &str, default: bool) -> io::Result<bool> {
+        let prompt = format!("{} [{}] ", message, if default { "Y/n" } else { "y/N" });
+        let input = self.prompt_and_read(&prompt, false)?;
+        match input.to_lowercase().as_str() {
+            "y" | "yes" => Ok(true),
+            "n" | "no" => Ok(false),
+            _ => Ok(default),
+        }
+    }
+
     pub fn get_env_or_prompt_and_read(
         &mut self,
         env_name: &str,
@@ -30,6 +40,7 @@ impl<'a> Console<'a> {
         };
         self.prompt_and_read(prompt, is_password)
     }
+
     fn read_user(&mut self, is_password: bool) -> io::Result<String> {
         if is_password {
             read_password()
