@@ -15,7 +15,7 @@ use tokio::process::Command;
 mod template;
 
 use crate::abs_path::{AbsPathBuf, ToAbs as _};
-use crate::model::{string, Contest, Problem, ProblemId, Service, ServiceKind};
+use crate::model::{string, Contest, LangName, Problem, ProblemId, Service, ServiceKind};
 use crate::service::{Act, AtcoderActor, CookieStorage};
 use crate::{Console, GlobalOpt, Result, VERSION};
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
@@ -340,7 +340,7 @@ impl Default for ServicesConfig {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
-    language: String,
+    lang_name: LangName,
     working_dir: TargetTempl,
     source_path: TargetTempl,
     compile: TemplArray<TargetTempl>,
@@ -364,7 +364,7 @@ int main() {
     fn default_for(service_id: ServiceKind) -> Self {
         match service_id {
             ServiceKind::Atcoder => Self {
-                language: "C++14 (GCC 5.4.1)".into(),
+                lang_name: "C++14 (GCC 5.4.1)".into(),
                 working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
                 compile: (&[

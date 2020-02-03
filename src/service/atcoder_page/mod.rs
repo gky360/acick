@@ -15,6 +15,7 @@ mod tasks_print;
 
 pub use login::{LoginPage, LoginPageBuilder};
 pub use settings::{SettingsPage, SettingsPageBuilder};
+pub use submit::{SubmitPage, SubmitPageBuilder};
 pub use tasks::{TasksPage, TasksPageBuilder};
 pub use tasks_print::{TasksPrintPage, TasksPrintPageBuilder};
 

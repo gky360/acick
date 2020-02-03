@@ -328,6 +328,10 @@ pub mod string {
 
 pub type LangId = String;
 
+pub type LangIdRef<'a> = &'a str;
+
 pub type LangName = String;
+
+pub type LangNameRef<'a> = &'a str;
 
 pub type Langs = HashMap<LangName, LangId>;
