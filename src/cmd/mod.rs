@@ -71,14 +71,18 @@ pub enum Cmd {
     /// Shows current config
     Show(ShowOpt),
     /// Logs in to service
+    #[structopt(visible_alias("l"))]
     Login(LoginOpt),
     // Participate(ParticipateOpt),
     /// Fetches problems from service
+    #[structopt(visible_alias("f"))]
     Fetch(FetchOpt),
     /// Tests source code with sample inputs and outputs
+    #[structopt(visible_alias("t"))]
     Test(TestOpt),
     // Judge(JudgeOpt), // test full testcases, for AtCoder only
     /// Submits source code to service
+    #[structopt(visible_alias("s"))]
     Submit(SubmitOpt),
 }
 
