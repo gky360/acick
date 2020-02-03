@@ -107,17 +107,18 @@ jobs:
           fi
         shell: bash
 
-      - name: "`cargo test -- --ignored`"
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }} -- --ignored
-
       - name: "`cargo test`"
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }}
+
+      - name: "`cargo test -- --ignored`"
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }} -- --ignored
+        if: github.ref == 'master'
 
       - name: "`rustup component add clippy`"
         run: rustup component add clippy
