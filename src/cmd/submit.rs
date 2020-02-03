@@ -22,15 +22,18 @@ impl Run for SubmitOpt {
             .load_problem(&self.problem_id, cnsl)
             .context("Could not load problem file.")?;
 
-        // TODO: load source
-        let source = " ";
+        // load source
+        let source = conf
+            .load_source(&self.problem_id, cnsl)
+            .context("Could not load source file")?;
         if source.is_empty() {
-            return Err(Error::msg("Found empty source code"));
+            return Err(Error::msg("Found empty source file"));
         }
 
+        // submit
         let actor = conf.build_actor();
         let lang_name = conf.service().lang_name();
-        actor.submit(&problem, lang_name, source, cnsl)?;
+        actor.submit(&problem, lang_name, &source, cnsl)?;
 
         Ok(Box::new(SubmitOutcome {
             service: Service::new(conf.global_opt().service_id),

@@ -1,5 +1,5 @@
 use std::fmt;
-use std::io::Write as _;
+use std::io::{Read as _, Write as _};
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -124,6 +124,19 @@ impl Config {
         source_abs_path.save_pretty(
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
             overwrite,
+            Some(&self.base_dir),
+            cnsl,
+        )
+    }
+
+    pub fn load_source(&self, problem_id: &ProblemId, cnsl: &mut Console) -> Result<String> {
+        let source_abs_path = self.source_abs_path(problem_id)?;
+        source_abs_path.load_pretty(
+            |mut file| {
+                let mut buf = String::new();
+                file.read_to_string(&mut buf)?;
+                Ok(buf)
+            },
             Some(&self.base_dir),
             cnsl,
         )
