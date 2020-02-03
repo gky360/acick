@@ -228,7 +228,7 @@ impl ConfigBody {
         let base_dir = cwd.search_dir_contains(Self::FILE_NAME).with_context(|| {
             format!(
                 "Could not find config file ({}) in {} or any of the parent directories. \
-                 Create config file first by `init` command.",
+                 Create config file first by `acick init` command.",
                 Self::FILE_NAME,
                 cwd
             )
