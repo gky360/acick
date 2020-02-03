@@ -181,7 +181,8 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             global_opt: GlobalOpt::default(),
-            base_dir: AbsPathBuf::try_new(std::env::temp_dir()).unwrap(),
+            base_dir: AbsPathBuf::try_new(std::env::temp_dir().join(env!("CARGO_PKG_NAME")))
+                .unwrap(),
             body: ConfigBody::default(),
         }
     }
