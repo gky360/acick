@@ -11,23 +11,21 @@ use crate::{Config, Result};
 pub struct ShowOpt {}
 
 impl ShowOpt {
-    pub fn run(&self, conf: &Config) -> Result<ShowOutcome> {
-        Ok(ShowOutcome { conf: conf.clone() })
+    pub fn run<'a>(&self, conf: &'a Config) -> Result<ShowOutcome<'a>> {
+        Ok(ShowOutcome(conf))
     }
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ShowOutcome {
-    conf: Config,
-}
+pub struct ShowOutcome<'a>(&'a Config);
 
-impl fmt::Display for ShowOutcome {
+impl fmt::Display for ShowOutcome<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.conf.fmt(f)
+        self.0.fmt(f)
     }
 }
 
-impl Outcome for ShowOutcome {
+impl Outcome for ShowOutcome<'_> {
     fn is_error(&self) -> bool {
         false
     }
@@ -43,7 +41,7 @@ mod tests {
     #[test]
     fn run_default() -> anyhow::Result<()> {
         let opt = ShowOpt {};
-        run_with(&tempdir()?, |conf, _| opt.run(conf))?;
+        run_with(&tempdir()?, |conf, _| opt.run(conf).map(|_| ()))?;
         Ok(())
     }
 }
