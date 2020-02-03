@@ -1,6 +1,7 @@
 use std::fmt;
 
 use anyhow::Context as _;
+use chrono::{offset::Local, DateTime, SecondsFormat};
 use serde::Serialize;
 use structopt::StructOpt;
 
@@ -37,18 +38,31 @@ impl Run for SubmitOpt {
 
         Ok(Box::new(SubmitOutcome {
             service: Service::new(conf.global_opt().service_id),
+            submitted_at: Local::now(),
+            source_bytes: source.len(),
         }))
     }
 }
 
+pub type LocalDateTime = DateTime<Local>;
+
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SubmitOutcome {
     service: Service,
+    submitted_at: LocalDateTime,
+    source_bytes: usize,
 }
 
 impl fmt::Display for SubmitOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "This is submit outcome")
+        write!(
+            f,
+            "Submitted source to {} ({}, {} Bytes)",
+            self.service.id(),
+            self.submitted_at
+                .to_rfc3339_opts(SecondsFormat::Secs, false),
+            self.source_bytes
+        )
     }
 }
 
