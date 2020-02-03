@@ -8,7 +8,7 @@ use crate::cmd::{Outcome, Run};
 use crate::model::{Contest, ProblemId, Service};
 use crate::{Config, Console, Result};
 
-#[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct FetchOpt {
     /// If specified, fetches only one problem
@@ -72,7 +72,10 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let opt = FetchOpt::default();
+        let opt = FetchOpt {
+            problem_id: None,
+            overwrite: true,
+        };
         opt.run_default()?;
         Ok(())
     }

@@ -117,8 +117,11 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let opt = crate::cmd::fetch::FetchOpt::default();
-        opt.run_default()?;
+        // let fetch_opt = FetchOpt {
+        //     problem_id: None,
+        //     overwrite: true,
+        // };
+        // fetch_opt.run_default()?;
 
         let opt = TestOpt {
             problem_id: "c".into(),

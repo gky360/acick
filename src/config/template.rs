@@ -281,13 +281,10 @@ impl Shell {
             .context("Could not expand command template")?;
         self.exec(&cmd)
     }
-}
 
-impl Default for Shell {
-    fn default() -> Self {
+    fn find_bash() -> PathBuf {
         let env_path = env::var_os("PATH").unwrap_or_default();
-
-        let bash = env::split_paths(&env_path)
+        env::split_paths(&env_path)
             .chain(if cfg!(windows) {
                 vec![
                     PathBuf::from(r"C:\tools\msys64\usr\bin"),
@@ -304,9 +301,14 @@ impl Default for Shell {
                     p.join("bash")
                 }
             })
-            .find(|p| p.exists() && p.to_str().is_some())
-            .unwrap_or_else(|| PathBuf::from("bash"));
+            .find(|p| p.is_file() && p.to_str().is_some())
+            .unwrap_or_else(|| PathBuf::from("bash"))
+    }
+}
 
+impl Default for Shell {
+    fn default() -> Self {
+        let bash = Self::find_bash();
         (&[bash.to_str().unwrap(), "-c", "{{ command }}"]).into()
     }
 }

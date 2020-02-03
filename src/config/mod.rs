@@ -170,8 +170,8 @@ impl Config {
 }
 
 #[cfg(test)]
-impl Default for Config {
-    fn default() -> Self {
+impl Config {
+    pub fn default_test() -> Self {
         use crate::GlobalOpt;
 
         let GlobalOpt {
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn serialize_default() -> anyhow::Result<()> {
-        serde_yaml::to_string(&Config::default())?;
+        serde_yaml::to_string(&Config::default_test())?;
         Ok(())
     }
 

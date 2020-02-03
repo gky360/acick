@@ -53,7 +53,7 @@ pub trait Run {
 
     #[cfg(test)]
     fn run_default(&self) -> Result<Box<dyn Outcome>> {
-        let conf = Config::default();
+        let conf = Config::default_test();
 
         let mut output_buf = Vec::new();
         let cnsl = &mut Console::new(&mut output_buf);
