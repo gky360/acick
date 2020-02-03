@@ -2,7 +2,6 @@ use std::fmt;
 use std::io::{Read as _, Write as _};
 
 use anyhow::{anyhow, Context as _};
-use getset::Getters;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
@@ -197,18 +196,14 @@ impl fmt::Display for Config {
     }
 }
 
-#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
 pub struct ConfigBody {
     #[serde(with = "string")]
-    #[get = "pub"]
     version: Version,
-    #[get = "pub"]
     shell: Shell,
     problem_path: TargetTempl,
-    #[get = "pub"]
     session: SessionConfig,
-    #[get = "pub"]
     services: ServicesConfig,
 }
 
