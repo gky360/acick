@@ -1,6 +1,6 @@
 ---
 version: 0.0.4
-shell: ["/bin/bash", "-c", "{{ command }}"]
+shell: ["/bin/bash", "-e", "-c", "{{ command }}"]
 problem_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml"
 session:
   timeout: 30s
