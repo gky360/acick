@@ -77,6 +77,11 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
 
+    env:
+      RUST_BACKTRACE: full
+      ACICK_ATCODER_USERNAME: ${{ secrets.ACICK_ATCODER_USERNAME }}
+      ACICK_ATCODER_PASSWORD: ${{ secrets.ACICK_ATCODER_PASSWORD }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v1
@@ -102,15 +107,17 @@ jobs:
           fi
         shell: bash
 
+      - name: "`cargo test -- --ignored`"
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }} -- --ignored
+
       - name: "`cargo test`"
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }}
-        env:
-          RUST_BACKTRACE: full
-          ACICK_ATCODER_USERNAME: ${{ secrets.ACICK_ATCODER_USERNAME }}
-          ACICK_ATCODER_PASSWORD: ${{ secrets.ACICK_ATCODER_PASSWORD }}
 
       - name: "`rustup component add clippy`"
         run: rustup component add clippy
