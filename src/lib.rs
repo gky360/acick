@@ -20,7 +20,7 @@ mod judge;
 mod model;
 mod service;
 
-use cmd::{Cmd, Run as _};
+use cmd::{Cmd, Outcome};
 use config::Config;
 use console::Console;
 use model::{ContestId, ServiceKind};
@@ -95,21 +95,28 @@ pub struct Opt {
 
 impl Opt {
     pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
-        let GlobalOpt {
-            service_id,
-            ref contest_id,
-            output,
-        } = self.global_opt;
+        let service_id = self.global_opt.service_id;
+        let contest_id = &self.global_opt.contest_id;
+
         let cnsl = &mut Console::new(stderr);
         let conf =
             Config::load(service_id, contest_id.clone(), cnsl).context("Could not load config")?;
 
-        let outcome = self.cmd.run(&conf, cnsl)?;
+        self.cmd.run(&conf, cnsl, |outcome, cnsl| {
+            self.finish(outcome, stdout, cnsl)
+        })
+    }
 
+    fn finish(
+        &self,
+        outcome: &dyn Outcome,
+        stdout: &mut dyn Write,
+        cnsl: &mut Console,
+    ) -> Result<()> {
         cnsl.flush()?;
         writeln!(stdout)?;
 
-        outcome.print(stdout, output)?;
+        outcome.print(stdout, self.global_opt.output)?;
 
         if outcome.is_error() {
             Err(Error::msg("Command exited with error"))

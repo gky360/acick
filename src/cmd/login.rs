@@ -5,7 +5,7 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::cmd::{Outcome, Run};
+use crate::cmd::Outcome;
 use crate::model::Service;
 use crate::{Config, Console, Result};
 
@@ -13,8 +13,8 @@ use crate::{Config, Console, Result};
 #[structopt(rename_all = "kebab")]
 pub struct LoginOpt {}
 
-impl Run for LoginOpt {
-    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+impl LoginOpt {
+    pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<LoginOutcome> {
         let (user_env, pass_env) = conf.service_id.to_user_pass_env_names();
         let user = cnsl
             .get_env_or_prompt_and_read(user_env, "username: ", false)
@@ -32,7 +32,7 @@ impl Run for LoginOpt {
             username: user,
             is_already: !is_not_already,
         };
-        Ok(Box::new(outcome))
+        Ok(outcome)
     }
 }
 
@@ -69,7 +69,10 @@ impl Outcome for LoginOutcome {
 mod tests {
     use std::env;
 
+    use tempfile::tempdir;
+
     use super::*;
+    use crate::cmd::tests::run_with;
 
     fn check_envs_for_user_and_pass() -> anyhow::Result<()> {
         assert!(!env::var("ACICK_ATCODER_USERNAME")?.is_empty());
@@ -80,8 +83,9 @@ mod tests {
     #[test]
     fn run_default() -> anyhow::Result<()> {
         check_envs_for_user_and_pass()?;
+
         let opt = LoginOpt {};
-        opt.run_default(&tempfile::tempdir()?)?;
+        run_with(&tempdir()?, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())
     }
 }

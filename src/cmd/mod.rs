@@ -48,22 +48,6 @@ impl<T: Serialize + fmt::Display + fmt::Debug> OutcomeSerialize for T {
     }
 }
 
-pub trait Run {
-    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>>;
-
-    #[cfg(test)]
-    fn run_default(&self, test_dir: &tempfile::TempDir) -> Result<Box<dyn Outcome>> {
-        let conf = Config::default_test(test_dir);
-
-        let mut output_buf = Vec::new();
-        let cnsl = &mut Console::new(&mut output_buf);
-
-        let result = self.run(&conf, cnsl);
-        eprintln!("{}", String::from_utf8_lossy(&output_buf));
-        result
-    }
-}
-
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub enum Cmd {
@@ -86,14 +70,38 @@ pub enum Cmd {
     Submit(SubmitOpt),
 }
 
-impl Run for Cmd {
-    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+impl Cmd {
+    pub fn run(
+        &self,
+        conf: &Config,
+        cnsl: &mut Console,
+        finish: impl FnOnce(&dyn Outcome, &mut Console) -> Result<()>,
+    ) -> Result<()> {
         match self {
-            Self::Show(opt) => opt.run(conf, cnsl),
-            Self::Login(opt) => opt.run(conf, cnsl),
-            Self::Fetch(opt) => opt.run(conf, cnsl),
-            Self::Test(opt) => opt.run(conf, cnsl),
-            Self::Submit(opt) => opt.run(conf, cnsl),
+            Self::Show(opt) => finish(&opt.run(conf)?, cnsl),
+            Self::Login(opt) => finish(&opt.run(conf, cnsl)?, cnsl),
+            Self::Fetch(opt) => finish(&opt.run(conf, cnsl)?, cnsl),
+            Self::Test(opt) => finish(&opt.run(conf, cnsl)?, cnsl),
+            Self::Submit(opt) => finish(&opt.run(conf, cnsl)?, cnsl),
         }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    use tempfile::TempDir;
+
+    pub fn run_with<T>(
+        test_dir: &TempDir,
+        run: impl FnOnce(&Config, &mut Console) -> Result<T>,
+    ) -> Result<T> {
+        let conf = &Config::default_test(test_dir);
+
+        let mut output_buf = Vec::new();
+        let cnsl = &mut Console::new(&mut output_buf);
+
+        run(conf, cnsl)
     }
 }

@@ -4,7 +4,7 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::cmd::{Outcome, Run};
+use crate::cmd::Outcome;
 use crate::model::{Contest, ProblemId, Service};
 use crate::{Config, Console, Result};
 
@@ -29,8 +29,8 @@ impl FetchOpt {
     }
 }
 
-impl Run for FetchOpt {
-    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+impl FetchOpt {
+    pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<FetchOutcome> {
         let Self {
             ref problem_id,
             overwrite,
@@ -54,7 +54,7 @@ impl Run for FetchOpt {
                 .context("Could not save source file from template")?;
         }
 
-        Ok(Box::new(FetchOutcome { service, contest }))
+        Ok(FetchOutcome { service, contest })
     }
 }
 
@@ -78,12 +78,15 @@ impl Outcome for FetchOutcome {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempdir;
+
     use super::*;
+    use crate::cmd::tests::run_with;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
         let opt = FetchOpt::default_test();
-        opt.run_default(&tempfile::tempdir()?)?;
+        run_with(&tempdir()?, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())
     }
 }
