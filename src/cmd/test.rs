@@ -87,7 +87,7 @@ impl Run for TestOpt {
 
         // build output
         Ok(Box::new(TestOutcome {
-            service: Service::new(conf.global_opt().service_id),
+            service: Service::new(conf.service_id),
             total,
         }))
     }

@@ -28,10 +28,9 @@ impl Run for FetchOpt {
 
         // fetch data from service
         let actor = conf.build_actor();
-        let contest_id = &conf.global_opt().contest_id;
-        let (contest, problems) = actor.fetch(contest_id, problem_id, cnsl)?;
+        let (contest, problems) = actor.fetch(&conf.contest_id, problem_id, cnsl)?;
 
-        let service = Service::new(conf.global_opt().service_id);
+        let service = Service::new(conf.service_id);
 
         // save problem data file
         for problem in problems.iter() {

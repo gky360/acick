@@ -95,14 +95,20 @@ pub struct Opt {
 
 impl Opt {
     pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
+        let GlobalOpt {
+            service_id,
+            ref contest_id,
+            output,
+        } = self.global_opt;
         let cnsl = &mut Console::new(stderr);
-        let conf = Config::load(self.global_opt.clone(), cnsl).context("Could not load config")?;
+        let conf =
+            Config::load(service_id, contest_id.clone(), cnsl).context("Could not load config")?;
         let outcome = self.cmd.run(&conf, cnsl)?;
 
         cnsl.flush()?;
         writeln!(stdout)?;
 
-        outcome.print(stdout, self.global_opt.output)?;
+        outcome.print(stdout, output)?;
 
         if outcome.is_error() {
             Err(Error::msg("Command exited with error"))

@@ -21,8 +21,10 @@ pub struct SubmitOpt {
 impl Run for SubmitOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
         // confirm
-        let contest_id = &conf.global_opt().contest_id;
-        let message = format!("submit problem {} to {}?", &self.problem_id, contest_id);
+        let message = format!(
+            "submit problem {} to {}?",
+            &self.problem_id, &conf.contest_id
+        );
         if !self.force && !cnsl.confirm(&message, false)? {
             return Err(Error::msg("Not submitted"));
         }
@@ -43,10 +45,10 @@ impl Run for SubmitOpt {
         // submit
         let actor = conf.build_actor();
         let lang_name = conf.service().lang_name();
-        actor.submit(contest_id, &problem, lang_name, &source, cnsl)?;
+        actor.submit(&conf.contest_id, &problem, lang_name, &source, cnsl)?;
 
         Ok(Box::new(SubmitOutcome {
-            service: Service::new(conf.global_opt().service_id),
+            service: Service::new(conf.service_id),
             submitted_at: Local::now(),
             source_bytes: source.len(),
         }))

@@ -12,34 +12,38 @@ mod template;
 
 use crate::abs_path::AbsPathBuf;
 use crate::model::{
-    string, Contest, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
+    string, Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
 };
 use crate::service::{Act, AtcoderActor};
-use crate::{Console, GlobalOpt, Result, VERSION};
+use crate::{Console, Result, VERSION};
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
 
-#[derive(Serialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
-#[get = "pub"]
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Config {
-    global_opt: GlobalOpt,
+    pub service_id: ServiceKind,
+    pub contest_id: ContestId,
     base_dir: AbsPathBuf,
     body: ConfigBody,
 }
 
 impl Config {
-    pub fn load(global_opt: GlobalOpt, cnsl: &mut Console) -> Result<Self> {
+    pub fn load(
+        service_id: ServiceKind,
+        contest_id: ContestId,
+        cnsl: &mut Console,
+    ) -> Result<Self> {
         let (body, base_dir) = ConfigBody::search(cnsl)?;
         Ok(Self {
-            global_opt,
+            service_id,
+            contest_id,
             base_dir,
             body,
         })
     }
 
     pub fn service(&self) -> &ServiceConfig {
-        let service_id = self.global_opt.service_id;
-        self.body.services.get(service_id)
+        self.body.services.get(self.service_id)
     }
 
     pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
@@ -48,8 +52,7 @@ impl Config {
             .build()
             .expect("Could not setup client. \
                 TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
-        let service_id = self.global_opt.service_id;
-        match service_id {
+        match self.service_id {
             ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, &self.body.session)),
         }
     }
@@ -94,9 +97,7 @@ impl Config {
         overwrite: bool,
         cnsl: &mut Console,
     ) -> Result<bool> {
-        let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
-        if service.id() != service_id || contest.id() != contest_id {
+        if service.id() != self.service_id || contest.id() != &self.contest_id {
             return Err(anyhow!("Found mismatching service id or contest id"));
         }
         let source_abs_path = self.source_abs_path(problem.id())?;
@@ -124,14 +125,12 @@ impl Config {
     }
 
     pub fn exec_compile(&self, problem_id: &ProblemId) -> Result<Command> {
-        let service_id = self.global_opt.service_id;
-        let compile = &self.body.services.get(service_id).compile;
+        let compile = &self.body.services.get(self.service_id).compile;
         self.exec_templ_arr(compile, problem_id)
     }
 
     pub fn exec_run(&self, problem_id: &ProblemId) -> Result<Command> {
-        let service_id = self.global_opt.service_id;
-        let run = &self.body.services.get(service_id).run;
+        let run = &self.body.services.get(self.service_id).run;
         self.exec_templ_arr(run, problem_id)
     }
 
@@ -141,21 +140,17 @@ impl Config {
     }
 
     fn working_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let service_id = self.global_opt.service_id;
-        let working_dir = &self.body.services.get(service_id).working_dir;
+        let working_dir = &self.body.services.get(self.service_id).working_dir;
         self.expand_to_abs(working_dir, problem_id)
     }
 
     fn source_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let service_id = self.global_opt.service_id;
-        let source_path = &self.body.services.get(service_id).source_path;
+        let source_path = &self.body.services.get(self.service_id).source_path;
         self.expand_to_abs(source_path, problem_id)
     }
 
     fn expand_to_abs(&self, path: &TargetTempl, problem_id: &ProblemId) -> Result<AbsPathBuf> {
-        let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
-        path.expand_with(service_id, contest_id, problem_id)
+        path.expand_with(self.service_id, &self.contest_id, problem_id)
             .and_then(|path_expanded| self.base_dir.join_expand(path_expanded))
     }
 
@@ -167,9 +162,7 @@ impl Config {
     where
         T: Expand<'a, Context = TargetContext<'a>>,
     {
-        let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
-        let target_context = TargetContext::new(service_id, contest_id, problem_id);
+        let target_context = TargetContext::new(self.service_id, &self.contest_id, problem_id);
         let working_abs_dir = self.working_abs_dir(problem_id)?;
         let mut command = self.body.shell.exec_templ_arr(templ_arr, &target_context)?;
         command.current_dir(working_abs_dir.as_ref());
@@ -180,8 +173,16 @@ impl Config {
 #[cfg(test)]
 impl Default for Config {
     fn default() -> Self {
+        use crate::GlobalOpt;
+
+        let GlobalOpt {
+            service_id,
+            contest_id,
+            ..
+        } = GlobalOpt::default();
         Self {
-            global_opt: GlobalOpt::default(),
+            service_id,
+            contest_id,
             base_dir: AbsPathBuf::try_new(std::env::temp_dir().join(env!("CARGO_PKG_NAME")))
                 .unwrap(),
             body: ConfigBody::default(),

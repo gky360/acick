@@ -7,7 +7,7 @@ use structopt::StructOpt;
 
 use crate::cmd::{Outcome, Run};
 use crate::model::Service;
-use crate::{Config, Console, GlobalOpt, Result};
+use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Default, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
@@ -15,8 +15,7 @@ pub struct LoginOpt {}
 
 impl Run for LoginOpt {
     fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
-        let GlobalOpt { service_id, .. } = conf.global_opt();
-        let (user_env, pass_env) = service_id.to_user_pass_env_names();
+        let (user_env, pass_env) = conf.service_id.to_user_pass_env_names();
         let user = cnsl
             .get_env_or_prompt_and_read(user_env, "username: ", false)
             .context("Could not read username")?;
@@ -29,7 +28,7 @@ impl Run for LoginOpt {
         let is_not_already = actor.login(user.to_owned(), pass, cnsl)?;
 
         let outcome = LoginOutcome {
-            service: Service::new(conf.global_opt().service_id),
+            service: Service::new(conf.service_id),
             username: user,
             is_already: !is_not_already,
         };
