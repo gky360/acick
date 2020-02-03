@@ -2,24 +2,25 @@ use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
+use crate::config::SessionConfig;
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
 use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
-use crate::{Config, Console, Error, Result};
+use crate::{Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SettingsPageBuilder<'a> {
-    conf: &'a Config,
+    session: &'a SessionConfig,
 }
 
 impl<'a> SettingsPageBuilder<'a> {
     const PATH: &'static str = "/settings";
 
-    pub fn new(conf: &'a Config) -> Self {
-        Self { conf }
+    pub fn new(session: &'a SessionConfig) -> Self {
+        Self { session }
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<SettingsPage<'a>> {
-        let (status, html) = self.fetch(client, self.conf, cnsl)?;
+        let (status, html) = self.fetch(client, self.session, cnsl)?;
         match status {
             StatusCode::OK => Ok(SettingsPage {
                 builder: self,

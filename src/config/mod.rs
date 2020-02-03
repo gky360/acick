@@ -50,7 +50,7 @@ impl Config {
                 TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
         let service_id = self.global_opt.service_id;
         match service_id {
-            ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, self)),
+            ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, &self.body.session)),
         }
     }
 

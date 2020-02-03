@@ -2,24 +2,25 @@ use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
+use crate::config::SessionConfig;
 use crate::service::atcoder_page::{HasHeader, BASE_URL};
 use crate::service::scrape::{ExtractCsrfToken, Fetch as _, HasUrl, Scrape};
-use crate::{Config, Console, Error, Result};
+use crate::{Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginPageBuilder<'a> {
-    conf: &'a Config,
+    session: &'a SessionConfig,
 }
 
 impl<'a> LoginPageBuilder<'a> {
     const PATH: &'static str = "/login";
 
-    pub fn new(conf: &'a Config) -> Self {
-        Self { conf }
+    pub fn new(session: &'a SessionConfig) -> Self {
+        Self { session }
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<LoginPage<'a>> {
-        self.fetch(client, self.conf, cnsl)
+        self.fetch(client, self.session, cnsl)
             .and_then(|(status, html)| {
                 if status == StatusCode::OK {
                     Ok(LoginPage {

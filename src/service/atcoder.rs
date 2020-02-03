@@ -3,7 +3,8 @@ use maplit::hashmap;
 use reqwest::blocking::{Client, Response};
 use reqwest::{StatusCode, Url};
 
-use crate::model::{Contest, LangNameRef, Problem, ProblemId};
+use crate::config::SessionConfig;
+use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
@@ -11,44 +12,43 @@ use crate::service::atcoder_page::{
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
 use crate::service::{Act, ResponseExt as _};
-use crate::{Config, Console, Error, Result};
+use crate::{Console, Error, Result};
 
 #[derive(Debug)]
 pub struct AtcoderActor<'a> {
     client: Client,
-    conf: &'a Config,
+    session: &'a SessionConfig,
 }
 
 impl<'a> AtcoderActor<'a> {
-    pub fn new(client: Client, conf: &'a Config) -> Self {
-        AtcoderActor { client, conf }
+    pub fn new(client: Client, session: &'a SessionConfig) -> Self {
+        AtcoderActor { client, session }
     }
 }
 
 impl AtcoderActor<'_> {
-    fn submissions_me_url(&self) -> Result<Url> {
-        let contest_id = &self.conf.global_opt().contest_id;
+    fn submissions_me_url(contest_id: &ContestId) -> Result<Url> {
         let path = format!("/contests/{}/submissions/me", contest_id);
         BASE_URL
             .join(&path)
             .context(format!("Could not parse url path: {}", path))
     }
 
-    fn validate_login_response(&self, res: &Response) -> Result<()> {
+    fn validate_login_response(res: &Response) -> Result<()> {
         if res.status() != StatusCode::FOUND {
             return Err(Error::msg("Received invalid response code"));
         }
         Ok(())
     }
 
-    fn validate_submit_response(&self, res: &Response) -> Result<()> {
+    fn validate_submit_response(res: &Response, contest_id: &ContestId) -> Result<()> {
         if res.status() != StatusCode::FOUND {
             return Err(Error::msg("Received invalid response code"));
         }
         let loc_url = res
             .location_url(&BASE_URL)
             .context("Could not extract redirection url from response")?;
-        if loc_url != self.submissions_me_url()? {
+        if loc_url != Self::submissions_me_url(contest_id)? {
             return Err(Error::msg("Found invalid redirection url"));
         }
         Ok(())
@@ -57,10 +57,10 @@ impl AtcoderActor<'_> {
 
 impl Act for AtcoderActor<'_> {
     fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool> {
-        let Self { client, conf } = self;
+        let Self { client, session } = self;
 
         // check if user is already logged in
-        let login_page = LoginPageBuilder::new(conf).build(client, cnsl)?;
+        let login_page = LoginPageBuilder::new(session).build(client, cnsl)?;
         if login_page.is_logged_in()? {
             let current_user = login_page.current_user()?;
             if current_user != user {
@@ -81,13 +81,12 @@ impl Act for AtcoderActor<'_> {
         let res = client
             .post(login_page.url()?)
             .form(&payload)
-            .with_retry(client, conf, cnsl)
+            .with_retry(client, session, cnsl)
             .retry_send()?;
 
         // check if login succeeded
-        self.validate_login_response(&res)
-            .context("Login rejected by service")?;
-        let settings_page = SettingsPageBuilder::new(conf).build(client, cnsl)?;
+        Self::validate_login_response(&res).context("Login rejected by service")?;
+        let settings_page = SettingsPageBuilder::new(session).build(client, cnsl)?;
         let current_user = settings_page.current_user()?;
         if current_user != user {
             return Err(anyhow!("Logged in as another user: {}", current_user));
@@ -98,13 +97,13 @@ impl Act for AtcoderActor<'_> {
 
     fn fetch(
         &self,
+        contest_id: &ContestId,
         problem_id: &Option<ProblemId>,
         cnsl: &mut Console,
     ) -> Result<(Contest, Vec<Problem>)> {
-        let Self { client, conf } = self;
-        let contest_id = &conf.global_opt().contest_id;
+        let Self { client, session } = self;
 
-        let tasks_page = TasksPageBuilder::new(conf).build(client, cnsl)?;
+        let tasks_page = TasksPageBuilder::new(contest_id, session).build(client, cnsl)?;
         let contest_name = tasks_page
             .extract_contest_name()
             .context("Could not extract contest name")?;
@@ -135,7 +134,8 @@ impl Act for AtcoderActor<'_> {
             return err;
         }
 
-        let tasks_print_page = TasksPrintPageBuilder::new(conf).build(client, cnsl)?;
+        let tasks_print_page =
+            TasksPrintPageBuilder::new(contest_id, session).build(client, cnsl)?;
         let mut samples_map = tasks_print_page.extract_samples_map()?;
         for problem in problems.iter_mut() {
             if let Some(samples) = samples_map.remove(&problem.id()) {
@@ -155,15 +155,16 @@ impl Act for AtcoderActor<'_> {
 
     fn submit(
         &self,
+        contest_id: &ContestId,
         problem: &Problem,
         lang_name: LangNameRef,
         source: &str,
         cnsl: &mut Console,
     ) -> Result<()> {
-        let Self { client, conf } = self;
+        let Self { client, session } = self;
 
         // prepare payload
-        let submit_page = SubmitPageBuilder::new(conf).build(client, cnsl)?;
+        let submit_page = SubmitPageBuilder::new(contest_id, session).build(client, cnsl)?;
         let csrf_token = submit_page.extract_csrf_token()?;
         let lang_id = submit_page.extract_lang_id(lang_name)?;
         let payload = hashmap!(
@@ -177,11 +178,11 @@ impl Act for AtcoderActor<'_> {
         let res = client
             .post(submit_page.url()?)
             .form(&payload)
-            .with_retry(client, conf, cnsl)
+            .with_retry(client, session, cnsl)
             .retry_send()?;
 
         // check response
-        self.validate_submit_response(&res)
+        Self::validate_submit_response(&res, contest_id)
             .context("Submission rejected by service")?;
 
         Ok(())

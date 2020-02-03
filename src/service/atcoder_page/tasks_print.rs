@@ -7,25 +7,30 @@ use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::{ElementRef, Html, Selector};
 
-use crate::model::{ProblemId, Sample};
+use crate::config::SessionConfig;
+use crate::model::{ContestId, ProblemId, Sample};
 use crate::service::atcoder_page::{FetchRestricted, BASE_URL};
 use crate::service::scrape::{
     parse_zenkaku_digits, regex, select, ElementRefExt as _, HasUrl, Scrape,
 };
-use crate::{Config, Console, Result};
+use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPrintPageBuilder<'a> {
-    conf: &'a Config,
+    contest_id: &'a ContestId,
+    session: &'a SessionConfig,
 }
 
 impl<'a> TasksPrintPageBuilder<'a> {
-    pub fn new(conf: &'a Config) -> Self {
-        Self { conf }
+    pub fn new(contest_id: &'a ContestId, session: &'a SessionConfig) -> Self {
+        Self {
+            contest_id,
+            session,
+        }
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<TasksPrintPage<'a>> {
-        self.fetch_restricted(client, self.conf, cnsl)
+        self.fetch_restricted(client, self.session, cnsl)
             .map(|html| TasksPrintPage {
                 builder: self,
                 content: html,
@@ -35,8 +40,7 @@ impl<'a> TasksPrintPageBuilder<'a> {
 
 impl HasUrl for TasksPrintPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
-        let contest_id = &self.conf.global_opt().contest_id;
-        let path = format!("/contests/{}/tasks_print", contest_id);
+        let path = format!("/contests/{}/tasks_print", self.contest_id);
         BASE_URL
             .join(&path)
             .context(format!("Could not parse url path: {}", path))

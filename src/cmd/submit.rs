@@ -43,7 +43,7 @@ impl Run for SubmitOpt {
         // submit
         let actor = conf.build_actor();
         let lang_name = conf.service().lang_name();
-        actor.submit(&problem, lang_name, &source, cnsl)?;
+        actor.submit(contest_id, &problem, lang_name, &source, cnsl)?;
 
         Ok(Box::new(SubmitOutcome {
             service: Service::new(conf.global_opt().service_id),
