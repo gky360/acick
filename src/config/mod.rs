@@ -100,7 +100,10 @@ impl Config {
             return Err(anyhow!("Found mismatching service id or contest id"));
         }
         let source_abs_path = self.source_abs_path(problem.id())?;
-        let template = &self.service().template;
+        let template = match &self.service().template {
+            Some(template) => template,
+            None => return Ok(false), // skip if template is empty
+        };
         let template_expanded = template.expand_with(service, contest, problem)?;
         source_abs_path.save_pretty(
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
@@ -197,18 +200,28 @@ impl fmt::Display for Config {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-#[serde(default)]
 pub struct ConfigBody {
     #[serde(with = "string")]
     version: Version,
+    #[serde(default)]
     shell: Shell,
+    #[serde(default = "ConfigBody::default_problem_path")]
     problem_path: TargetTempl,
+    #[serde(default)]
     session: SessionConfig,
+    #[serde(default)]
     services: ServicesConfig,
 }
 
 impl ConfigBody {
     pub const FILE_NAME: &'static str = "acick.yaml";
+
+    const DEFAULT_PROBLEM_PATH: &'static str =
+        "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml";
+
+    fn default_problem_path() -> TargetTempl {
+        Self::DEFAULT_PROBLEM_PATH.into()
+    }
 
     fn search(cnsl: &mut Console) -> Result<(Self, AbsPathBuf)> {
         let cwd = AbsPathBuf::cwd()?;
@@ -255,7 +268,7 @@ impl Default for ConfigBody {
         Self {
             version: VERSION.clone(),
             shell: Shell::default(),
-            problem_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml".into(),
+            problem_path: Self::DEFAULT_PROBLEM_PATH.into(),
             session: SessionConfig::default(),
             services: ServicesConfig::default(),
         }
@@ -291,7 +304,8 @@ pub struct ServiceConfig {
     source_path: TargetTempl,
     compile: TemplArray<TargetTempl>,
     run: TemplArray<TargetTempl>,
-    template: ProblemTempl,
+    #[serde(default)]
+    template: Option<ProblemTempl>,
 }
 
 impl ServiceConfig {
@@ -325,7 +339,7 @@ int main() {
                 ])
                     .into(),
                 run: (&["./a.out"]).into(),
-                template: Self::DEFAULT_TEMPLATE.into(),
+                template: Some(Self::DEFAULT_TEMPLATE.into()),
             },
         }
     }
