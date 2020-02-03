@@ -6,9 +6,9 @@ session:
   timeout: 30s
   retry_limit: 4
   retry_interval: 2s
-  # cookies_path: ~/.local/share # for Linux
+  # cookies_path: ~/.local/share/acick/cookies.json # for Linux
   cookies_path: ~/Library/Application Support/acick/cookies.json # for macOS
-  # cookies_path: C:\Users\Alice\AppData\Local # for Windows
+  # cookies_path: C:\Users\Alice\AppData\Local\acick\cookies.json # for Windows
 services:
   atcoder:
     lang_name: C++14 (GCC 5.4.1)
