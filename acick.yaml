@@ -11,8 +11,8 @@ services:
     lang_name: C++14 (GCC 5.4.1)
     working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}"
     source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp"
-    compile: ["g++", "-std=gnu++1y", "-O2", "-o", "./a.out", "./Main.cpp"]
-    run: ["./a.out"]
+    compile: set -x && g++ -std=gnu++1y -O2 -o ./a.out ./Main.cpp
+    run: ./a.out
     template: |
       /*
       [{{ contest.id }}] {{ problem.id }} - {{ problem.name }}

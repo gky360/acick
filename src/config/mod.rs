@@ -16,7 +16,7 @@ use crate::model::{
 use crate::service::{Act, AtcoderActor};
 use crate::{Console, Result, VERSION};
 pub use session_config::SessionConfig;
-use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl, TemplArray};
+use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Config {
@@ -128,12 +128,12 @@ impl Config {
 
     pub fn exec_compile(&self, problem_id: &ProblemId) -> Result<Command> {
         let compile = &self.service().compile;
-        self.exec_templ_arr(compile, problem_id)
+        self.exec_templ(compile, problem_id)
     }
 
     pub fn exec_run(&self, problem_id: &ProblemId) -> Result<Command> {
         let run = &self.service().run;
-        self.exec_templ_arr(run, problem_id)
+        self.exec_templ(run, problem_id)
     }
 
     fn problem_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
@@ -156,9 +156,9 @@ impl Config {
             .and_then(|path_expanded| self.base_dir.join_expand(path_expanded))
     }
 
-    fn exec_templ_arr<'a, T>(
+    fn exec_templ<'a, T: Expand<'a>>(
         &'a self,
-        templ_arr: &TemplArray<T>,
+        templ: &T,
         problem_id: &'a ProblemId,
     ) -> Result<Command>
     where
@@ -166,7 +166,7 @@ impl Config {
     {
         let target_context = TargetContext::new(self.service_id, &self.contest_id, problem_id);
         let working_abs_dir = self.working_abs_dir(problem_id)?;
-        let mut command = self.body.shell.exec_templ_arr(templ_arr, &target_context)?;
+        let mut command = self.body.shell.exec_templ(templ, &target_context)?;
         command.current_dir(working_abs_dir.as_ref());
         Ok(command)
     }
@@ -303,8 +303,8 @@ pub struct ServiceConfig {
     lang_name: LangName,
     working_dir: TargetTempl,
     source_path: TargetTempl,
-    compile: TemplArray<TargetTempl>,
-    run: TemplArray<TargetTempl>,
+    compile: TargetTempl,
+    run: TargetTempl,
     #[serde(default)]
     template: Option<ProblemTempl>,
 }
@@ -328,18 +328,9 @@ int main() {
                 lang_name: "C++14 (GCC 5.4.1)".into(),
                 working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
-                compile: (&[
-                    "g++",
-                    "-std=gnu++1y",
-                    "-O2",
-                    // "-I/opt/boost/gcc/include",
-                    // "-L/opt/boost/gcc/lib",
-                    "-o",
-                    "./a.out",
-                    "./Main.cpp",
-                ])
-                    .into(),
-                run: (&["./a.out"]).into(),
+                compile: "set -x && g++ -std=gnu++1y -O2 -o ./a.out ./Main.cpp".into(),
+                // compile: "g++ -std=gnu++1y -O2 -I/opt/boost/gcc/include -L/opt/boost/gcc/lib -o ./a.out ./Main.cpp".into(),
+                run: "./a.out".into(),
                 template: Some(Self::DEFAULT_TEMPLATE.into()),
             },
         }
@@ -388,7 +379,7 @@ mod tests {
             &DEFAULT_CONTEST.id(),
             &DEFAULT_PROBLEM.id(),
         );
-        let output = shell.exec_templ_arr(&compile, &context)?;
+        let output = shell.exec_templ(&compile, &context)?;
         println!("{:?}", output);
         // TODO: assert success
         Ok(())
