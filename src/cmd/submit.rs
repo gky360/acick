@@ -15,7 +15,7 @@ pub struct SubmitOpt {
     #[structopt(name = "problem")]
     problem_id: ProblemId,
     #[structopt(long, short)]
-    force: bool,
+    yes: bool,
 }
 
 impl SubmitOpt {
@@ -25,7 +25,7 @@ impl SubmitOpt {
             "submit problem {} to {}?",
             &self.problem_id, &conf.contest_id
         );
-        if !self.force && !cnsl.confirm(&message, false)? {
+        if !self.yes && !cnsl.confirm(&message, false)? {
             return Err(Error::msg("Not submitted"));
         }
 
@@ -103,7 +103,7 @@ mod tests {
 
         let opt = SubmitOpt {
             problem_id: "c".into(),
-            force: true,
+            yes: true,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())
