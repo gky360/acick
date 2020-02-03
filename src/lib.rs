@@ -96,8 +96,7 @@ pub struct Opt {
 impl Opt {
     pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
         let cnsl = &mut Console::new(stderr);
-        let conf =
-            Config::search(self.global_opt.clone(), cnsl).context("Could not load config")?;
+        let conf = Config::load(self.global_opt.clone(), cnsl).context("Could not load config")?;
         let outcome = self.cmd.run(&conf, cnsl)?;
 
         cnsl.flush()?;

@@ -31,7 +31,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn search(global_opt: GlobalOpt, cnsl: &mut Console) -> Result<Self> {
+    pub fn load(global_opt: GlobalOpt, cnsl: &mut Console) -> Result<Self> {
         let (body, base_dir) = ConfigBody::search(cnsl)?;
         Ok(Self {
             global_opt,
