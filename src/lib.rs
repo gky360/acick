@@ -95,16 +95,28 @@ pub struct Opt {
 
 impl Opt {
     pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
+        let cnsl = &mut Console::new(stderr);
+
+        match &self.cmd {
+            Cmd::Init(opt) => self.finish(&opt.run(cnsl)?, stdout, cnsl),
+            cmd => {
+                let conf = &self.load_config(cnsl)?;
+                match cmd {
+                    Cmd::Init(_) => unreachable!(),
+                    Cmd::Show(opt) => self.finish(&opt.run(conf)?, stdout, cnsl),
+                    Cmd::Login(opt) => self.finish(&opt.run(conf, cnsl)?, stdout, cnsl),
+                    Cmd::Fetch(opt) => self.finish(&opt.run(conf, cnsl)?, stdout, cnsl),
+                    Cmd::Test(opt) => self.finish(&opt.run(conf, cnsl)?, stdout, cnsl),
+                    Cmd::Submit(opt) => self.finish(&opt.run(conf, cnsl)?, stdout, cnsl),
+                }
+            }
+        }
+    }
+
+    fn load_config(&self, cnsl: &mut Console) -> Result<Config> {
         let service_id = self.global_opt.service_id;
         let contest_id = &self.global_opt.contest_id;
-
-        let cnsl = &mut Console::new(stderr);
-        let conf =
-            Config::load(service_id, contest_id.clone(), cnsl).context("Could not load config")?;
-
-        self.cmd.run(&conf, cnsl, |outcome, cnsl| {
-            self.finish(outcome, stdout, cnsl)
-        })
+        Config::load(service_id, contest_id.clone(), cnsl).context("Could not load config")
     }
 
     fn finish(

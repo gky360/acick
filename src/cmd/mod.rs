@@ -4,15 +4,17 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::{Config, Console, OutputFormat, Result};
+use crate::{OutputFormat, Result};
 
 mod fetch;
+mod init;
 mod login;
 mod show;
 mod submit;
 mod test;
 
 pub use fetch::FetchOpt;
+pub use init::{InitOpt, InitOutcome};
 pub use login::{LoginOpt, LoginOutcome};
 pub use show::{ShowOpt, ShowOutcome};
 pub use submit::{SubmitOpt, SubmitOutcome};
@@ -51,7 +53,8 @@ impl<T: Serialize + fmt::Display + fmt::Debug> OutcomeSerialize for T {
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub enum Cmd {
-    // Init(InitOpt),
+    /// Creates config file
+    Init(InitOpt),
     /// Shows current config
     Show(ShowOpt),
     /// Logs in to service
@@ -70,26 +73,10 @@ pub enum Cmd {
     Submit(SubmitOpt),
 }
 
-impl Cmd {
-    pub fn run(
-        &self,
-        conf: &Config,
-        cnsl: &mut Console,
-        finish: impl FnOnce(&dyn Outcome, &mut Console) -> Result<()>,
-    ) -> Result<()> {
-        match self {
-            Self::Show(opt) => finish(&opt.run(conf)?, cnsl),
-            Self::Login(opt) => finish(&opt.run(conf, cnsl)?, cnsl),
-            Self::Fetch(opt) => finish(&opt.run(conf, cnsl)?, cnsl),
-            Self::Test(opt) => finish(&opt.run(conf, cnsl)?, cnsl),
-            Self::Submit(opt) => finish(&opt.run(conf, cnsl)?, cnsl),
-        }
-    }
-}
-
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::{Config, Console};
 
     use tempfile::TempDir;
 
@@ -102,6 +89,7 @@ pub mod tests {
         let mut output_buf = Vec::new();
         let cnsl = &mut Console::new(&mut output_buf);
 
+        eprintln!("{}", std::env::current_dir()?.display());
         run(conf, cnsl)
     }
 }
