@@ -3,16 +3,20 @@ use std::{fmt, io};
 use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
+use strum::VariantNames;
 
-use crate::{Config, Console, OutputFormat, Result};
+use crate::model::{ContestId, ServiceKind};
+use crate::{Config, Console, OutputFormat, Result, DEFAULT_CONTEST, DEFAULT_SERVICE};
 
 mod fetch;
+mod init;
 mod login;
 mod show;
 mod submit;
 mod test;
 
 pub use fetch::FetchOpt;
+pub use init::{InitOpt, InitOutcome};
 pub use login::{LoginOpt, LoginOutcome};
 pub use show::{ShowOpt, ShowOutcome};
 pub use submit::{SubmitOpt, SubmitOutcome};
@@ -48,52 +52,129 @@ impl<T: Serialize + fmt::Display + fmt::Debug> OutcomeSerialize for T {
     }
 }
 
-pub trait Run {
-    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>>;
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
+#[structopt(rename_all = "kebab")]
+pub enum Cmd {
+    /// Creates config file
+    Init(InitOpt),
+    /// Shows current config
+    Show {
+        #[structopt(flatten)]
+        sc: ServiceContest,
+        #[structopt(flatten)]
+        opt: ShowOpt,
+    },
+    /// Logs in to service
+    #[structopt(visible_alias("l"))]
+    Login {
+        #[structopt(flatten)]
+        sc: ServiceContest,
+        #[structopt(flatten)]
+        opt: LoginOpt,
+    },
+    // Participate(ParticipateOpt),
+    /// Fetches problems from service
+    #[structopt(visible_alias("f"))]
+    Fetch {
+        #[structopt(flatten)]
+        sc: ServiceContest,
+        #[structopt(flatten)]
+        opt: FetchOpt,
+    },
+    /// Tests source code with sample inputs and outputs
+    #[structopt(visible_alias("t"))]
+    Test {
+        #[structopt(flatten)]
+        sc: ServiceContest,
+        #[structopt(flatten)]
+        opt: TestOpt,
+    },
+    // Judge(JudgeOpt), // test full testcases, for AtCoder only
+    /// Submits source code to service
+    #[structopt(visible_alias("s"))]
+    Submit {
+        #[structopt(flatten)]
+        sc: ServiceContest,
+        #[structopt(flatten)]
+        opt: SubmitOpt,
+    },
+}
 
-    #[cfg(test)]
-    fn run_default(&self, test_dir: &tempfile::TempDir) -> Result<Box<dyn Outcome>> {
-        let conf = Config::default_test(test_dir);
+impl Cmd {
+    pub fn run(
+        &self,
+        cnsl: &mut Console,
+        finish: impl FnOnce(&dyn Outcome, &mut Console) -> Result<()>,
+    ) -> Result<()> {
+        match self {
+            Self::Init(opt) => finish(&opt.run(cnsl)?, cnsl),
+            Self::Show { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?)?, cnsl),
+            Self::Login { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
+            Self::Fetch { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
+            Self::Test { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
+            Self::Submit { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
+        }
+    }
+}
+
+#[derive(StructOpt, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServiceContest {
+    #[structopt(
+        name = "service",
+        long,
+        global = true,
+        env = "ACICK_SERVICE",
+        default_value = DEFAULT_SERVICE.id().into(),
+        possible_values = &ServiceKind::VARIANTS,
+    )]
+    pub service_id: ServiceKind,
+    #[structopt(
+        name = "contest",
+        long,
+        global = true,
+        env = "ACICK_CONTEST",
+        default_value = DEFAULT_CONTEST.id().as_ref(),
+    )]
+    pub contest_id: ContestId,
+}
+
+impl ServiceContest {
+    fn load_config(&self, cnsl: &mut Console) -> Result<Config> {
+        Config::load(self.service_id, self.contest_id.clone(), cnsl)
+            .context("Could not load config file")
+    }
+}
+
+impl Default for ServiceContest {
+    fn default() -> Self {
+        Self {
+            service_id: DEFAULT_SERVICE.id(),
+            contest_id: DEFAULT_CONTEST.id().clone(),
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use crate::{Config, Console};
+
+    use tempfile::TempDir;
+
+    pub fn run_with<T>(
+        test_dir: &TempDir,
+        run: impl FnOnce(&Config, &mut Console) -> Result<T>,
+    ) -> Result<T> {
+        eprintln!("{}", std::env::current_dir()?.display());
+
+        let conf = &Config::default_test(test_dir);
 
         let mut output_buf = Vec::new();
         let cnsl = &mut Console::new(&mut output_buf);
 
-        let result = self.run(&conf, cnsl);
+        let result = run(conf, cnsl);
+
         eprintln!("{}", String::from_utf8_lossy(&output_buf));
         result
-    }
-}
-
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
-#[structopt(rename_all = "kebab")]
-pub enum Cmd {
-    // Init(InitOpt),
-    /// Shows current config
-    Show(ShowOpt),
-    /// Logs in to service
-    #[structopt(visible_alias("l"))]
-    Login(LoginOpt),
-    // Participate(ParticipateOpt),
-    /// Fetches problems from service
-    #[structopt(visible_alias("f"))]
-    Fetch(FetchOpt),
-    /// Tests source code with sample inputs and outputs
-    #[structopt(visible_alias("t"))]
-    Test(TestOpt),
-    // Judge(JudgeOpt), // test full testcases, for AtCoder only
-    /// Submits source code to service
-    #[structopt(visible_alias("s"))]
-    Submit(SubmitOpt),
-}
-
-impl Run for Cmd {
-    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
-        match self {
-            Self::Show(opt) => opt.run(conf, cnsl),
-            Self::Login(opt) => opt.run(conf, cnsl),
-            Self::Fetch(opt) => opt.run(conf, cnsl),
-            Self::Test(opt) => opt.run(conf, cnsl),
-            Self::Submit(opt) => opt.run(conf, cnsl),
-        }
     }
 }

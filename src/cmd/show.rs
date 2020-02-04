@@ -3,31 +3,29 @@ use std::fmt;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::cmd::{Outcome, Run};
-use crate::{Config, Console, Result};
+use crate::cmd::Outcome;
+use crate::{Config, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct ShowOpt {}
 
-impl Run for ShowOpt {
-    fn run(&self, conf: &Config, _cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
-        Ok(Box::new(ShowOutcome { conf: conf.clone() }))
+impl ShowOpt {
+    pub fn run<'a>(&self, conf: &'a Config) -> Result<ShowOutcome<'a>> {
+        Ok(ShowOutcome(conf))
     }
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ShowOutcome {
-    conf: Config,
-}
+pub struct ShowOutcome<'a>(&'a Config);
 
-impl fmt::Display for ShowOutcome {
+impl fmt::Display for ShowOutcome<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.conf.fmt(f)
+        self.0.fmt(f)
     }
 }
 
-impl Outcome for ShowOutcome {
+impl Outcome for ShowOutcome<'_> {
     fn is_error(&self) -> bool {
         false
     }
@@ -35,12 +33,15 @@ impl Outcome for ShowOutcome {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempdir;
+
     use super::*;
+    use crate::cmd::tests::run_with;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
         let opt = ShowOpt {};
-        opt.run_default(&tempfile::tempdir()?)?;
+        run_with(&tempdir()?, |conf, _| opt.run(conf).map(|_| ()))?;
         Ok(())
     }
 }

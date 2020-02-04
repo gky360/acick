@@ -120,12 +120,15 @@ impl AbsPathBuf {
         if let Some(dir) = self.0.parent() {
             create_dir_all(&dir)?;
         }
-        let file = OpenOptions::new()
+        self.open(is_read, is_write)
+    }
+
+    fn open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
+        OpenOptions::new()
             .read(is_read)
             .write(is_write)
             .create(true)
-            .open(&self.0)?;
-        Ok(file)
+            .open(&self.0)
     }
 
     pub fn strip_prefix(&self, base: &AbsPathBuf) -> &Path {

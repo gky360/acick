@@ -49,12 +49,6 @@ impl ServiceKind {
     }
 }
 
-impl Default for ServiceKind {
-    fn default() -> Self {
-        Self::Atcoder
-    }
-}
-
 impl fmt::Display for ServiceKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(self.into())
@@ -91,6 +85,12 @@ impl FromStr for ContestId {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         Ok(Self::from(s))
+    }
+}
+
+impl AsRef<str> for ContestId {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
@@ -199,6 +199,12 @@ impl FromStr for ProblemId {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         Ok(Self::from(s))
+    }
+}
+
+impl AsRef<str> for ProblemId {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 

@@ -5,7 +5,7 @@ use chrono::{offset::Local, DateTime, SecondsFormat};
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::cmd::{Outcome, Run};
+use crate::cmd::Outcome;
 use crate::model::{ProblemId, Service};
 use crate::{Config, Console, Error, Result};
 
@@ -15,17 +15,17 @@ pub struct SubmitOpt {
     #[structopt(name = "problem")]
     problem_id: ProblemId,
     #[structopt(long, short)]
-    force: bool,
+    yes: bool,
 }
 
-impl Run for SubmitOpt {
-    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
+impl SubmitOpt {
+    pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<SubmitOutcome> {
         // confirm
         let message = format!(
             "submit problem {} to {}?",
             &self.problem_id, &conf.contest_id
         );
-        if !self.force && !cnsl.confirm(&message, false)? {
+        if !self.yes && !cnsl.confirm(&message, false)? {
             return Err(Error::msg("Not submitted"));
         }
 
@@ -47,11 +47,11 @@ impl Run for SubmitOpt {
         let lang_name = conf.service().lang_name();
         actor.submit(&conf.contest_id, &problem, lang_name, &source, cnsl)?;
 
-        Ok(Box::new(SubmitOutcome {
+        Ok(SubmitOutcome {
             service: Service::new(conf.service_id),
             submitted_at: Local::now(),
             source_bytes: source.len(),
-        }))
+        })
     }
 }
 
@@ -85,24 +85,27 @@ impl Outcome for SubmitOutcome {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempdir;
+
     use super::*;
+    use crate::cmd::tests::run_with;
 
     #[test]
     #[ignore]
     fn run_default() -> anyhow::Result<()> {
-        let test_dir = tempfile::tempdir()?;
+        let test_dir = tempdir()?;
 
         let login_opt = crate::cmd::LoginOpt {};
-        login_opt.run_default(&test_dir)?;
+        run_with(&test_dir, |conf, cnsl| login_opt.run(conf, cnsl))?;
 
         let fetch_opt = crate::cmd::FetchOpt::default_test();
-        fetch_opt.run_default(&test_dir)?;
+        run_with(&test_dir, |conf, cnsl| fetch_opt.run(conf, cnsl))?;
 
         let opt = SubmitOpt {
             problem_id: "c".into(),
-            force: true,
+            yes: true,
         };
-        opt.run_default(&test_dir)?;
+        run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())
     }
 }

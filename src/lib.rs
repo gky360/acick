@@ -5,7 +5,6 @@ extern crate strum;
 
 use std::io::Write;
 
-use anyhow::Context as _;
 use lazy_static::lazy_static;
 use semver::Version;
 use serde::Serialize;
@@ -14,22 +13,24 @@ use strum::VariantNames;
 
 mod abs_path;
 mod cmd;
-mod config;
+pub mod config;
 mod console;
 mod judge;
 mod model;
 mod service;
 
-use cmd::{Cmd, Run as _};
+use cmd::{Cmd, Outcome};
 use config::Config;
 use console::Console;
-use model::{ContestId, ServiceKind};
+use model::{Contest, Service, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
 lazy_static! {
-    pub static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+    static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+    static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
+    static ref DEFAULT_CONTEST: Contest = Contest::new("arc100", "AtCoder Regular Contest 100");
 }
 
 #[derive(
@@ -50,25 +51,8 @@ impl Default for OutputFormat {
     }
 }
 
-#[derive(StructOpt, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct GlobalOpt {
-    #[structopt(
-        name = "service",
-        long,
-        global = true,
-        env = "ACICK_SERVICE",
-        default_value = ServiceKind::default().into(),
-        possible_values = &ServiceKind::VARIANTS,
-    )]
-    service_id: ServiceKind,
-    #[structopt(
-        name = "contest",
-        long,
-        global = true,
-        env = "ACICK_CONTEST",
-        default_value = "arc100"
-    )]
-    contest_id: ContestId,
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Opt {
     #[structopt(
         long,
         global = true,
@@ -76,40 +60,27 @@ pub struct GlobalOpt {
         possible_values = &OutputFormat::VARIANTS
     )]
     output: OutputFormat,
-}
-
-impl Default for GlobalOpt {
-    fn default() -> Self {
-        let args = [""];
-        GlobalOpt::from_iter(&args)
-    }
-}
-
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Opt {
-    #[structopt(flatten)]
-    global_opt: GlobalOpt,
     #[structopt(subcommand)]
     cmd: Cmd,
 }
 
 impl Opt {
     pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
-        let GlobalOpt {
-            service_id,
-            ref contest_id,
-            output,
-        } = self.global_opt;
         let cnsl = &mut Console::new(stderr);
-        let conf =
-            Config::load(service_id, contest_id.clone(), cnsl).context("Could not load config")?;
+        self.cmd
+            .run(cnsl, |outcome, cnsl| self.finish(outcome, stdout, cnsl))
+    }
 
-        let outcome = self.cmd.run(&conf, cnsl)?;
-
+    fn finish(
+        &self,
+        outcome: &dyn Outcome,
+        stdout: &mut dyn Write,
+        cnsl: &mut Console,
+    ) -> Result<()> {
         cnsl.flush()?;
         writeln!(stdout)?;
 
-        outcome.print(stdout, output)?;
+        outcome.print(stdout, self.output)?;
 
         if outcome.is_error() {
             Err(Error::msg("Command exited with error"))
@@ -125,13 +96,9 @@ mod tests {
 
     use lazy_static::lazy_static;
 
-    use super::*;
-    use crate::model::{Compare, Contest, Problem, Service};
+    use crate::model::{Compare, Problem};
 
     lazy_static! {
-        pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
-        pub static ref DEFAULT_CONTEST: Contest =
-            Contest::new("arc100", "AtCoder Regular Contest 100");
         pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
             "C",
             "Linear Approximation",

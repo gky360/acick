@@ -5,7 +5,7 @@ use anyhow::{anyhow, Context as _};
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::cmd::{Outcome, Run};
+use crate::cmd::Outcome;
 use crate::judge::{Judge, StatusKind, TotalStatus};
 use crate::model::{Problem, ProblemId, Service};
 use crate::{Config, Console, Result};
@@ -19,6 +19,21 @@ pub struct TestOpt {
 }
 
 impl TestOpt {
+    pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<TestOutcome> {
+        // load problem file
+        let problem = conf
+            .load_problem(&self.problem_id, cnsl)
+            .context("Could not load problem file.")?;
+
+        let total = self.compile_and_test(problem, conf, cnsl)?;
+
+        // build output
+        Ok(TestOutcome {
+            service: Service::new(conf.service_id),
+            total,
+        })
+    }
+
     async fn compile(&self, conf: &Config) -> Result<()> {
         let mut compile = conf.exec_compile(&self.problem_id)?;
         let exit_status = compile.status().await?;
@@ -76,23 +91,6 @@ impl TestOpt {
     }
 }
 
-impl Run for TestOpt {
-    fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<Box<dyn Outcome>> {
-        // load problem file
-        let problem = conf
-            .load_problem(&self.problem_id, cnsl)
-            .context("Could not load problem file.")?;
-
-        let total = self.compile_and_test(problem, conf, cnsl)?;
-
-        // build output
-        Ok(Box::new(TestOutcome {
-            service: Service::new(conf.service_id),
-            total,
-        }))
-    }
-}
-
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TestOutcome {
     service: Service,
@@ -113,20 +111,23 @@ impl Outcome for TestOutcome {
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempdir;
+
     use super::*;
+    use crate::cmd::tests::run_with;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let test_dir = tempfile::tempdir()?;
+        let test_dir = tempdir()?;
 
         let fetch_opt = crate::cmd::FetchOpt::default_test();
-        fetch_opt.run_default(&test_dir)?;
+        run_with(&test_dir, |conf, cnsl| fetch_opt.run(conf, cnsl))?;
 
         let opt = TestOpt {
             problem_id: "c".into(),
             sample_name: None,
         };
-        opt.run_default(&test_dir)?;
+        run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())
     }
 }
