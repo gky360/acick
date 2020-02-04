@@ -51,8 +51,8 @@ impl Default for OutputFormat {
     }
 }
 
-#[derive(StructOpt, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct GlobalOpt {
+#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Opt {
     #[structopt(
         long,
         global = true,
@@ -60,19 +60,6 @@ pub struct GlobalOpt {
         possible_values = &OutputFormat::VARIANTS
     )]
     output: OutputFormat,
-}
-
-impl Default for GlobalOpt {
-    fn default() -> Self {
-        let args = [""];
-        GlobalOpt::from_iter(&args)
-    }
-}
-
-#[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Opt {
-    #[structopt(flatten)]
-    global_opt: GlobalOpt,
     #[structopt(subcommand)]
     cmd: Cmd,
 }
@@ -93,7 +80,7 @@ impl Opt {
         cnsl.flush()?;
         writeln!(stdout)?;
 
-        outcome.print(stdout, self.global_opt.output)?;
+        outcome.print(stdout, self.output)?;
 
         if outcome.is_error() {
             Err(Error::msg("Command exited with error"))
