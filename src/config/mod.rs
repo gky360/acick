@@ -248,8 +248,9 @@ impl ConfigBody {
     }
 
     fn validate(&self) -> Result<()> {
-        let version_req =
-            VersionReq::parse(&self.version.to_string()).context("Could not parse version")?;
+        // check version
+        let version_req = VersionReq::parse(&self.version.to_string())
+            .context("Could not parse version requirement")?;
         if !version_req.matches(&VERSION) {
             return Err(anyhow!(
                 r#"Found mismatched version in config file.
@@ -260,6 +261,7 @@ Fix the config file so that it is compatible with the current version of acick."
                 &*VERSION
             ));
         }
+
         Ok(())
     }
 }
