@@ -7,7 +7,7 @@
 # Version of acick that generated this config file.
 version: {version}
 # Shell used to compile the source code or to run the binary. [c]
-shell: ["{bash}", "-e", "-c", "{{{{ command }}}}"]
+shell: [{bash}, "-e", "-c", "{{{{ command }}}}"]
 # Path at which the problems fetched from service are saved. [t, s]
 problem_path: "{{{{ service }}}}/{{{{ contest }}}}/{{{{ problem | lower }}}}/problem.yaml"
 
