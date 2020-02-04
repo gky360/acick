@@ -5,7 +5,6 @@ extern crate strum;
 
 use std::io::Write;
 
-use anyhow::Context as _;
 use lazy_static::lazy_static;
 use semver::Version;
 use serde::Serialize;
@@ -23,13 +22,15 @@ mod service;
 use cmd::{Cmd, Outcome};
 use config::Config;
 use console::Console;
-use model::{ContestId, ServiceKind};
+use model::{Contest, Service, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
 lazy_static! {
     static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+    static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
+    static ref DEFAULT_CONTEST: Contest = Contest::new("arc100", "AtCoder Regular Contest 100");
 }
 
 #[derive(
@@ -52,23 +53,6 @@ impl Default for OutputFormat {
 
 #[derive(StructOpt, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct GlobalOpt {
-    #[structopt(
-        name = "service",
-        long,
-        global = true,
-        env = "ACICK_SERVICE",
-        default_value = ServiceKind::default().into(),
-        possible_values = &ServiceKind::VARIANTS,
-    )]
-    service_id: ServiceKind,
-    #[structopt(
-        name = "contest",
-        long,
-        global = true,
-        env = "ACICK_CONTEST",
-        default_value = "arc100"
-    )]
-    contest_id: ContestId,
     #[structopt(
         long,
         global = true,
@@ -96,27 +80,8 @@ pub struct Opt {
 impl Opt {
     pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
         let cnsl = &mut Console::new(stderr);
-
-        match &self.cmd {
-            Cmd::Init(opt) => self.finish(&opt.run(cnsl)?, stdout, cnsl),
-            cmd => {
-                let conf = &self.load_config(cnsl)?;
-                match cmd {
-                    Cmd::Init(_) => unreachable!(),
-                    Cmd::Show(opt) => self.finish(&opt.run(conf)?, stdout, cnsl),
-                    Cmd::Login(opt) => self.finish(&opt.run(conf, cnsl)?, stdout, cnsl),
-                    Cmd::Fetch(opt) => self.finish(&opt.run(conf, cnsl)?, stdout, cnsl),
-                    Cmd::Test(opt) => self.finish(&opt.run(conf, cnsl)?, stdout, cnsl),
-                    Cmd::Submit(opt) => self.finish(&opt.run(conf, cnsl)?, stdout, cnsl),
-                }
-            }
-        }
-    }
-
-    fn load_config(&self, cnsl: &mut Console) -> Result<Config> {
-        let service_id = self.global_opt.service_id;
-        let contest_id = &self.global_opt.contest_id;
-        Config::load(service_id, contest_id.clone(), cnsl).context("Could not load config")
+        self.cmd
+            .run(cnsl, |outcome, cnsl| self.finish(outcome, stdout, cnsl))
     }
 
     fn finish(
@@ -144,13 +109,9 @@ mod tests {
 
     use lazy_static::lazy_static;
 
-    use super::*;
-    use crate::model::{Compare, Contest, Problem, Service};
+    use crate::model::{Compare, Problem};
 
     lazy_static! {
-        pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
-        pub static ref DEFAULT_CONTEST: Contest =
-            Contest::new("arc100", "AtCoder Regular Contest 100");
         pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
             "C",
             "Linear Approximation",

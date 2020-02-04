@@ -227,17 +227,11 @@ impl Config {
 #[cfg(test)]
 impl Config {
     pub fn default_test(test_dir: &tempfile::TempDir) -> Self {
-        use crate::GlobalOpt;
-
-        let GlobalOpt {
-            service_id,
-            contest_id,
-            ..
-        } = GlobalOpt::default();
+        let service_contest = crate::cmd::ServiceContest::default();
 
         Self {
-            service_id,
-            contest_id,
+            service_id: service_contest.service_id,
+            contest_id: service_contest.contest_id,
             base_dir: AbsPathBuf::try_new(test_dir.path().join(env!("CARGO_PKG_NAME"))).unwrap(),
             body: ConfigBody::default(),
         }
@@ -409,7 +403,8 @@ int main() {
 mod tests {
     use super::*;
     use crate::config::template::TargetContext;
-    use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
+    use crate::tests::DEFAULT_PROBLEM;
+    use crate::{DEFAULT_CONTEST, DEFAULT_SERVICE};
 
     #[test]
     fn generate_and_deserialize() -> anyhow::Result<()> {

@@ -31,10 +31,8 @@ impl FetchOpt {
 
 impl FetchOpt {
     pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<FetchOutcome> {
-        let Self {
-            ref problem_id,
-            overwrite,
-        } = *self;
+        let problem_id = &self.problem_id;
+        let overwrite = self.overwrite;
 
         // fetch data from service
         let actor = conf.build_actor();

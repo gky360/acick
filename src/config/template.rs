@@ -312,7 +312,8 @@ impl Default for Shell {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
+    use crate::tests::DEFAULT_PROBLEM;
+    use crate::{DEFAULT_CONTEST, DEFAULT_SERVICE};
 
     #[test]
     fn expand_cmd_templ() -> anyhow::Result<()> {
