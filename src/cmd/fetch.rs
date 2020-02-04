@@ -24,7 +24,7 @@ impl FetchOpt {
     pub fn default_test() -> Self {
         Self {
             problem_id: None,
-            overwrite: true,
+            overwrite: false,
         }
     }
 }
