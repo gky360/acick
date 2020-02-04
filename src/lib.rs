@@ -14,7 +14,7 @@ use strum::VariantNames;
 
 mod abs_path;
 mod cmd;
-mod config;
+pub mod config;
 mod console;
 mod judge;
 mod model;
@@ -29,7 +29,7 @@ pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
 lazy_static! {
-    pub static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+    static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
 }
 
 #[derive(

@@ -1,5 +1,57 @@
+//! Config for acick.
+//!
+//! ## Templates
+//!
+//! In some fields, you can use [Tera](https://tera.netlify.com/) template.
+//! Tera template is similar to Jinja2 and Django templates.
+//! See [Tera documentation](https://tera.netlify.com/docs/) for details.
+//!
+//! Following filters are available in addition to built-in filters of Tera.
+//! - `camel` : converts string to `camelCase`
+//! - `pascal` : converts string to `PascalCase`
+//! - `snake` : converts string to `snake_case`
+//! - `kebab` : converts string to `kebab-case`
+//!
+//! Available variables depend on fields.
+//! See [Field features](#field-features) section for details.
+//!
+//! ## Field features
+//!
+//! Fields have following features.
+//!
+//! ### `[c]` Command template field
+//!
+//! The field is recognized as an array of Tera templates
+//! with the following variables available:
+//! - `command` (str): command to be executed on shell
+//!
+//! ### `[t]` Target template field
+//!
+//! The field is recognized as a Tera template
+//! with the following variables available:
+//! - `service` (str): id of service (e.g.: `atcoder`)
+//! - `contest` (str): id of contest (e.g.: `arc100`)
+//! - `problem` (str): id of problem (e.g.: `C`)
+//!
+//! ### `[p]` Problem template field
+//!
+//! The field is recognized as a Tera template
+//! with the following variables available:
+//! - `service` (object): object that describes service
+//! - `contest` (object): object that describes contest
+//! - `problem` (object): object that describes problem
+//!
+//! ### `[s]` Shell-expanded field
+//!
+//! The field is processed with shell-like expansions.
+//! - Tilde `~` is expanded to the home directory.
+//! - Environment variables are expanded into their values.
+//!
+//! When combined with Tera template,
+//! the field is first processed as a template and then expanded.
+
 use std::fmt;
-use std::io::{Read as _, Write as _};
+use std::io::{Read as _, Write};
 
 use anyhow::{anyhow, Context as _};
 use semver::{Version, VersionReq};
@@ -219,6 +271,16 @@ impl ConfigBody {
     const DEFAULT_PROBLEM_PATH: &'static str =
         "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml";
 
+    pub fn generate_to(writer: &mut dyn Write) -> Result<()> {
+        writeln!(
+            writer,
+            include_str!("../../resources/acick.yaml.txt"),
+            version = &*VERSION,
+            bash = Shell::find_bash().display()
+        )
+        .context("Could not write config")
+    }
+
     fn default_problem_path() -> TargetTempl {
         Self::DEFAULT_PROBLEM_PATH.into()
     }
@@ -346,31 +408,20 @@ int main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::abs_path::AbsPathBuf;
     use crate::config::template::TargetContext;
     use crate::tests::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
 
     #[test]
-    fn serialize_default() -> anyhow::Result<()> {
-        let test_dir = tempfile::tempdir()?;
-        let conf = Config::default_test(&test_dir);
-        serde_yaml::to_string(&conf)?;
-        Ok(())
-    }
+    fn generate_and_deserialize() -> anyhow::Result<()> {
+        let mut buf = Vec::new();
+        ConfigBody::generate_to(&mut buf)?;
+        let body_yaml_str = String::from_utf8(buf)?;
+        let body_generated: ConfigBody = serde_yaml::from_str(&body_yaml_str)?;
 
-    #[test]
-    fn deserialize_example() -> anyhow::Result<()> {
-        let mut output_buf = Vec::new();
-        let cnsl = &mut Console::new(&mut output_buf);
+        let body_default = ConfigBody::default();
 
-        let default_body = ConfigBody::default();
-        let mut example_body = ConfigBody::load(&AbsPathBuf::cwd()?, cnsl)?;
-        // ignore difference on shell because it varies depending on environments
-        example_body.shell = Shell::default();
+        assert_eq!(body_generated, body_default);
 
-        eprintln!("{}", String::from_utf8_lossy(&output_buf));
-
-        assert_eq!(example_body, default_body);
         Ok(())
     }
 

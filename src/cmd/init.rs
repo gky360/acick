@@ -35,10 +35,7 @@ impl InitOpt {
         // save config to yaml file
         let config_path = base_dir.join(ConfigBody::FILE_NAME);
         let is_saved = config_path.save_pretty(
-            |file| {
-                serde_yaml::to_writer(file, &ConfigBody::default())
-                    .context("Could not save config as yaml")
-            },
+            |mut file| ConfigBody::generate_to(&mut file).context("Could not save config"),
             self.overwrite,
             Some(&cwd),
             cnsl,

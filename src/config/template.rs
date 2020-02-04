@@ -35,10 +35,10 @@ macro_rules! register_case_conversion {
 lazy_static! {
     static ref RENDERER: Mutex<Tera> = {
         let mut renderer = Tera::default();
-        register_case_conversion!(renderer, "pascal", to_camel_case);
-        register_case_conversion!(renderer, "kebab", to_kebab_case);
         register_case_conversion!(renderer, "camel", to_mixed_case);
+        register_case_conversion!(renderer, "pascal", to_camel_case);
         register_case_conversion!(renderer, "snake", to_snake_case);
+        register_case_conversion!(renderer, "kebab", to_kebab_case);
 
         Mutex::new(renderer)
     };
@@ -278,7 +278,7 @@ impl Shell {
         self.exec(&cmd)
     }
 
-    fn find_bash() -> PathBuf {
+    pub fn find_bash() -> PathBuf {
         let env_path = env::var_os("PATH").unwrap_or_default();
         env::split_paths(&env_path)
             .chain(if cfg!(windows) {
