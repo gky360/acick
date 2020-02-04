@@ -165,12 +165,16 @@ pub mod tests {
         test_dir: &TempDir,
         run: impl FnOnce(&Config, &mut Console) -> Result<T>,
     ) -> Result<T> {
+        eprintln!("{}", std::env::current_dir()?.display());
+
         let conf = &Config::default_test(test_dir);
 
         let mut output_buf = Vec::new();
         let cnsl = &mut Console::new(&mut output_buf);
 
-        eprintln!("{}", std::env::current_dir()?.display());
-        run(conf, cnsl)
+        let result = run(conf, cnsl);
+
+        eprintln!("{}", String::from_utf8_lossy(&output_buf));
+        result
     }
 }
