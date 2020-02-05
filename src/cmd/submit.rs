@@ -1,4 +1,5 @@
 use std::fmt;
+use std::io::Write as _;
 
 use anyhow::Context as _;
 use chrono::{offset::Local, DateTime, SecondsFormat};
@@ -12,10 +13,15 @@ use crate::{Config, Console, Error, Result};
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct SubmitOpt {
+    /// Id of the problem to be submitted
     #[structopt(name = "problem")]
     problem_id: ProblemId,
+    /// Submits without prompting for confirmation
     #[structopt(long, short)]
     yes: bool,
+    /// Opens the submission status in browser
+    #[structopt(name = "open", long, short)]
+    need_open: bool,
 }
 
 impl SubmitOpt {
@@ -46,6 +52,14 @@ impl SubmitOpt {
         let actor = conf.build_actor();
         let lang_name = conf.service().lang_name();
         actor.submit(&conf.contest_id, &problem, lang_name, &source, cnsl)?;
+
+        // open submissions in browser if needed
+        if self.need_open {
+            actor
+                .open_submissions_url(&conf.contest_id, cnsl)
+                // coerce error
+                .unwrap_or_else(|err| writeln!(cnsl, "{:?}", err).unwrap_or(()));
+        }
 
         Ok(SubmitOutcome {
             service: Service::new(conf.service_id),
@@ -104,6 +118,7 @@ mod tests {
         let opt = SubmitOpt {
             problem_id: "c".into(),
             yes: true,
+            need_open: false,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())

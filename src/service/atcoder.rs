@@ -11,7 +11,7 @@ use crate::service::atcoder_page::{
 };
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
-use crate::service::{Act, ResponseExt as _};
+use crate::service::{open_in_browser, Act, ResponseExt as _};
 use crate::{Console, Error, Result};
 
 #[derive(Debug)]
@@ -27,11 +27,18 @@ impl<'a> AtcoderActor<'a> {
 }
 
 impl AtcoderActor<'_> {
-    fn submissions_me_url(contest_id: &ContestId) -> Result<Url> {
+    fn problem_url(contest_id: &ContestId, problem: &Problem) -> Result<Url> {
+        let path = format!("/contests/{}/tasks/{}", contest_id, &problem.url_name());
+        BASE_URL
+            .join(&path)
+            .context(format!("Could not parse problem url : {}", path))
+    }
+
+    fn submissions_url(contest_id: &ContestId) -> Result<Url> {
         let path = format!("/contests/{}/submissions/me", contest_id);
         BASE_URL
             .join(&path)
-            .context(format!("Could not parse url path: {}", path))
+            .context(format!("Could not parse submissions url : {}", path))
     }
 
     fn validate_login_response(res: &Response) -> Result<()> {
@@ -48,7 +55,7 @@ impl AtcoderActor<'_> {
         let loc_url = res
             .location_url(&BASE_URL)
             .context("Could not extract redirection url from response")?;
-        if loc_url != Self::submissions_me_url(contest_id)? {
+        if loc_url != Self::submissions_url(contest_id)? {
             return Err(Error::msg("Found invalid redirection url"));
         }
         Ok(())
@@ -186,5 +193,18 @@ impl Act for AtcoderActor<'_> {
             .context("Submission rejected by service")?;
 
         Ok(())
+    }
+
+    fn open_problem_url(
+        &self,
+        contest_id: &ContestId,
+        problem: &Problem,
+        cnsl: &mut Console,
+    ) -> Result<()> {
+        open_in_browser(&Self::problem_url(contest_id, problem)?, cnsl)
+    }
+
+    fn open_submissions_url(&self, contest_id: &ContestId, cnsl: &mut Console) -> Result<()> {
+        open_in_browser(&Self::submissions_url(contest_id)?, cnsl)
     }
 }

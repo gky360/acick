@@ -19,4 +19,13 @@ pub trait Act {
         source: &str,
         cnsl: &mut Console,
     ) -> Result<()>;
+
+    fn open_problem_url(
+        &self,
+        contest_id: &ContestId,
+        problem: &Problem,
+        cnsl: &mut Console,
+    ) -> Result<()>;
+
+    fn open_submissions_url(&self, contest_id: &ContestId, cnsl: &mut Console) -> Result<()>;
 }

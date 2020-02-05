@@ -17,6 +17,9 @@ pub struct FetchOpt {
     /// Overwrites existing problem files and source files
     #[structopt(long, short = "w")]
     overwrite: bool,
+    /// Opens problems in browser
+    #[structopt(name = "open", long, short)]
+    need_open: bool,
 }
 
 #[cfg(test)]
@@ -25,14 +28,18 @@ impl FetchOpt {
         Self {
             problem_id: None,
             overwrite: false,
+            need_open: false,
         }
     }
 }
 
 impl FetchOpt {
     pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<FetchOutcome> {
-        let problem_id = &self.problem_id;
-        let overwrite = self.overwrite;
+        let Self {
+            ref problem_id,
+            overwrite,
+            need_open,
+        } = *self;
 
         // fetch data from service
         let actor = conf.build_actor();
@@ -50,6 +57,13 @@ impl FetchOpt {
         for problem in problems.iter() {
             conf.expand_and_save_source(&service, &contest, problem, overwrite, cnsl)
                 .context("Could not save source file from template")?;
+        }
+
+        // open problem in browser if needed
+        if need_open {
+            for problem in problems.iter() {
+                actor.open_problem_url(&conf.contest_id, problem, cnsl)?;
+            }
         }
 
         Ok(FetchOutcome { service, contest })
