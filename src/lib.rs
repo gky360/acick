@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate strum;
 
-use std::io::Write;
+use std::io::{self, Write};
 
 use lazy_static::lazy_static;
 use semver::Version;
@@ -53,6 +53,7 @@ impl Default for OutputFormat {
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Opt {
+    /// Format of output
     #[structopt(
         long,
         global = true,
@@ -60,15 +61,20 @@ pub struct Opt {
         possible_values = &OutputFormat::VARIANTS
     )]
     output: OutputFormat,
+    /// Hides any messages except the final outcome of commands
+    #[structopt(long, short, global = true)]
+    quiet: bool,
     #[structopt(subcommand)]
     cmd: Cmd,
 }
 
 impl Opt {
-    pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
-        let cnsl = &mut Console::new(stderr);
-        self.cmd
-            .run(cnsl, |outcome, cnsl| self.finish(outcome, stdout, cnsl))
+    pub fn run(&self) -> Result<()> {
+        let mut writer = OutputWriter::new(self.quiet);
+        let cnsl = &mut Console::new(writer.as_write());
+        self.cmd.run(cnsl, |outcome, cnsl| {
+            self.finish(outcome, &mut io::stdout(), cnsl)
+        })
     }
 
     fn finish(
@@ -86,6 +92,29 @@ impl Opt {
             Err(Error::msg("Command exited with error"))
         } else {
             Ok(())
+        }
+    }
+}
+
+#[derive(Debug)]
+enum OutputWriter {
+    Stderr(io::Stderr),
+    Sink(io::Sink),
+}
+
+impl OutputWriter {
+    fn new(quiet: bool) -> Self {
+        if quiet {
+            OutputWriter::Sink(io::sink())
+        } else {
+            OutputWriter::Stderr(io::stderr())
+        }
+    }
+
+    fn as_write(&mut self) -> &mut dyn Write {
+        match self {
+            Self::Stderr(ref mut stderr) => stderr,
+            Self::Sink(ref mut sink) => sink,
         }
     }
 }
