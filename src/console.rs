@@ -13,7 +13,7 @@ impl<'a> Console<'a> {
     }
 
     pub fn confirm(&mut self, message: &str, default: bool) -> io::Result<bool> {
-        let prompt = format!("{} [{}] ", message, if default { "Y/n" } else { "y/N" });
+        let prompt = format!("{} ({}) ", message, if default { "Y/n" } else { "y/N" });
         let input = self.prompt_and_read(&prompt, false)?;
         match input.to_lowercase().as_str() {
             "y" | "yes" => Ok(true),
