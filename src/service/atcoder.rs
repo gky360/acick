@@ -3,11 +3,15 @@ use maplit::hashmap;
 use reqwest::blocking::{Client, Response};
 use reqwest::{StatusCode, Url};
 
+use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
+};
+use crate::service::dropbox::{
+    DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
 };
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
@@ -58,6 +62,27 @@ impl AtcoderActor<'_> {
         if loc_url != Self::submissions_url(contest_id)? {
             return Err(Error::msg("Found invalid redirection url"));
         }
+        Ok(())
+    }
+
+    pub fn fetch_full(
+        token_path: &AbsPathBuf,
+        _testcases_path: &AbsPathBuf,
+        cnsl: &mut Console,
+    ) -> Result<()> {
+        static DBX_TESTCASES_URL: &str =
+            "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
+
+        let dropbox = DbxAuthorizer::new(
+            DBX_APP_KEY,
+            DBX_APP_SECRET,
+            DBX_REDIRECT_PORT,
+            DBX_REDIRECT_PATH,
+        )
+        .load_or_request(token_path, cnsl)?;
+
+        let folders = dropbox.list_all_folders(DBX_TESTCASES_URL)?;
+        eprintln!("{:?}", folders);
         Ok(())
     }
 }

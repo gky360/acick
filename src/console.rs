@@ -12,6 +12,10 @@ impl<'a> Console<'a> {
         Self { stderr }
     }
 
+    pub fn warn(&mut self, message: &str) -> io::Result<()> {
+        writeln!(self, "WARN: {}", message)
+    }
+
     pub fn confirm(&mut self, message: &str, default: bool) -> io::Result<bool> {
         let prompt = format!("{} ({}) ", message, if default { "Y/n" } else { "y/N" });
         let input = self.prompt_and_read(&prompt, false)?;
@@ -30,7 +34,7 @@ impl<'a> Console<'a> {
     ) -> io::Result<String> {
         if let Ok(val) = env::var(env_name) {
             writeln!(
-                self.stderr,
+                self,
                 "{}{:16} (read from env {})",
                 prompt,
                 if is_password { "********" } else { &val },

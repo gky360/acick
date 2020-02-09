@@ -4,8 +4,10 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
+use crate::abs_path::AbsPathBuf;
 use crate::cmd::Outcome;
-use crate::model::{Contest, ProblemId, Service};
+use crate::model::{Contest, Problem, ProblemId, Service, ServiceKind};
+use crate::service::AtcoderActor;
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -20,6 +22,9 @@ pub struct FetchOpt {
     /// Opens problems in browser
     #[structopt(name = "open", long, short)]
     need_open: bool,
+    /// Fetches full testcases from dropbox (only available for AtCoder)
+    #[structopt(name = "full", long)]
+    is_full: bool,
 }
 
 #[cfg(test)]
@@ -29,6 +34,7 @@ impl FetchOpt {
             problem_id: None,
             overwrite: false,
             need_open: false,
+            is_full: false,
         }
     }
 }
@@ -39,6 +45,7 @@ impl FetchOpt {
             ref problem_id,
             overwrite,
             need_open,
+            is_full,
         } = *self;
 
         // fetch data from service
@@ -66,7 +73,22 @@ impl FetchOpt {
             }
         }
 
-        Ok(FetchOutcome { service, contest })
+        if is_full {
+            if conf.service_id == ServiceKind::Atcoder {
+                // TODO: load paths from config
+                let token_path = AbsPathBuf::cwd()?;
+                let test_cases_path = AbsPathBuf::cwd()?;
+                AtcoderActor::fetch_full(&token_path, &test_cases_path, cnsl)?;
+            } else {
+                cnsl.warn("WARN: \"--full\" option is only available for AtCoder")?;
+            }
+        }
+
+        Ok(FetchOutcome {
+            service,
+            contest,
+            problems,
+        })
     }
 }
 
@@ -74,11 +96,18 @@ impl FetchOpt {
 pub struct FetchOutcome {
     service: Service,
     contest: Contest,
+    problems: Vec<Problem>,
 }
 
 impl fmt::Display for FetchOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Successfully fetched problems")
+        if self.problems.is_empty() {
+            write!(f, "Found no problems")
+        } else if self.problems.len() == 1 {
+            write!(f, "Successfully fetched 1 problem")
+        } else {
+            write!(f, "Successfully fetched {} problems", self.problems.len())
+        }
     }
 }
 

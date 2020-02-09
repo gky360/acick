@@ -13,9 +13,9 @@ use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
 use crate::abs_path::AbsPathBuf;
-use crate::service::dropbox::Dropbox;
+use crate::service::dropbox::{convert_dbx_err, Dropbox};
 use crate::service::open_in_browser;
-use crate::{Console, Error, Result};
+use crate::{Console, Result};
 
 type Token = String;
 
@@ -23,7 +23,7 @@ static STATE_LEN: usize = 16;
 static DBX_CODE_PARAM: &str = "code";
 static DBX_STATE_PARAM: &str = "state";
 
-pub struct Authorizer<'a> {
+pub struct DbxAuthorizer<'a> {
     app_key: &'a str,
     app_secret: &'a str,
     redirect_port: u16,
@@ -31,8 +31,7 @@ pub struct Authorizer<'a> {
     redirect_uri: String,
 }
 
-impl<'a> Authorizer<'a> {
-    #[allow(dead_code)]
+impl<'a> DbxAuthorizer<'a> {
     pub fn new(
         app_key: &'a str,
         app_secret: &'a str,
@@ -48,9 +47,8 @@ impl<'a> Authorizer<'a> {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn load_or_request(&self, path: &AbsPathBuf, cnsl: &mut Console) -> Result<Dropbox> {
-        let load_result = self.load_token(path, cnsl)?;
+    pub fn load_or_request(&self, token_path: &AbsPathBuf, cnsl: &mut Console) -> Result<Dropbox> {
+        let load_result = self.load_token(token_path, cnsl)?;
         let token = match load_result {
             Some(token) if Self::validate_token(token.clone())? => token,
             _ => self.request_token(cnsl)?,
@@ -61,18 +59,19 @@ impl<'a> Authorizer<'a> {
         Ok(Dropbox { client })
     }
 
-    fn load_token(&self, path: &AbsPathBuf, cnsl: &mut Console) -> Result<Option<String>> {
-        if !path.as_ref().exists() {
+    fn load_token(&self, token_path: &AbsPathBuf, cnsl: &mut Console) -> Result<Option<String>> {
+        if !token_path.as_ref().exists() {
             return Ok(None);
         }
 
         let mut token = String::new();
-        path.load_pretty(
-            |mut file| file.read_to_string(&mut token).map_err(Into::into),
-            None,
-            cnsl,
-        )
-        .context("Could not load token from file")?;
+        token_path
+            .load_pretty(
+                |mut file| file.read_to_string(&mut token).map_err(Into::into),
+                None,
+                cnsl,
+            )
+            .context("Could not load token from file")?;
 
         Ok(Some(token))
     }
@@ -143,10 +142,6 @@ impl<'a> Authorizer<'a> {
 
         Ok(rx.recv().await?)
     }
-}
-
-fn convert_dbx_err(err: dropbox_sdk::Error) -> Error {
-    Error::msg(err.to_string())
 }
 
 fn gen_random_state() -> String {
