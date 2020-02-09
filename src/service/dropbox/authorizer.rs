@@ -17,6 +17,8 @@ use crate::service::dropbox::Dropbox;
 use crate::service::open_in_browser;
 use crate::{Console, Error, Result};
 
+type Token = String;
+
 static STATE_LEN: usize = 16;
 static DBX_CODE_PARAM: &str = "code";
 static DBX_STATE_PARAM: &str = "state";
@@ -48,15 +50,10 @@ impl<'a> Authorizer<'a> {
 
     #[allow(dead_code)]
     pub fn load_or_request(&self, path: &AbsPathBuf, cnsl: &mut Console) -> Result<Dropbox> {
-        let load_result = self
-            .load_token(path, cnsl)
-            .context("Could not load token")?;
+        let load_result = self.load_token(path, cnsl)?;
         let token = match load_result {
-            // TODO: check if token is valid
-            Some(token) => token,
-            None => self
-                .request_token(cnsl)
-                .context("Could not get access token from Dropbox")?,
+            Some(token) if Self::validate_token(token.clone())? => token,
+            _ => self.request_token(cnsl)?,
         };
 
         let client = HyperClient::new(token);
@@ -71,19 +68,33 @@ impl<'a> Authorizer<'a> {
 
         let mut token = String::new();
         path.load_pretty(
-            |mut file| {
-                file.read_to_string(&mut token)
-                    .context("Could not load token from file")
-            },
+            |mut file| file.read_to_string(&mut token).map_err(Into::into),
             None,
             cnsl,
-        )?;
+        )
+        .context("Could not load token from file")?;
 
         Ok(Some(token))
     }
 
+    fn validate_token(token: Token) -> Result<bool> {
+        use dropbox_sdk::check::{self, EchoArg};
+        use dropbox_sdk::ErrorKind;
+
+        let client = HyperClient::new(token);
+        match check::user(&client, &EchoArg { query: "".into() }) {
+            Ok(Ok(_)) => Ok(true),
+            Ok(Err(())) => Ok(false),
+            Err(dropbox_sdk::Error(ErrorKind::InvalidToken(_), ..)) => Ok(false),
+            Err(err) => Err(convert_dbx_err(err)),
+        }
+        .context("Could not validate access token")
+    }
+
     fn request_token(&self, cnsl: &mut Console) -> Result<String> {
-        let code = self.authorize(cnsl)?;
+        let code = self
+            .authorize(cnsl)
+            .context("Could not authorize acick on Dropbox")?;
         HyperClient::oauth2_token_from_authorization_code(
             self.app_key,
             self.app_secret,
@@ -91,6 +102,7 @@ impl<'a> Authorizer<'a> {
             Some(&self.redirect_uri),
         )
         .map_err(convert_dbx_err)
+        .context("Could not get access token from Dropbox")
     }
 
     #[tokio::main]
