@@ -13,6 +13,7 @@ use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
 use crate::abs_path::AbsPathBuf;
+use crate::service::dropbox::Dropbox;
 use crate::service::open_in_browser;
 use crate::{Console, Error, Result};
 
@@ -209,8 +210,4 @@ async fn respond(
         respond_not_found()
     };
     Ok(res)
-}
-
-pub struct Dropbox {
-    client: HyperClient,
 }
