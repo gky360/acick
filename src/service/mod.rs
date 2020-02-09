@@ -11,6 +11,7 @@ mod act;
 mod atcoder;
 mod atcoder_page;
 mod cookie;
+mod dropbox;
 mod scrape;
 mod session;
 
@@ -34,11 +35,11 @@ impl ResponseExt for Response {
     }
 }
 
-fn open_in_browser(url: &Url, cnsl: &mut Console) -> Result<()> {
+fn open_in_browser(url: &str, cnsl: &mut Console) -> Result<()> {
     if cfg!(test) {
         unreachable!("Cannot open url in browser during test");
     }
-    match webbrowser::open(url.as_str()) {
+    match webbrowser::open(url) {
         Err(err) => Err(err.into()),
         Ok(output) if !output.status.success() => {
             Err(Error::msg("Process returned non-zero exit code"))

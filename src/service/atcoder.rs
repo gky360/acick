@@ -201,10 +201,10 @@ impl Act for AtcoderActor<'_> {
         problem: &Problem,
         cnsl: &mut Console,
     ) -> Result<()> {
-        open_in_browser(&Self::problem_url(contest_id, problem)?, cnsl)
+        open_in_browser(&Self::problem_url(contest_id, problem)?.as_str(), cnsl)
     }
 
     fn open_submissions_url(&self, contest_id: &ContestId, cnsl: &mut Console) -> Result<()> {
-        open_in_browser(&Self::submissions_url(contest_id)?, cnsl)
+        open_in_browser(&Self::submissions_url(contest_id)?.as_str(), cnsl)
     }
 }

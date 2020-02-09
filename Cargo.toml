@@ -21,15 +21,18 @@ chrono = { version = "0.4.10", features = ["serde"] }
 cookie = "0.12.0"
 cookie_store = "0.10.0"
 dirs = "2.0.2"
+dropbox-sdk = "0.2.0"
 fs2 = "0.4.3"
 getset = "0.0.9"
 heck = "0.3.1"
 humantime = "2.0.0"
 humantime-serde = "1.0.0"
+hyper = "0.13.2"
 itertools = "0.8.2"
 lazy_static = "1.4.0"
 maplit = "1.0.2"
 once_cell = "1.3.1"
+rand = "0.7.3"
 regex = "1.3.3"
 retry = "1.0.0"
 reqwest = { version = "0.10.1", default_features = false, features = ["rustls-tls", "blocking"] }
@@ -43,5 +46,6 @@ shellexpand = "1.1.1"
 structopt = "0.3.7"
 strum = { version = "0.17.1", features = ["derive"] }
 tera = "1.0.2"
-tokio = { version = "0.2.11", features = ["rt-core", "rt-threaded", "io-util", "time", "process", "macros"] }
+tokio = { version = "0.2.11", features = ["rt-core", "rt-threaded", "io-util", "time", "process", "macros", "sync"] }
+url = "2.1.1"
 webbrowser = "0.5.2"
