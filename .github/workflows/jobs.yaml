@@ -10,6 +10,13 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+**"
   pull_request:
 
+env:
+  RUST_BACKTRACE: full
+  ACICK_ATCODER_USERNAME: ${{ secrets.ACICK_ATCODER_USERNAME }}
+  ACICK_ATCODER_PASSWORD: ${{ secrets.ACICK_ATCODER_PASSWORD }}
+  ACICK_DBX_APP_KEY: ${{ secrets.ACICK_DBX_APP_KEY }}
+  ACICK_DBX_APP_SECRET: ${{ secrets.ACICK_DBX_APP_SECRET }}
+
 jobs:
   rustfmt:
     name: Rustfmt
@@ -107,12 +114,6 @@ jobs:
         with:
           command: test
           args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }}
-        env:
-          RUST_BACKTRACE: full
-          ACICK_ATCODER_USERNAME: ${{ secrets.ACICK_ATCODER_USERNAME }}
-          ACICK_ATCODER_PASSWORD: ${{ secrets.ACICK_ATCODER_PASSWORD }}
-          ACICK_DBX_APP_KEY: ${{ secrets.ACICK_DBX_APP_KEY }}
-          ACICK_DBX_APP_SECRET: ${{ secrets.ACICK_DBX_APP_SECRET }}
 
       - name: "`rustup component add clippy`"
         run: rustup component add clippy
