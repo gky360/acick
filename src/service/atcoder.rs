@@ -66,6 +66,7 @@ impl AtcoderActor<'_> {
     }
 
     pub fn fetch_full(
+        contest_id: &ContestId,
         token_path: &AbsPathBuf,
         _testcases_path: &AbsPathBuf,
         cnsl: &mut Console,
@@ -82,7 +83,10 @@ impl AtcoderActor<'_> {
         .load_or_request(token_path, cnsl)?;
 
         let folders = dropbox.list_all_folders(DBX_TESTCASES_URL)?;
-        eprintln!("{:?}", folders);
+        let folder = folders
+            .iter()
+            .find(|folder| &ContestId::from(&folder.name) == contest_id);
+        eprintln!("{:?}", folder);
         Ok(())
     }
 }
