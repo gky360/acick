@@ -8,6 +8,8 @@ use std::time::Duration;
 use getset::{CopyGetters, Getters, Setters};
 use serde::{Deserialize, Serialize};
 
+use crate::macros::regex;
+
 #[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
     #[get_copy = "pub"]
@@ -71,8 +73,38 @@ impl Contest {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub struct ContestId(String);
+
+impl ContestId {
+    pub fn normalize(&self) -> String {
+        regex!(r"[-_]").replace_all(&self.0, "").to_lowercase()
+    }
+}
+
+impl PartialEq<ContestId> for ContestId {
+    fn eq(&self, other: &ContestId) -> bool {
+        self.normalize() == other.normalize()
+    }
+}
+
+impl PartialOrd for ContestId {
+    fn partial_cmp(&self, other: &ContestId) -> Option<Ordering> {
+        Some(self.normalize().cmp(&other.normalize()))
+    }
+}
+
+impl Ord for ContestId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.normalize().cmp(&other.normalize())
+    }
+}
+
+impl Hash for ContestId {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.normalize().hash(state);
+    }
+}
 
 impl<T: Into<String>> From<T> for ContestId {
     fn from(id: T) -> Self {
@@ -338,3 +370,24 @@ pub type LangIdRef<'a> = &'a str;
 pub type LangName = String;
 
 pub type LangNameRef<'a> = &'a str;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn contest_id_eq() {
+        assert_eq!(ContestId::from("arc100"), ContestId::from("arc100"));
+        assert_eq!(ContestId::from("ARC100"), ContestId::from("arc100"));
+        assert_eq!(
+            ContestId::from("CodeFestival2017QualA"),
+            ContestId::from("code-festival-2017-quala")
+        );
+    }
+
+    #[test]
+    fn problem_id_eq() {
+        assert_eq!(ProblemId::from("A"), ProblemId::from("A"));
+        assert_eq!(ProblemId::from("a"), ProblemId::from("A"));
+    }
+}
