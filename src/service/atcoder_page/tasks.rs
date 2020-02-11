@@ -5,9 +5,10 @@ use reqwest::Url;
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
+use crate::macros::select;
 use crate::model::{Compare, ContestId, Problem, ProblemId};
 use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{select, ElementRefExt as _, HasUrl, Scrape};
+use crate::service::scrape::{ElementRefExt as _, HasUrl, Scrape};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

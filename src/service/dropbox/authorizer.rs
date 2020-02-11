@@ -54,6 +54,8 @@ impl<'a> DbxAuthorizer<'a> {
             _ => self.request_token(cnsl)?,
         };
 
+        // TODO: save token
+
         let client = HyperClient::new(token);
 
         Ok(Dropbox { client })

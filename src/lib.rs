@@ -16,6 +16,7 @@ mod cmd;
 pub mod config;
 mod console;
 mod judge;
+mod macros;
 mod model;
 mod service;
 
