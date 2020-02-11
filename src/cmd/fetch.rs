@@ -76,8 +76,8 @@ impl FetchOpt {
         if is_full {
             if conf.service_id == ServiceKind::Atcoder {
                 // TODO: load paths from config
-                let token_path = AbsPathBuf::cwd()?;
-                let test_cases_path = AbsPathBuf::cwd()?;
+                let token_path = AbsPathBuf::try_new("/tmp/acick/token.txt".into())?;
+                let test_cases_path = AbsPathBuf::try_new("/tmp/acick/testcases".into())?;
                 AtcoderActor::fetch_full(&token_path, &test_cases_path, cnsl)?;
             } else {
                 cnsl.warn("WARN: \"--full\" option is only available for AtCoder")?;
