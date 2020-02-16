@@ -4,7 +4,6 @@ use std::io::Read as _;
 use std::net::SocketAddr;
 
 use anyhow::Context as _;
-use dropbox_sdk::{HyperClient, Oauth2AuthorizeUrlBuilder, Oauth2Type};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
@@ -13,6 +12,7 @@ use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
 use crate::abs_path::AbsPathBuf;
+use crate::service::dropbox::hyper_client::{HyperClient, Oauth2AuthorizeUrlBuilder, Oauth2Type};
 use crate::service::dropbox::{convert_dbx_err, Dropbox};
 use crate::service::open_in_browser;
 use crate::{Console, Result};

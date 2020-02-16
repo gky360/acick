@@ -2,13 +2,14 @@ use dropbox_sdk::files::{
     self, FolderMetadata, ListFolderArg, ListFolderContinueArg, ListFolderCursor, Metadata,
     SharedLink,
 };
-use dropbox_sdk::HyperClient;
 
 use crate::{Error, Result};
 
 mod authorizer;
+mod hyper_client;
 
 pub use authorizer::DbxAuthorizer;
+use hyper_client::HyperClient;
 
 pub static DBX_APP_KEY: &str = env!("ACICK_DBX_APP_KEY");
 pub static DBX_APP_SECRET: &str = env!("ACICK_DBX_APP_SECRET");
