@@ -76,7 +76,7 @@ impl FetchOpt {
         if is_full {
             if conf.service_id == ServiceKind::Atcoder {
                 // TODO: load paths from config
-                let token_path = AbsPathBuf::try_new("/tmp/acick/token.txt".into())?;
+                let token_path = AbsPathBuf::try_new("/tmp/acick/token.json".into())?;
                 let test_cases_path = AbsPathBuf::try_new("/tmp/acick/testcases".into())?;
                 AtcoderActor::fetch_full(&conf.contest_id, &token_path, &test_cases_path, cnsl)?;
             } else {

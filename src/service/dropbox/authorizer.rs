@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::io::{Read as _, Write as _};
 use std::net::SocketAddr;
 
 use anyhow::Context as _;
@@ -10,6 +9,7 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng as _};
+use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
@@ -19,12 +19,16 @@ use crate::service::dropbox::{convert_dbx_err, Dropbox};
 use crate::service::open_in_browser;
 use crate::{Console, Result};
 
-type Token = String;
-
 static STATE_LEN: usize = 16;
 static DBX_CODE_PARAM: &str = "code";
 static DBX_STATE_PARAM: &str = "state";
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+struct Token {
+    access_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DbxAuthorizer<'a> {
     app_key: &'a str,
     app_secret: &'a str,
@@ -55,13 +59,13 @@ impl<'a> DbxAuthorizer<'a> {
     pub fn load_or_request(&self, cnsl: &mut Console) -> Result<Dropbox> {
         let load_result = self.load_token(cnsl)?;
         let token = match load_result {
-            Some(token) if Self::validate_token(token.clone())? => token,
+            Some(token) if Self::validate_token(&token)? => token,
             _ => self.request_token(cnsl)?,
         };
 
         self.save_token(&token, cnsl)?;
 
-        let client = HyperClient::new(token);
+        let client = HyperClient::new(token.access_token);
 
         Ok(Dropbox { client })
     }
@@ -71,33 +75,28 @@ impl<'a> DbxAuthorizer<'a> {
             return Ok(None);
         }
 
-        let mut token = String::new();
-        self.token_path
-            .load_pretty(
-                |mut file| file.read_to_string(&mut token).map_err(Into::into),
-                None,
-                cnsl,
-            )
-            .context("Could not load token from file")?;
+        let token = self.token_path.load_pretty(
+            |file| serde_json::from_reader(file).context("Could not load token from json file"),
+            None,
+            cnsl,
+        )?;
 
         Ok(Some(token))
     }
 
-    fn save_token(&self, token: &str, cnsl: &mut Console) -> Result<()> {
-        self.token_path
-            .save_pretty(
-                |mut file| file.write_all(token.as_bytes()).map_err(Into::into),
-                true,
-                None,
-                cnsl,
-            )
-            .context("Could not save token to file")?;
+    fn save_token(&self, token: &Token, cnsl: &mut Console) -> Result<()> {
+        self.token_path.save_pretty(
+            |file| serde_json::to_writer(file, token).context("Could not save token as json file"),
+            true,
+            None,
+            cnsl,
+        )?;
 
         Ok(())
     }
 
-    fn validate_token(token: Token) -> Result<bool> {
-        let client = HyperClient::new(token);
+    fn validate_token(token: &Token) -> Result<bool> {
+        let client = HyperClient::new(token.access_token.clone());
         match check::user(&client, &EchoArg { query: "".into() }) {
             Ok(Ok(_)) => Ok(true),
             Ok(Err(())) => Ok(false),
@@ -107,18 +106,20 @@ impl<'a> DbxAuthorizer<'a> {
         .context("Could not validate access token")
     }
 
-    fn request_token(&self, cnsl: &mut Console) -> Result<String> {
+    fn request_token(&self, cnsl: &mut Console) -> Result<Token> {
         let code = self
             .authorize(cnsl)
             .context("Could not authorize acick on Dropbox")?;
-        HyperClient::oauth2_token_from_authorization_code(
+        let access_token = HyperClient::oauth2_token_from_authorization_code(
             self.app_key,
             self.app_secret,
             &code,
             Some(&self.redirect_uri),
         )
         .map_err(convert_dbx_err)
-        .context("Could not get access token from Dropbox")
+        .context("Could not get access token from Dropbox")?;
+
+        Ok(Token { access_token })
     }
 
     #[tokio::main]
