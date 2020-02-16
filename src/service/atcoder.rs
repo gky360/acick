@@ -79,8 +79,9 @@ impl AtcoderActor<'_> {
             DBX_APP_SECRET,
             DBX_REDIRECT_PORT,
             DBX_REDIRECT_PATH,
+            token_path,
         )
-        .load_or_request(token_path, cnsl)?;
+        .load_or_request(cnsl)?;
 
         let folders = dropbox.list_all_folders(DBX_TESTCASES_URL)?;
         let folder = folders

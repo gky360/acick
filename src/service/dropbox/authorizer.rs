@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::io::Read as _;
+use std::io::{Read as _, Write as _};
 use std::net::SocketAddr;
 
 use anyhow::Context as _;
+use dropbox_sdk::check::{self, EchoArg};
+use dropbox_sdk::ErrorKind;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
@@ -29,6 +31,7 @@ pub struct DbxAuthorizer<'a> {
     redirect_port: u16,
     redirect_path: &'a str,
     redirect_uri: String,
+    token_path: &'a AbsPathBuf,
 }
 
 impl<'a> DbxAuthorizer<'a> {
@@ -37,6 +40,7 @@ impl<'a> DbxAuthorizer<'a> {
         app_secret: &'a str,
         redirect_port: u16,
         redirect_path: &'a str,
+        token_path: &'a AbsPathBuf,
     ) -> Self {
         Self {
             app_key,
@@ -44,30 +48,31 @@ impl<'a> DbxAuthorizer<'a> {
             redirect_port,
             redirect_path,
             redirect_uri: format!("http://localhost:{}{}", redirect_port, redirect_path),
+            token_path,
         }
     }
 
-    pub fn load_or_request(&self, token_path: &AbsPathBuf, cnsl: &mut Console) -> Result<Dropbox> {
-        let load_result = self.load_token(token_path, cnsl)?;
+    pub fn load_or_request(&self, cnsl: &mut Console) -> Result<Dropbox> {
+        let load_result = self.load_token(cnsl)?;
         let token = match load_result {
             Some(token) if Self::validate_token(token.clone())? => token,
             _ => self.request_token(cnsl)?,
         };
 
-        // TODO: save token
+        self.save_token(&token, cnsl)?;
 
         let client = HyperClient::new(token);
 
         Ok(Dropbox { client })
     }
 
-    fn load_token(&self, token_path: &AbsPathBuf, cnsl: &mut Console) -> Result<Option<String>> {
-        if !token_path.as_ref().exists() {
+    fn load_token(&self, cnsl: &mut Console) -> Result<Option<Token>> {
+        if !self.token_path.as_ref().exists() {
             return Ok(None);
         }
 
         let mut token = String::new();
-        token_path
+        self.token_path
             .load_pretty(
                 |mut file| file.read_to_string(&mut token).map_err(Into::into),
                 None,
@@ -78,10 +83,20 @@ impl<'a> DbxAuthorizer<'a> {
         Ok(Some(token))
     }
 
-    fn validate_token(token: Token) -> Result<bool> {
-        use dropbox_sdk::check::{self, EchoArg};
-        use dropbox_sdk::ErrorKind;
+    fn save_token(&self, token: &str, cnsl: &mut Console) -> Result<()> {
+        self.token_path
+            .save_pretty(
+                |mut file| file.write_all(token.as_bytes()).map_err(Into::into),
+                true,
+                None,
+                cnsl,
+            )
+            .context("Could not save token to file")?;
 
+        Ok(())
+    }
+
+    fn validate_token(token: Token) -> Result<bool> {
         let client = HyperClient::new(token);
         match check::user(&client, &EchoArg { query: "".into() }) {
             Ok(Ok(_)) => Ok(true),
