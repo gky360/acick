@@ -67,6 +67,7 @@ impl AtcoderActor<'_> {
 
     pub fn fetch_full(
         contest_id: &ContestId,
+        problems: &[Problem],
         token_path: &AbsPathBuf,
         _testcases_path: &AbsPathBuf,
         cnsl: &mut Console,
@@ -83,11 +84,34 @@ impl AtcoderActor<'_> {
         )
         .load_or_request(cnsl)?;
 
-        let folders = dropbox.list_all_folders(DBX_TESTCASES_URL)?;
+        // find dropbox folder that corresponds to the contest
+        let folders = dropbox.list_all_folders("", Some(DBX_TESTCASES_URL))?;
         let folder = folders
             .iter()
-            .find(|folder| &ContestId::from(&folder.name) == contest_id);
-        eprintln!("{:?}", folder);
+            .find(|folder| &ContestId::from(&folder.name) == contest_id)
+            .ok_or_else(|| {
+                anyhow!(
+                    "Could not find folder for the contest on Dropbox : {}",
+                    contest_id
+                )
+            })?;
+
+        for problem in problems.iter() {
+            for inout in &["in", "out"] {
+                let files = dropbox.list_all_files(
+                    format!("/{}/{}/{}", folder.name, problem.id(), inout),
+                    Some(DBX_TESTCASES_URL),
+                )?;
+                eprintln!("{:?}", files);
+
+                for file in files.iter() {
+                    let path = format!("/{}/{}/{}/{}", folder.name, problem.id(), inout, file.name);
+                    let (len, _reader) = dropbox.get_shared_link_file(DBX_TESTCASES_URL, path)?;
+                    eprintln!("{}: {}", file.name, len);
+                }
+            }
+        }
+
         Ok(())
     }
 }

@@ -21,6 +21,7 @@ use url::form_urlencoded::Serializer as UrlEncoder;
 
 const USER_AGENT: &str = concat!("Dropbox-APIv2-Rust/", env!("CARGO_PKG_VERSION"));
 
+#[derive(Debug)]
 pub struct HyperClient {
     client: hyper0_10::client::Client,
     token: String,

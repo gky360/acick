@@ -78,7 +78,13 @@ impl FetchOpt {
                 // TODO: load paths from config
                 let token_path = AbsPathBuf::try_new("/tmp/acick/token.json".into())?;
                 let test_cases_path = AbsPathBuf::try_new("/tmp/acick/testcases".into())?;
-                AtcoderActor::fetch_full(&conf.contest_id, &token_path, &test_cases_path, cnsl)?;
+                AtcoderActor::fetch_full(
+                    &conf.contest_id,
+                    &problems,
+                    &token_path,
+                    &test_cases_path,
+                    cnsl,
+                )?;
             } else {
                 cnsl.warn("WARN: \"--full\" option is only available for AtCoder")?;
             }
