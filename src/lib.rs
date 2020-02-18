@@ -20,10 +20,10 @@ mod macros;
 mod model;
 mod service;
 
-use cmd::{Cmd, Outcome};
-use config::Config;
-use console::Console;
-use model::{Contest, Service, ServiceKind};
+use crate::cmd::{Cmd, Outcome};
+use crate::config::Config;
+use crate::console::Console;
+use crate::model::{Contest, Service, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
@@ -71,9 +71,12 @@ pub struct Opt {
 
 impl Opt {
     pub fn run(&self) -> Result<()> {
-        let mut writer = OutputWriter::new(self.quiet);
-        let cnsl = &mut Console::new(writer.as_write());
-        self.cmd.run(cnsl, |outcome, cnsl| {
+        let mut cnsl = if self.quiet {
+            Console::sink()
+        } else {
+            Console::term()
+        };
+        self.cmd.run(&mut cnsl, |outcome, cnsl| {
             self.finish(outcome, &mut io::stdout(), cnsl)
         })
     }
@@ -93,29 +96,6 @@ impl Opt {
             Err(Error::msg("Command exited with error"))
         } else {
             Ok(())
-        }
-    }
-}
-
-#[derive(Debug)]
-enum OutputWriter {
-    Stderr(io::Stderr),
-    Sink(io::Sink),
-}
-
-impl OutputWriter {
-    fn new(quiet: bool) -> Self {
-        if quiet {
-            OutputWriter::Sink(io::sink())
-        } else {
-            OutputWriter::Stderr(io::stderr())
-        }
-    }
-
-    fn as_write(&mut self) -> &mut dyn Write {
-        match self {
-            Self::Stderr(ref mut stderr) => stderr,
-            Self::Sink(ref mut sink) => sink,
         }
     }
 }

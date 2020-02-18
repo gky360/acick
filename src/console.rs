@@ -1,15 +1,62 @@
+use std::env;
 use std::io::{self, Write};
-use std::{env, fmt};
 
+use console::Term;
 use rpassword::read_password;
 
-pub struct Console<'a> {
-    stderr: &'a mut dyn Write,
+#[derive(Debug)]
+enum Inner {
+    Term(Term),
+    Stderr(io::Stderr),
+    Buf(Vec<u8>),
+    Sink(io::Sink),
 }
 
-impl<'a> Console<'a> {
-    pub fn new(stderr: &'a mut dyn Write) -> Self {
-        Self { stderr }
+#[derive(Debug)]
+pub struct Console {
+    inner: Inner,
+}
+
+impl Console {
+    pub fn term() -> Self {
+        Self {
+            inner: Inner::Term(Term::stderr()),
+        }
+    }
+
+    pub fn stderr() -> Self {
+        Self {
+            inner: Inner::Stderr(io::stderr()),
+        }
+    }
+
+    pub fn buf() -> Self {
+        Self {
+            inner: Inner::Buf(Vec::new()),
+        }
+    }
+
+    pub fn sink() -> Self {
+        Self {
+            inner: Inner::Sink(io::sink()),
+        }
+    }
+
+    pub fn take_buf(self) -> Option<Vec<u8>> {
+        match self.inner {
+            Inner::Buf(buf) => Some(buf),
+            _ => None,
+        }
+    }
+
+    #[inline(always)]
+    fn as_mut_write(&mut self) -> &mut dyn Write {
+        match self.inner {
+            Inner::Term(ref mut w) => w,
+            Inner::Stderr(ref mut w) => w,
+            Inner::Buf(ref mut w) => w,
+            Inner::Sink(ref mut w) => w,
+        }
     }
 
     pub fn warn(&mut self, message: &str) -> io::Result<()> {
@@ -76,20 +123,14 @@ impl<'a> Console<'a> {
     }
 }
 
-impl Write for Console<'_> {
+impl Write for Console {
     #[inline(always)]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.stderr.write(buf)
+        self.as_mut_write().write(buf)
     }
 
     #[inline(always)]
     fn flush(&mut self) -> io::Result<()> {
-        self.stderr.flush()
-    }
-}
-
-impl fmt::Debug for Console<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str("Console")
+        self.as_mut_write().flush()
     }
 }

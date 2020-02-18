@@ -50,7 +50,7 @@ impl TestOpt {
         &self,
         problem: Problem,
         conf: &Config,
-        cnsl: &mut Console<'_>,
+        cnsl: &mut Console,
     ) -> Result<TotalStatus> {
         let time_limit = problem.time_limit();
         let compare = problem.compare();

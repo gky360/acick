@@ -75,8 +75,7 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let mut output_buf = Vec::new();
-        let cnsl = &mut Console::new(&mut output_buf);
+        let cnsl = &mut Console::buf();
 
         let test_dir = tempdir()?;
         let opt = InitOpt {
