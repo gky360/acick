@@ -96,20 +96,29 @@ impl AtcoderActor<'_> {
                 )
             })?;
 
+        // list testcase file path components
+        let mut components = Vec::new();
         for problem in problems.iter() {
             for inout in &["in", "out"] {
                 let files = dropbox.list_all_files(
                     format!("/{}/{}/{}", folder.name, problem.id(), inout),
                     Some(DBX_TESTCASES_URL),
                 )?;
-                eprintln!("{:?}", files);
-
-                for file in files.iter() {
-                    let path = format!("/{}/{}/{}/{}", folder.name, problem.id(), inout, file.name);
-                    let (len, _reader) = dropbox.get_shared_link_file(DBX_TESTCASES_URL, path)?;
-                    eprintln!("{}: {}", file.name, len);
-                }
+                components.extend(files.into_iter().map(|file| (problem, inout, file)));
             }
+        }
+
+        // calculate total size
+        let total_size = components
+            .iter()
+            .fold(0, |sum, (_, _, file)| sum + file.size);
+        eprintln!("total size: {}", total_size);
+
+        for (problem, inout, file) in components.into_iter() {
+            let dbx_path = format!("/{}/{}/{}/{}", folder.name, problem.id(), inout, file.name);
+            eprint!("{}: ", dbx_path);
+            let (len, _reader) = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
+            eprintln!("{:6}, {:6}", len, file.size);
         }
 
         Ok(())
