@@ -93,21 +93,32 @@ impl Console {
     }
 
     fn read_user(&mut self, is_password: bool) -> io::Result<String> {
-        if is_password {
-            read_password()
-        } else {
-            let mut buf = String::new();
-            io::stdin().read_line(&mut buf)?;
-
-            if buf.ends_with('\n') {
-                // Remove the \n from the line if present
-                buf.pop();
-                // Remove the \r from the line if present
-                if buf.ends_with('\r') {
-                    buf.pop();
+        match &self.inner {
+            Inner::Term(term) => {
+                if is_password {
+                    term.read_secure_line()
+                } else {
+                    term.read_line()
                 }
             }
-            Ok(buf)
+            Inner::Stderr(_) => {
+                if is_password {
+                    read_password()
+                } else {
+                    let mut buf = String::new();
+                    io::stdin().read_line(&mut buf)?;
+                    if buf.ends_with('\n') {
+                        // Remove the \n from the line if present
+                        buf.pop();
+                        // Remove the \r from the line if present
+                        if buf.ends_with('\r') {
+                            buf.pop();
+                        }
+                    }
+                    Ok(buf)
+                }
+            }
+            _ => Ok(String::from("")),
         }
     }
 

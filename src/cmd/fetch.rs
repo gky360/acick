@@ -86,7 +86,7 @@ impl FetchOpt {
                     cnsl,
                 )?;
             } else {
-                cnsl.warn("WARN: \"--full\" option is only available for AtCoder")?;
+                cnsl.warn("\"--full\" option is only available for AtCoder")?;
             }
         }
 
