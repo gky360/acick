@@ -38,7 +38,7 @@ impl InitOpt {
             |mut file| ConfigBody::generate_to(&mut file).context("Could not save config"),
             self.overwrite,
             Some(&cwd),
-            cnsl,
+            Some(cnsl),
         )?;
 
         // check if saved

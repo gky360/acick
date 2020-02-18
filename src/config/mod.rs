@@ -119,7 +119,7 @@ impl Config {
             |file| serde_yaml::to_writer(file, &problem).context("Could not save problem as yaml"),
             overwrite,
             Some(&self.base_dir),
-            cnsl,
+            Some(cnsl),
         )
     }
 
@@ -128,7 +128,7 @@ impl Config {
         let problem: Problem = problem_abs_path.load_pretty(
             |file| serde_yaml::from_reader(file).context("Could not read problem as yaml"),
             Some(&self.base_dir),
-            cnsl,
+            Some(cnsl),
         )?;
         if problem.id() != problem_id {
             Err(anyhow!(
@@ -161,7 +161,7 @@ impl Config {
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
             overwrite,
             Some(&self.base_dir),
-            cnsl,
+            Some(cnsl),
         )
     }
 
@@ -174,7 +174,7 @@ impl Config {
                 Ok(buf)
             },
             Some(&self.base_dir),
-            cnsl,
+            Some(cnsl),
         )
     }
 
@@ -297,7 +297,7 @@ impl ConfigBody {
         let body: Self = base_dir.join(Self::FILE_NAME).load_pretty(
             |file| serde_yaml::from_reader(file).context("Could not read config file as yaml"),
             Some(base_dir),
-            cnsl,
+            Some(cnsl),
         )?;
         body.validate()?;
         Ok(body)

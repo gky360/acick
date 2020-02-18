@@ -53,13 +53,15 @@ impl AbsPathBuf {
         save: impl FnOnce(File) -> Result<()>,
         overwrite: bool,
         base_dir: Option<&AbsPathBuf>,
-        cnsl: &mut Console,
+        mut cnsl: Option<&mut Console>,
     ) -> Result<bool> {
-        write!(
-            cnsl,
-            "Saving {} ... ",
-            self.strip_prefix_if(base_dir).display()
-        )?;
+        if let Some(ref mut cnsl) = cnsl {
+            write!(
+                cnsl,
+                "Saving {} ... ",
+                self.strip_prefix_if(base_dir).display()
+            )?;
+        }
         let is_existed = self.as_ref().is_file();
         let result = if !overwrite && is_existed {
             Ok(false)
@@ -88,7 +90,9 @@ impl AbsPathBuf {
         } else {
             "failed"
         };
-        writeln!(cnsl, "{}", msg)?;
+        if let Some(ref mut cnsl) = cnsl {
+            writeln!(cnsl, "{}", msg)?;
+        }
         result
     }
 
@@ -96,13 +100,15 @@ impl AbsPathBuf {
         &self,
         load: impl FnOnce(File) -> Result<T>,
         base_dir: Option<&AbsPathBuf>,
-        cnsl: &mut Console,
+        mut cnsl: Option<&mut Console>,
     ) -> Result<T> {
-        write!(
-            cnsl,
-            "Loading {} ... ",
-            self.strip_prefix_if(base_dir).display()
-        )?;
+        if let Some(ref mut cnsl) = cnsl {
+            write!(
+                cnsl,
+                "Loading {} ... ",
+                self.strip_prefix_if(base_dir).display()
+            )?;
+        }
         let result = OpenOptions::new()
             .read(true)
             .open(&self.0)
@@ -112,7 +118,9 @@ impl AbsPathBuf {
             Ok(_) => "loaded",
             Err(_) => "failed",
         };
-        writeln!(cnsl, "{}", msg)?;
+        if let Some(ref mut cnsl) = cnsl {
+            writeln!(cnsl, "{}", msg)?;
+        }
         result
     }
 

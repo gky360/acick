@@ -126,9 +126,7 @@ impl AtcoderActor<'_> {
 
         for (problem, inout, file) in components.into_iter() {
             let dbx_path = format!("/{}/{}/{}/{}", folder.name, problem.id(), inout, file.name);
-            eprint!("{}: ", dbx_path);
             let (len, mut reader) = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
-            eprintln!("{:6}, {:6}", len, file.size);
             let abs_path = testcases_path.join(inout).join(file.name);
             abs_path.save_pretty(
                 |mut file| {
@@ -137,7 +135,7 @@ impl AtcoderActor<'_> {
                 },
                 true,
                 Some(&testcases_path),
-                cnsl,
+                None,
             )?;
             pb.inc(file.size);
         }
