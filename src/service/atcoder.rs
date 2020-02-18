@@ -1,6 +1,7 @@
 use std::io;
 
 use anyhow::{anyhow, Context as _};
+use indicatif::{ProgressBar, ProgressStyle};
 use maplit::hashmap;
 use reqwest::blocking::{Client, Response};
 use reqwest::{StatusCode, Url};
@@ -116,6 +117,13 @@ impl AtcoderActor<'_> {
             .fold(0, |sum, (_, _, file)| sum + file.size);
         eprintln!("total size: {}", total_size);
 
+        // prepare progress bar
+        let pb = ProgressBar::with_draw_target(total_size, cnsl.to_pb_target());
+        let style = ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+        .progress_chars("#>-");
+        pb.set_style(style);
+
         for (problem, inout, file) in components.into_iter() {
             let dbx_path = format!("/{}/{}/{}/{}", folder.name, problem.id(), inout, file.name);
             eprint!("{}: ", dbx_path);
@@ -131,7 +139,10 @@ impl AtcoderActor<'_> {
                 Some(&testcases_path),
                 cnsl,
             )?;
+            pb.inc(file.size);
         }
+
+        pb.finish();
 
         Ok(())
     }

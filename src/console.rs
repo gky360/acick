@@ -2,12 +2,11 @@ use std::env;
 use std::io::{self, Write};
 
 use console::Term;
-use rpassword::read_password;
+use indicatif::ProgressDrawTarget;
 
 #[derive(Debug)]
 enum Inner {
     Term(Term),
-    Stderr(io::Stderr),
     Buf(Vec<u8>),
     Sink(io::Sink),
 }
@@ -21,12 +20,6 @@ impl Console {
     pub fn term() -> Self {
         Self {
             inner: Inner::Term(Term::stderr()),
-        }
-    }
-
-    pub fn stderr() -> Self {
-        Self {
-            inner: Inner::Stderr(io::stderr()),
         }
     }
 
@@ -53,9 +46,15 @@ impl Console {
     fn as_mut_write(&mut self) -> &mut dyn Write {
         match self.inner {
             Inner::Term(ref mut w) => w,
-            Inner::Stderr(ref mut w) => w,
             Inner::Buf(ref mut w) => w,
             Inner::Sink(ref mut w) => w,
+        }
+    }
+
+    pub fn to_pb_target(&self) -> ProgressDrawTarget {
+        match &self.inner {
+            Inner::Term(term) => ProgressDrawTarget::to_term(term.clone(), None),
+            _ => ProgressDrawTarget::hidden(),
         }
     }
 
@@ -99,23 +98,6 @@ impl Console {
                     term.read_secure_line()
                 } else {
                     term.read_line()
-                }
-            }
-            Inner::Stderr(_) => {
-                if is_password {
-                    read_password()
-                } else {
-                    let mut buf = String::new();
-                    io::stdin().read_line(&mut buf)?;
-                    if buf.ends_with('\n') {
-                        // Remove the \n from the line if present
-                        buf.pop();
-                        // Remove the \r from the line if present
-                        if buf.ends_with('\r') {
-                            buf.pop();
-                        }
-                    }
-                    Ok(buf)
                 }
             }
             _ => Ok(String::from("")),
