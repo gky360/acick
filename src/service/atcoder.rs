@@ -77,6 +77,7 @@ impl AtcoderActor<'_> {
     ) -> Result<()> {
         static DBX_TESTCASES_URL: &str =
             "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
+        static TICK_INTERVAL_MS: u64 = 50;
 
         let dropbox = DbxAuthorizer::new(
             DBX_APP_KEY,
@@ -120,13 +121,18 @@ impl AtcoderActor<'_> {
         // prepare progress bar
         let pb = ProgressBar::with_draw_target(total_size, cnsl.to_pb_target());
         let style = ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-        .progress_chars("#>-");
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] \
+                 {bytes}/{total_bytes} (ETA {eta:>4}) {msg:>20}",
+            )
+            .progress_chars("#>-");
         pb.set_style(style);
+        pb.enable_steady_tick(TICK_INTERVAL_MS);
 
         for (problem, inout, file) in components.into_iter() {
+            pb.set_message(&file.name);
             let dbx_path = format!("/{}/{}/{}/{}", folder.name, problem.id(), inout, file.name);
-            let (len, mut reader) = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
+            let mut reader = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
             let abs_path = testcases_path.join(inout).join(file.name);
             abs_path.save_pretty(
                 |mut file| {

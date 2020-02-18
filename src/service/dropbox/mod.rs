@@ -102,13 +102,13 @@ impl Dropbox {
         &self,
         url: T,
         path: Path,
-    ) -> Result<(u64, Box<dyn Read>)> {
+    ) -> Result<Box<dyn Read>> {
         let arg = GetSharedLinkFileArg::new(url.into()).with_path(Some(path.clone()));
         let res = sharing::get_shared_link_file(&self.client, &arg, None, None)
             .map_err(convert_dbx_err)??;
 
-        match (res.content_length, res.body) {
-            (Some(content_length), Some(body)) => Ok((content_length, body)),
+        match res.body {
+            Some(body) => Ok(body),
             _ => Err(anyhow!("Found empty body : {}", path)),
         }
     }
