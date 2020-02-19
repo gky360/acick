@@ -5,9 +5,9 @@ use console::Term;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 
 static PB_TICK_INTERVAL_MS: u64 = 50;
-static PB_TEMPL_COUNT: &str = 
-"{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} {per_sec} ETA {eta}";
-static PB_TEMPL_BYTES: &str = 
+static PB_TEMPL_COUNT: &str =
+    "{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} {per_sec} ETA {eta}";
+static PB_TEMPL_BYTES: &str =
 "{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} {bytes_per_sec} ETA {eta}";
 static PB_PROGRESS_CHARS: &str = "#>-";
 

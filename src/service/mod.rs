@@ -9,6 +9,7 @@ use crate::{Console, Error, Result};
 
 mod act;
 mod atcoder;
+mod atcoder_full;
 mod atcoder_page;
 mod cookie;
 mod scrape;
