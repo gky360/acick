@@ -1,10 +1,13 @@
 use std::io;
 
 use anyhow::{anyhow, Context as _};
+use dropbox_sdk::files::FileMetadata;
 use indicatif::{ProgressBar, ProgressStyle};
+use itertools::Itertools as _;
 use maplit::hashmap;
 use reqwest::blocking::{Client, Response};
 use reqwest::{StatusCode, Url};
+use tokio::stream::{self, Stream as _, StreamExt as _};
 
 use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
@@ -68,7 +71,8 @@ impl AtcoderActor<'_> {
         Ok(())
     }
 
-    pub fn fetch_full(
+    #[tokio::main]
+    pub async fn fetch_full(
         contest_id: &ContestId,
         problems: &[Problem],
         token_path: &AbsPathBuf,
@@ -101,21 +105,40 @@ impl AtcoderActor<'_> {
             })?;
 
         // list testcase file path components
-        let mut components = Vec::new();
-        for problem in problems.iter() {
-            for inout in &["in", "out"] {
-                let files = dropbox.list_all_files(
-                    format!("/{}/{}/{}", folder.name, problem.id(), inout),
-                    Some(DBX_TESTCASES_URL),
-                )?;
-                components.extend(files.into_iter().map(|file| (problem, inout, file)));
-            }
-        }
+        let components_arr: Vec<Vec<(&Problem, &str, FileMetadata)>> =
+            stream::iter(problems.iter().cartesian_product(&["in", "out"]))
+                .map(|(problem, inout)| {
+                    eprintln!("list_all_files");
+                    dropbox
+                        .list_all_files(
+                            format!("/{}/{}/{}", folder.name, problem.id(), inout),
+                            Some(DBX_TESTCASES_URL),
+                        )
+                        .context("Could not list testcase files on Dropbox")
+                        .map(|files| {
+                            eprintln!("list_all_files_finish");
+                            files
+                                .into_iter()
+                                .map(|file| (problem, *inout, file))
+                                .collect::<Vec<_>>()
+                        })
+                })
+                .collect::<Result<Vec<_>>>()
+                .await?;
+        let components: Vec<(&Problem, &str, FileMetadata)> =
+            components_arr.into_iter().flatten().collect();
+        // for problem in problems.iter() {
+        //     for inout in &["in", "out"] {
+        //         let files = dropbox.list_all_files(
+        //             format!("/{}/{}/{}", folder.name, problem.id(), inout),
+        //             Some(DBX_TESTCASES_URL),
+        //         )?;
+        //         components.extend(files.into_iter().map(|file| (problem, inout, file)));
+        //     }
+        // }
 
         // calculate total size
-        let total_size = components
-            .iter()
-            .fold(0, |sum, (_, _, file)| sum + file.size);
+        let total_size = components.iter().map(|(_, _, file)| file.size).sum();
         eprintln!("total size: {}", total_size);
 
         // prepare progress bar

@@ -49,6 +49,6 @@ shellexpand = "1.1.1"
 structopt = "0.3.7"
 strum = { version = "0.17.1", features = ["derive"] }
 tera = "1.0.2"
-tokio = { version = "0.2.11", features = ["rt-core", "rt-threaded", "io-util", "time", "process", "macros", "sync"] }
+tokio = { version = "0.2.11", features = ["rt-core", "rt-threaded", "io-util", "time", "process", "macros", "sync", "stream"] }
 url = "2.1.1"
 webbrowser = "0.5.2"
