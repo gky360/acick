@@ -2,7 +2,6 @@ use std::io::{self, Write as _};
 
 use anyhow::{anyhow, Context as _};
 use dropbox_sdk::files::FileMetadata;
-use itertools::Itertools as _;
 use rayon::prelude::*;
 use strum::IntoEnumIterator as _;
 
@@ -11,11 +10,20 @@ use crate::dropbox::Dropbox;
 use crate::model::{ContestId, Problem};
 use crate::{Console, Result};
 
+static DBX_TESTCASES_URL: &str =
+    "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
+
 #[derive(AsRefStr, EnumIter, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[strum(serialize_all = "kebab-case")]
 pub enum InOut {
     In,
     Out,
+}
+
+impl InOut {
+    fn par_iter() -> impl ParallelIterator<Item = Self> {
+        Self::iter().collect::<Vec<_>>().into_par_iter()
+    }
 }
 
 pub fn fetch_full(
@@ -25,9 +33,6 @@ pub fn fetch_full(
     testcases_path: &AbsPathBuf,
     cnsl: &mut Console,
 ) -> Result<()> {
-    static DBX_TESTCASES_URL: &str =
-        "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
-
     writeln!(cnsl, "Downloading testcase files from Dropbox ...")?;
 
     // find dropbox folder that corresponds to the contest
@@ -42,42 +47,62 @@ pub fn fetch_full(
             )
         })?;
 
-    // list testcase files
-    let folders = problems
+    // download and save testcase files
+    problems
         .iter()
-        .cartesian_product(InOut::iter())
-        .collect::<Vec<_>>();
-    let components_arr: Vec<(&Problem, InOut, Vec<FileMetadata>)> = folders
-        .into_par_iter()
-        .map(|(problem, inout)| {
+        .try_for_each(|problem| download(dropbox, &folder.name, problem, testcases_path, cnsl))?;
+
+    Ok(())
+}
+
+fn list_testcase_files(
+    dropbox: &Dropbox,
+    folder_name: &str,
+    problem: &Problem,
+) -> Result<Vec<(InOut, FileMetadata)>> {
+    // fetch testcase files metadata
+    let files_arr: Vec<(InOut, Vec<FileMetadata>)> = InOut::par_iter()
+        .map(|inout| {
             let files = dropbox
                 .list_all_files(
-                    format!("/{}/{}/{}", folder.name, problem.id(), inout.as_ref()),
+                    format!("/{}/{}/{}", folder_name, problem.id(), inout.as_ref()),
                     Some(DBX_TESTCASES_URL),
                 )
                 .context("Could not list testcase files on Dropbox")?;
-            Ok((problem, inout, files))
+            Ok((inout, files))
         })
         .collect::<Result<Vec<_>>>()?;
 
-    // flatten testcase files data
-    let components: Vec<(&Problem, InOut, FileMetadata)> = components_arr
+    // flatten testcase files metadata
+    let files: Vec<(InOut, FileMetadata)> = files_arr
         .into_iter()
-        .map(|(problem, inout, files)| files.into_iter().map(move |file| (problem, inout, file)))
+        .map(|(inout, files)| files.into_iter().map(move |file| (inout, file)))
         .flatten()
         .collect();
+    Ok(files)
+}
 
-    // calculate total size
-    let total_size = components.iter().map(|(_, _, file)| file.size).sum();
+fn download(
+    dropbox: &Dropbox,
+    folder_name: &str,
+    problem: &Problem,
+    testcases_path: &AbsPathBuf,
+    cnsl: &mut Console,
+) -> Result<()> {
+    let files = list_testcase_files(dropbox, folder_name, problem)?;
 
-    // download and save testcase files
+    // setup progress bar
+    let total_size = files.iter().map(|(_, file)| file.size).sum();
     let pb = cnsl.build_pb_bytes(total_size);
-    components
+    pb.set_prefix(&format!("Problem {}", problem.id()));
+
+    // fetch and save
+    files
         .into_par_iter()
-        .try_for_each::<_, Result<()>>(|(problem, inout, file)| {
+        .try_for_each::<_, Result<()>>(|(inout, file)| {
             let dbx_path = format!(
                 "/{}/{}/{}/{}",
-                folder.name,
+                folder_name,
                 problem.id(),
                 inout.as_ref(),
                 file.name
@@ -96,8 +121,8 @@ pub fn fetch_full(
             pb.inc(file.size);
             Ok(())
         })?;
-    pb.finish();
 
+    pb.finish();
     Ok(())
 }
 
