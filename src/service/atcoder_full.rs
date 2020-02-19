@@ -48,9 +48,9 @@ pub fn fetch_full(
         })?;
 
     // download and save testcase files
-    problems
-        .iter()
-        .try_for_each(|problem| download(dropbox, &folder.name, problem, testcases_path, cnsl))?;
+    problems.iter().try_for_each(|problem| {
+        fetch_problem_full(dropbox, &folder.name, problem, testcases_path, cnsl)
+    })?;
 
     Ok(())
 }
@@ -82,7 +82,7 @@ fn list_testcase_files(
     Ok(files)
 }
 
-fn download(
+fn fetch_problem_full(
     dropbox: &Dropbox,
     folder_name: &str,
     problem: &Problem,
@@ -94,7 +94,7 @@ fn download(
     // setup progress bar
     let total_size = files.iter().map(|(_, file)| file.size).sum();
     let pb = cnsl.build_pb_bytes(total_size);
-    pb.set_prefix(&format!("Problem {}", problem.id()));
+    pb.set_prefix(problem.id().as_ref());
 
     // fetch and save
     files
