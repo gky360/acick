@@ -164,7 +164,13 @@ mod tests {
         let testcases_path = AbsPathBuf::try_new(test_dir.path().to_owned())?;
         let mut cnsl = Console::buf();
 
-        let result = fetch_full(&dropbox, &contest_id, &problems, &testcases_path, &mut cnsl);
+        let result = fetch_full(
+            &dropbox,
+            &contest_id,
+            &problems[0..2],
+            &testcases_path,
+            &mut cnsl,
+        );
 
         let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
         eprintln!("{}", output_str);
