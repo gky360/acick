@@ -2,7 +2,14 @@ use std::env;
 use std::io::{self, Write};
 
 use console::Term;
-use indicatif::ProgressDrawTarget;
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+
+static PB_TICK_INTERVAL_MS: u64 = 50;
+static PB_TEMPL_COUNT: &str = 
+"{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} {per_sec} ETA {eta}";
+static PB_TEMPL_BYTES: &str = 
+"{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} {bytes_per_sec} ETA {eta}";
+static PB_PROGRESS_CHARS: &str = "#>-";
 
 #[derive(Debug)]
 enum Inner {
@@ -48,13 +55,6 @@ impl Console {
             Inner::Term(ref mut w) => w,
             Inner::Buf(ref mut w) => w,
             Inner::Sink(ref mut w) => w,
-        }
-    }
-
-    pub fn to_pb_target(&self) -> ProgressDrawTarget {
-        match &self.inner {
-            Inner::Term(term) => ProgressDrawTarget::to_term(term.clone(), None),
-            _ => ProgressDrawTarget::hidden(),
         }
     }
 
@@ -113,6 +113,33 @@ impl Console {
     fn prompt_and_read(&mut self, prompt: &str, is_password: bool) -> io::Result<String> {
         self.prompt(prompt)?;
         self.read_user(is_password)
+    }
+
+    pub fn build_pb_count(&self, len: u64) -> ProgressBar {
+        self.build_pb_with(len, PB_TEMPL_COUNT)
+    }
+
+    pub fn build_pb_bytes(&self, len: u64) -> ProgressBar {
+        self.build_pb_with(len, PB_TEMPL_BYTES)
+    }
+
+    fn build_pb_with(&self, len: u64, template: &str) -> ProgressBar {
+        let pb = ProgressBar::with_draw_target(len, self.to_pb_target());
+        let style = Self::pb_style_common().template(template);
+        pb.set_style(style);
+        pb.enable_steady_tick(PB_TICK_INTERVAL_MS);
+        pb
+    }
+
+    fn to_pb_target(&self) -> ProgressDrawTarget {
+        match &self.inner {
+            Inner::Term(term) => ProgressDrawTarget::to_term(term.clone(), None),
+            _ => ProgressDrawTarget::hidden(),
+        }
+    }
+
+    fn pb_style_common() -> ProgressStyle {
+        ProgressStyle::default_bar().progress_chars(PB_PROGRESS_CHARS)
     }
 }
 

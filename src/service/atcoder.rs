@@ -2,7 +2,6 @@ use std::io::{self, Write as _};
 
 use anyhow::{anyhow, Context as _};
 use dropbox_sdk::files::FileMetadata;
-use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools as _;
 use maplit::hashmap;
 use rayon::prelude::*;
@@ -78,9 +77,8 @@ impl AtcoderActor<'_> {
     ) -> Result<()> {
         static DBX_TESTCASES_URL: &str =
             "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
-        static TICK_INTERVAL_MS: u64 = 50;
 
-        writeln!(cnsl, "Downloading testcases from Dropbox ...")?;
+        writeln!(cnsl, "Downloading testcase files from Dropbox ...")?;
 
         // find dropbox folder that corresponds to the contest
         let folders = dropbox.list_all_folders("", Some(DBX_TESTCASES_URL))?;
@@ -110,6 +108,8 @@ impl AtcoderActor<'_> {
                 Ok((problem, *inout, files))
             })
             .collect::<Result<Vec<_>>>()?;
+
+        // flatten testcase files data
         let components: Vec<(&Problem, &str, FileMetadata)> = components_arr
             .into_iter()
             .map(|(problem, inout, files)| {
@@ -121,18 +121,8 @@ impl AtcoderActor<'_> {
         // calculate total size
         let total_size = components.iter().map(|(_, _, file)| file.size).sum();
 
-        // prepare progress bar
-        let pb = ProgressBar::with_draw_target(total_size, cnsl.to_pb_target());
-        let style = ProgressStyle::default_bar()
-            .template(
-                "{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] \
-                 {bytes}/{total_bytes} {bytes_per_sec} ETA {eta}",
-            )
-            .progress_chars("#>-");
-        pb.set_style(style);
-        pb.enable_steady_tick(TICK_INTERVAL_MS);
-
         // download and save testcase files
+        let pb = cnsl.build_pb_bytes(total_size);
         components
             .into_par_iter()
             .try_for_each::<_, Result<()>>(|(problem, inout, file)| {
@@ -152,7 +142,6 @@ impl AtcoderActor<'_> {
                 pb.inc(file.size);
                 Ok(())
             })?;
-
         pb.finish();
 
         Ok(())
