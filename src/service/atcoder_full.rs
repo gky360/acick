@@ -100,3 +100,77 @@ pub fn fetch_full(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use tempfile::tempdir;
+
+    use super::*;
+    use crate::dropbox::Token;
+    use crate::model::Compare;
+
+    fn get_test_problems() -> Vec<Problem> {
+        vec![
+            Problem::new(
+                "C",
+                "Linear Approximation",
+                "arc100_a",
+                Duration::from_secs(2),
+                "1024 MB".parse().unwrap(),
+                Compare::Default,
+                vec![],
+            ),
+            Problem::new(
+                "D",
+                "Equal Cut",
+                "arc100_b",
+                Duration::from_secs(2),
+                "1024 MB".parse().unwrap(),
+                Compare::Default,
+                vec![],
+            ),
+            Problem::new(
+                "E",
+                "Or Plus Max",
+                "arc100_c",
+                Duration::from_secs(2),
+                "1024 MB".parse().unwrap(),
+                Compare::Default,
+                vec![],
+            ),
+            Problem::new(
+                "F",
+                "Colorful Sequences",
+                "arc100_d",
+                Duration::from_secs(2),
+                "1024 MB".parse().unwrap(),
+                Compare::Default,
+                vec![],
+            ),
+        ]
+    }
+
+    #[test]
+    fn test_fetch_full() -> Result<()> {
+        let test_dir = tempdir()?;
+
+        let dropbox = Dropbox::new(Token {
+            access_token: env!("ACICK_DBX_ACCESS_TOKEN").to_owned(),
+        });
+        let contest_id = ContestId::from("arc100");
+        let problems = get_test_problems();
+        let testcases_path = AbsPathBuf::try_new(test_dir.path().to_owned())?;
+        let mut cnsl = Console::buf();
+
+        let result = fetch_full(&dropbox, &contest_id, &problems, &testcases_path, &mut cnsl);
+
+        let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
+        eprintln!("{}", output_str);
+
+        // TODO: check if testcase files exists
+
+        result
+    }
+}

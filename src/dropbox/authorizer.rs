@@ -65,9 +65,7 @@ impl<'a> DbxAuthorizer<'a> {
 
         self.save_token(&token, cnsl)?;
 
-        let client = HyperClient::new(token.access_token);
-
-        Ok(Dropbox { client })
+        Ok(Dropbox::new(token))
     }
 
     fn load_token(&self, cnsl: &mut Console) -> Result<Option<Token>> {
