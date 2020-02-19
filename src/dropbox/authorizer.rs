@@ -14,8 +14,8 @@ use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
 use crate::abs_path::AbsPathBuf;
-use crate::service::dropbox::hyper_client::{HyperClient, Oauth2AuthorizeUrlBuilder, Oauth2Type};
-use crate::service::dropbox::{convert_dbx_err, Dropbox};
+use crate::dropbox::hyper_client::{HyperClient, Oauth2AuthorizeUrlBuilder, Oauth2Type};
+use crate::dropbox::{convert_dbx_err, Dropbox};
 use crate::service::open_in_browser;
 use crate::{Console, Result};
 

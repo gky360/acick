@@ -11,13 +11,11 @@ use reqwest::{StatusCode, Url};
 
 use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
+use crate::dropbox::Dropbox;
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
-};
-use crate::service::dropbox::{
-    DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
 };
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
@@ -72,25 +70,15 @@ impl AtcoderActor<'_> {
     }
 
     pub fn fetch_full(
+        dropbox: &Dropbox,
         contest_id: &ContestId,
         problems: &[Problem],
-        token_path: &AbsPathBuf,
         testcases_path: &AbsPathBuf,
         cnsl: &mut Console,
     ) -> Result<()> {
         static DBX_TESTCASES_URL: &str =
             "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
         static TICK_INTERVAL_MS: u64 = 50;
-
-        // authorize Dropbox account
-        let dropbox = DbxAuthorizer::new(
-            DBX_APP_KEY,
-            DBX_APP_SECRET,
-            DBX_REDIRECT_PORT,
-            DBX_REDIRECT_PATH,
-            token_path,
-        )
-        .load_or_request(cnsl)?;
 
         writeln!(cnsl, "Downloading testcases from Dropbox ...")?;
 
