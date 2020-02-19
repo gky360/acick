@@ -71,8 +71,7 @@ impl AtcoderActor<'_> {
         Ok(())
     }
 
-    #[tokio::main]
-    pub async fn fetch_full(
+    pub fn fetch_full(
         contest_id: &ContestId,
         problems: &[Problem],
         token_path: &AbsPathBuf,
@@ -83,8 +82,7 @@ impl AtcoderActor<'_> {
             "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
         static TICK_INTERVAL_MS: u64 = 50;
 
-        writeln!(cnsl, "Downloading testcases from Dropbox ...")?;
-
+        // authorize Dropbox account
         let dropbox = DbxAuthorizer::new(
             DBX_APP_KEY,
             DBX_APP_SECRET,
@@ -93,6 +91,8 @@ impl AtcoderActor<'_> {
             token_path,
         )
         .load_or_request(cnsl)?;
+
+        writeln!(cnsl, "Downloading testcases from Dropbox ...")?;
 
         // find dropbox folder that corresponds to the contest
         let folders = dropbox.list_all_folders("", Some(DBX_TESTCASES_URL))?;
@@ -138,7 +138,7 @@ impl AtcoderActor<'_> {
         let style = ProgressStyle::default_bar()
             .template(
                 "{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] \
-                 {bytes}/{total_bytes} (ETA {eta:>4}) {msg:>20}",
+                 {bytes}/{total_bytes} {bytes_per_sec} ETA {eta}",
             )
             .progress_chars("#>-");
         pb.set_style(style);
@@ -148,7 +148,6 @@ impl AtcoderActor<'_> {
         components
             .into_par_iter()
             .try_for_each::<_, Result<()>>(|(problem, inout, file)| {
-                pb.set_message(&file.name);
                 let dbx_path = format!("/{}/{}/{}/{}", folder.name, problem.id(), inout, file.name);
                 let mut reader = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
                 let abs_path = testcases_path.join(inout).join(file.name);
