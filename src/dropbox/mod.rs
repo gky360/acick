@@ -12,7 +12,7 @@ use crate::{Error, Result};
 mod authorizer;
 mod hyper_client;
 
-pub use authorizer::DbxAuthorizer;
+pub use authorizer::{DbxAuthorizer, Token};
 use hyper_client::HyperClient;
 
 pub static DBX_APP_KEY: &str = env!("ACICK_DBX_APP_KEY");
@@ -30,6 +30,11 @@ pub struct Dropbox {
 }
 
 impl Dropbox {
+    pub fn new(token: Token) -> Self {
+        let client = HyperClient::new(token.access_token);
+        Self { client }
+    }
+
     pub fn list_all_folders<P: Into<PathROrId>>(
         &self,
         path: P,

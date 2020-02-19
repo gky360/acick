@@ -10,18 +10,7 @@ use crate::judge::diff::TextDiff;
 use crate::{Console, Error, Result};
 
 #[derive(
-    Serialize,
-    Deserialize,
-    EnumVariantNames,
-    IntoStaticStr,
-    Debug,
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
+    Serialize, Deserialize, AsRefStr, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 #[serde(rename_all = "UPPERCASE")]
 #[strum(serialize_all = "UPPERCASE")]
@@ -30,12 +19,6 @@ pub enum StatusKind {
     Wa,
     Tle,
     Re,
-}
-
-impl fmt::Display for StatusKind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(self.into())
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -123,7 +106,12 @@ impl Status {
 
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} ({}ms)", self.kind(), self.elapsed.as_millis())
+        write!(
+            f,
+            "{} ({}ms)",
+            self.kind().as_ref(),
+            self.elapsed.as_millis()
+        )
     }
 }
 
@@ -191,7 +179,7 @@ impl fmt::Display for TotalStatus {
         write!(
             f,
             "{:3} (AC: {:>2}/{t:>2}, WA: {:>2}/{t:>2}, TLE: {:>2}/{t:>2}, RE: {:>2}/{t:>2})",
-            Into::<&'static str>::into(self.kind),
+            self.kind.as_ref(),
             self.count.ac,
             self.count.wa,
             self.count.tle,

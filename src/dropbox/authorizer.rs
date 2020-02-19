@@ -24,8 +24,8 @@ static DBX_CODE_PARAM: &str = "code";
 static DBX_STATE_PARAM: &str = "state";
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-struct Token {
-    access_token: String,
+pub struct Token {
+    pub access_token: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -5,7 +5,9 @@ use reqwest::{StatusCode, Url};
 
 use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
-use crate::dropbox::Dropbox;
+use crate::dropbox::{
+    DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
+};
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
 use crate::service::atcoder_full::fetch_full;
 use crate::service::atcoder_page::{
@@ -65,13 +67,23 @@ impl AtcoderActor<'_> {
     }
 
     pub fn fetch_full(
-        dropbox: &Dropbox,
         contest_id: &ContestId,
         problems: &[Problem],
         testcases_path: &AbsPathBuf,
+        token_path: &AbsPathBuf,
         cnsl: &mut Console,
     ) -> Result<()> {
-        fetch_full(dropbox, contest_id, problems, testcases_path, cnsl)
+        // authorize Dropbox account
+        let dropbox = DbxAuthorizer::new(
+            DBX_APP_KEY,
+            DBX_APP_SECRET,
+            DBX_REDIRECT_PORT,
+            DBX_REDIRECT_PATH,
+            &token_path,
+        )
+        .load_or_request(cnsl)?;
+
+        fetch_full(&dropbox, contest_id, problems, testcases_path, cnsl)
     }
 }
 

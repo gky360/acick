@@ -4,11 +4,19 @@ use anyhow::{anyhow, Context as _};
 use dropbox_sdk::files::FileMetadata;
 use itertools::Itertools as _;
 use rayon::prelude::*;
+use strum::IntoEnumIterator as _;
 
 use crate::abs_path::AbsPathBuf;
 use crate::dropbox::Dropbox;
 use crate::model::{ContestId, Problem};
 use crate::{Console, Result};
+
+#[derive(AsRefStr, EnumIter, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[strum(serialize_all = "kebab-case")]
+pub enum InOut {
+    In,
+    Out,
+}
 
 pub fn fetch_full(
     dropbox: &Dropbox,
@@ -37,23 +45,23 @@ pub fn fetch_full(
     // list testcase files
     let folders = problems
         .iter()
-        .cartesian_product(&["in", "out"])
+        .cartesian_product(InOut::iter())
         .collect::<Vec<_>>();
-    let components_arr: Vec<(&Problem, &str, Vec<FileMetadata>)> = folders
+    let components_arr: Vec<(&Problem, InOut, Vec<FileMetadata>)> = folders
         .into_par_iter()
         .map(|(problem, inout)| {
             let files = dropbox
                 .list_all_files(
-                    format!("/{}/{}/{}", folder.name, problem.id(), inout),
+                    format!("/{}/{}/{}", folder.name, problem.id(), inout.as_ref()),
                     Some(DBX_TESTCASES_URL),
                 )
                 .context("Could not list testcase files on Dropbox")?;
-            Ok((problem, *inout, files))
+            Ok((problem, inout, files))
         })
         .collect::<Result<Vec<_>>>()?;
 
     // flatten testcase files data
-    let components: Vec<(&Problem, &str, FileMetadata)> = components_arr
+    let components: Vec<(&Problem, InOut, FileMetadata)> = components_arr
         .into_iter()
         .map(|(problem, inout, files)| files.into_iter().map(move |file| (problem, inout, file)))
         .flatten()
@@ -67,9 +75,15 @@ pub fn fetch_full(
     components
         .into_par_iter()
         .try_for_each::<_, Result<()>>(|(problem, inout, file)| {
-            let dbx_path = format!("/{}/{}/{}/{}", folder.name, problem.id(), inout, file.name);
+            let dbx_path = format!(
+                "/{}/{}/{}/{}",
+                folder.name,
+                problem.id(),
+                inout.as_ref(),
+                file.name
+            );
             let mut reader = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
-            let abs_path = testcases_path.join(inout).join(file.name);
+            let abs_path = testcases_path.join(inout.as_ref()).join(file.name);
             abs_path.save_pretty(
                 |mut file| {
                     io::copy(&mut reader, &mut file).context("Could not save testcase to file")?;

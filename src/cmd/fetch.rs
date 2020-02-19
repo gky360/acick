@@ -6,9 +6,6 @@ use structopt::StructOpt;
 
 use crate::abs_path::AbsPathBuf;
 use crate::cmd::Outcome;
-use crate::dropbox::{
-    DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
-};
 use crate::model::{Contest, Problem, ProblemId, Service, ServiceKind};
 use crate::service::AtcoderActor;
 use crate::{Config, Console, Result};
@@ -79,24 +76,14 @@ impl FetchOpt {
         if is_full {
             if conf.service_id == ServiceKind::Atcoder {
                 // TODO: load paths from config
+                let testcases_path = AbsPathBuf::try_new("/tmp/acick/testcases".into())?;
                 let token_path = AbsPathBuf::try_new("/tmp/acick/token.json".into())?;
-                let test_cases_path = AbsPathBuf::try_new("/tmp/acick/testcases".into())?;
-
-                // authorize Dropbox account
-                let dropbox = DbxAuthorizer::new(
-                    DBX_APP_KEY,
-                    DBX_APP_SECRET,
-                    DBX_REDIRECT_PORT,
-                    DBX_REDIRECT_PATH,
-                    &token_path,
-                )
-                .load_or_request(cnsl)?;
 
                 AtcoderActor::fetch_full(
-                    &dropbox,
                     &conf.contest_id,
                     &problems,
-                    &test_cases_path,
+                    &testcases_path,
+                    &token_path,
                     cnsl,
                 )?;
             } else {
