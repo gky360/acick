@@ -192,7 +192,7 @@ mod tests {
         let result = fetch_full(
             &dropbox,
             &contest_id,
-            &problems[0..2],
+            &problems[0..1],
             &testcases_path,
             &mut cnsl,
         );
