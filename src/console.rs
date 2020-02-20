@@ -9,7 +9,7 @@ static PB_TEMPL_COUNT: &str =
     "{spinner:.green} {prefix} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} {per_sec} ETA {eta}";
 static PB_TEMPL_BYTES: &str =
     "{spinner:.green} {prefix} [{elapsed_precise}] [{wide_bar:.cyan/blue}] \
-     {bytes:>8}/{total_bytes:>8} {bytes_per_sec:>10} ETA {eta:>3}";
+     {bytes:>9}/{total_bytes:>9} {bytes_per_sec:>11} ETA {eta:>3}";
 static PB_PROGRESS_CHARS: &str = "#>-";
 
 #[derive(Debug)]
