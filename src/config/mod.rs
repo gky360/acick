@@ -54,6 +54,8 @@ use std::fmt;
 use std::io::{Read as _, Write};
 
 use anyhow::{anyhow, Context as _};
+use dirs::{data_local_dir, home_dir};
+use lazy_static::lazy_static;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
@@ -69,6 +71,23 @@ use crate::service::{Act, AtcoderActor};
 use crate::{Console, Result, VERSION};
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
+
+static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
+
+lazy_static! {
+    static ref DATA_LOCAL_DIR: AbsPathBuf = {
+        let path = data_local_dir()
+            .unwrap_or_else(|| {
+                home_dir()
+                    .expect("Could not get home dir")
+                    .join(".local")
+                    .join("share")
+            })
+            .join(env!("CARGO_PKG_NAME"));
+        AbsPathBuf::try_new(path).unwrap()
+    };
+    static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
+}
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Config {
@@ -253,6 +272,8 @@ pub struct ConfigBody {
     shell: Shell,
     #[serde(default = "ConfigBody::default_problem_path")]
     problem_path: TargetTempl,
+    #[serde(default = "ConfigBody::default_testcases_dir")]
+    testcases_dir: TargetTempl,
     #[serde(default)]
     session: SessionConfig,
     #[serde(default)]
@@ -264,6 +285,8 @@ impl ConfigBody {
 
     const DEFAULT_PROBLEM_PATH: &'static str =
         "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml";
+
+    const DEFAULT_TESTCASES_DIR: &'static str = "{{ service }}/{{ contest }}/{{ problem | lower }}";
 
     pub fn generate_to(writer: &mut dyn Write) -> Result<()> {
         writeln!(
@@ -277,6 +300,10 @@ impl ConfigBody {
 
     fn default_problem_path() -> TargetTempl {
         Self::DEFAULT_PROBLEM_PATH.into()
+    }
+
+    fn default_testcases_dir() -> TargetTempl {
+        Self::DEFAULT_TESTCASES_DIR.into()
     }
 
     fn search(cnsl: &mut Console) -> Result<(Self, AbsPathBuf)> {
@@ -327,7 +354,8 @@ impl Default for ConfigBody {
         Self {
             version: VERSION.clone(),
             shell: Shell::default(),
-            problem_path: Self::DEFAULT_PROBLEM_PATH.into(),
+            problem_path: Self::default_problem_path(),
+            testcases_dir: Self::default_testcases_dir(),
             session: SessionConfig::default(),
             services: ServicesConfig::default(),
         }

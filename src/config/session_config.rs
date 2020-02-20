@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use dirs::{data_local_dir, home_dir};
 use getset::{CopyGetters, Getters};
 use lazy_static::lazy_static;
 use reqwest::blocking::{Client, ClientBuilder};
@@ -8,6 +7,7 @@ use reqwest::redirect::Policy;
 use serde::{Deserialize, Serialize};
 
 use crate::abs_path::AbsPathBuf;
+use crate::config::DATA_LOCAL_DIR;
 use crate::service::CookieStorage;
 use crate::Result;
 
@@ -23,18 +23,7 @@ static USER_AGENT: &str = concat!(
 static COOKIES_FILE_NAME: &str = "cookies.json";
 
 lazy_static! {
-    static ref COOKIES_PATH: AbsPathBuf = {
-        let path = data_local_dir()
-            .unwrap_or_else(|| {
-                home_dir()
-                    .expect("Could not get home dir")
-                    .join(".local")
-                    .join("share")
-            })
-            .join(env!("CARGO_PKG_NAME"))
-            .join(COOKIES_FILE_NAME);
-        AbsPathBuf::try_new(path).unwrap()
-    };
+    static ref COOKIES_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(COOKIES_FILE_NAME);
 }
 
 #[derive(Serialize, Deserialize, Getters, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
