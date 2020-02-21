@@ -457,6 +457,10 @@ int main() {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::OpenOptions;
+
+    use tempfile::tempdir;
+
     use super::*;
     use crate::config::template::TargetContext;
     use crate::tests::DEFAULT_PROBLEM;
@@ -476,8 +480,28 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn exec_default_atcoder_compile() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn exec_default_atcoder_compile() -> anyhow::Result<()> {
+        let test_dir = tempdir()?;
+
+        // prepare source file
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(format!("{}/Main.cpp", test_dir.path().display()))?;
+        file.write_all(
+            r#"
+#include <iostream>
+using namespace std;
+
+int main() {{
+    return 0;
+}}
+        "#
+            .as_bytes(),
+        )?;
+
+        // exec compile command
         let shell = Shell::default();
         let compile = ServiceConfig::default_for(ServiceKind::Atcoder).compile;
         let context = TargetContext::new(
@@ -485,9 +509,14 @@ mod tests {
             &DEFAULT_CONTEST.id(),
             &DEFAULT_PROBLEM.id(),
         );
-        let output = shell.exec_templ(&compile, &context)?;
-        println!("{:?}", output);
-        // TODO: assert success
+        let output = shell
+            .exec_templ(&compile, &context)?
+            .current_dir(test_dir.path())
+            .output()
+            .await?;
+        eprintln!("{:?}", output);
+        assert!(output.status.success());
+
         Ok(())
     }
 }

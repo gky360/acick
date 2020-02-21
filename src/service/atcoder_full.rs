@@ -201,12 +201,20 @@ mod tests {
         let mut cnsl = Console::buf(ConsoleConfig::default());
 
         let result = fetch_full(&dropbox, &contest_id, &problems[0..1], &conf, &mut cnsl);
-
         let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
         eprintln!("{}", output_str);
+        result?;
 
-        // TODO: check if testcase files exists
+        let paths = &[
+            "acick/atcoder/arc100/c/testcases/in/sample_04.txt",
+            "acick/atcoder/arc100/c/testcases/in/subtask_1_11.txt",
+            "acick/atcoder/arc100/c/testcases/out/sample_04.txt",
+            "acick/atcoder/arc100/c/testcases/out/subtask_1_11.txt",
+        ];
+        for path in paths {
+            assert!(test_dir.path().join(path).is_file());
+        }
 
-        result
+        Ok(())
     }
 }
