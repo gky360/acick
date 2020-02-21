@@ -118,7 +118,7 @@ impl ProblemRowElem<'_> {
             url_name,
             time_limit,
             memory_limit,
-            Compare::Default, // TODO: suppord float
+            Compare::Default, // TODO: support float
             Vec::new(),
         ))
     }
