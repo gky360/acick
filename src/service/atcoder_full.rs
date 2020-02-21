@@ -9,7 +9,7 @@ use tempfile::tempdir;
 use crate::abs_path::AbsPathBuf;
 use crate::dropbox::Dropbox;
 use crate::model::{ContestId, Problem};
-use crate::{Console, Result};
+use crate::{Config, Console, Result};
 
 static DBX_TESTCASES_URL: &str =
     "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
@@ -31,7 +31,7 @@ pub fn fetch_full(
     dropbox: &Dropbox,
     contest_id: &ContestId,
     problems: &[Problem],
-    testcases_path: &AbsPathBuf,
+    conf: &Config,
     cnsl: &mut Console,
 ) -> Result<()> {
     writeln!(cnsl, "Downloading testcase files from Dropbox ...")?;
@@ -49,14 +49,20 @@ pub fn fetch_full(
         })?;
 
     // download and save testcase files
-    problems.iter().try_for_each(|problem| {
+    problems.iter().try_for_each(|problem| -> Result<()> {
         // setup temp dir
-        let tmp_testcases_dir = tempdir()?;
+        let tmp_testcases_dir =
+            tempdir().context("Could not create temp dir for downloading testcase files")?;
         let tmp_testcases_abs_dir = AbsPathBuf::try_new(tmp_testcases_dir.path().to_owned())?;
-        fetch_problem_full(dropbox, &folder.name, problem, &tmp_testcases_abs_dir, cnsl)
-    })?;
 
-    Ok(())
+        // download testcase files for the problem
+        fetch_problem_full(dropbox, &folder.name, problem, &tmp_testcases_abs_dir, cnsl)?;
+
+        // move temp dir to testcases dir specified in config
+        conf.move_testcases_dir(problem, &tmp_testcases_abs_dir, cnsl)?;
+
+        Ok(())
+    })
 }
 
 fn list_testcase_files(
@@ -191,16 +197,10 @@ mod tests {
         });
         let contest_id = ContestId::from("arc100");
         let problems = get_test_problems();
-        let testcases_path = AbsPathBuf::try_new(test_dir.path().to_owned())?;
+        let conf = Config::default_test(&test_dir);
         let mut cnsl = Console::buf(ConsoleConfig::default());
 
-        let result = fetch_full(
-            &dropbox,
-            &contest_id,
-            &problems[0..1],
-            &testcases_path,
-            &mut cnsl,
-        );
+        let result = fetch_full(&dropbox, &contest_id, &problems[0..1], &conf, &mut cnsl);
 
         let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
         eprintln!("{}", output_str);

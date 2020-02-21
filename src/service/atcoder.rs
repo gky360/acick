@@ -17,7 +17,7 @@ use crate::service::atcoder_page::{
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
 use crate::service::{open_in_browser, Act, ResponseExt as _};
-use crate::{Console, Error, Result};
+use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]
 pub struct AtcoderActor<'a> {
@@ -69,8 +69,8 @@ impl AtcoderActor<'_> {
     pub fn fetch_full(
         contest_id: &ContestId,
         problems: &[Problem],
-        testcases_path: &AbsPathBuf,
         token_path: &AbsPathBuf,
+        conf: &Config,
         cnsl: &mut Console,
     ) -> Result<()> {
         // authorize Dropbox account
@@ -83,7 +83,7 @@ impl AtcoderActor<'_> {
         )
         .load_or_request(cnsl)?;
 
-        fetch_full(&dropbox, contest_id, problems, testcases_path, cnsl)
+        fetch_full(&dropbox, contest_id, problems, conf, cnsl)
     }
 }
 

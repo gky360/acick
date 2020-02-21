@@ -4,8 +4,8 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::abs_path::AbsPathBuf;
 use crate::cmd::Outcome;
+use crate::config::DBX_TOKEN_PATH;
 use crate::model::{Contest, Problem, ProblemId, Service, ServiceKind};
 use crate::service::AtcoderActor;
 use crate::{Config, Console, Result};
@@ -75,17 +75,7 @@ impl FetchOpt {
 
         if is_full {
             if conf.service_id == ServiceKind::Atcoder {
-                // TODO: load paths from config
-                let testcases_path = AbsPathBuf::try_new("/tmp/acick/testcases".into())?;
-                let token_path = AbsPathBuf::try_new("/tmp/acick/token.json".into())?;
-
-                AtcoderActor::fetch_full(
-                    &conf.contest_id,
-                    &problems,
-                    &testcases_path,
-                    &token_path,
-                    cnsl,
-                )?;
+                AtcoderActor::fetch_full(&conf.contest_id, &problems, &DBX_TOKEN_PATH, conf, cnsl)?;
             } else {
                 cnsl.warn("\"--full\" option is only available for AtCoder")?;
             }

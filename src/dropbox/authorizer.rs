@@ -152,7 +152,6 @@ impl<'a> DbxAuthorizer<'a> {
         let graceful = server.with_graceful_shutdown(async {
             let mut rx = tx.subscribe();
             rx.recv().await.unwrap();
-            eprintln!("Shutting down server ...");
         });
         graceful.await?;
 
@@ -226,7 +225,6 @@ async fn respond(
     state: String,
     tx: Sender<String>,
 ) -> std::result::Result<Response<Body>, Infallible> {
-    eprintln!("{:?}", req);
     let res = if req.method() == Method::GET && req.uri().path() == redirect_path {
         handle_callback(req, tx, &state)
     } else {

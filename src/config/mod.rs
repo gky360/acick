@@ -86,7 +86,7 @@ lazy_static! {
             .join(env!("CARGO_PKG_NAME"));
         AbsPathBuf::try_new(path).unwrap()
     };
-    static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
+    pub static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -125,6 +125,28 @@ impl Config {
         match self.service_id {
             ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, &self.body.session)),
         }
+    }
+
+    pub fn move_testcases_dir(
+        &self,
+        problem: &Problem,
+        from: &AbsPathBuf,
+        cnsl: &mut Console,
+    ) -> Result<bool> {
+        let testcases_abs_dir = self.testcases_abs_dir(problem.id())?;
+        if testcases_abs_dir.as_ref().exists() {
+            let message = format!("remove existing testcases dir {}?", from);
+            if !cnsl.confirm(&message, false)? {
+                return Ok(false);
+            }
+            testcases_abs_dir.remove_dir_all_pretty(Some(&self.base_dir), Some(cnsl))?;
+        } else {
+            testcases_abs_dir.create_dir_all()?;
+        }
+
+        testcases_abs_dir.move_from_pretty(from, Some(&self.base_dir), Some(cnsl))?;
+
+        Ok(true)
     }
 
     pub fn save_problem(
@@ -212,6 +234,11 @@ impl Config {
         self.expand_to_abs(problem_path, problem_id)
     }
 
+    fn testcases_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
+        let testcases_dir = &self.body.testcases_dir;
+        self.expand_to_abs(testcases_dir, problem_id)
+    }
+
     fn working_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
         let working_dir = &self.service().working_dir;
         self.expand_to_abs(working_dir, problem_id)
@@ -286,7 +313,8 @@ impl ConfigBody {
     const DEFAULT_PROBLEM_PATH: &'static str =
         "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml";
 
-    const DEFAULT_TESTCASES_DIR: &'static str = "{{ service }}/{{ contest }}/{{ problem | lower }}";
+    const DEFAULT_TESTCASES_DIR: &'static str =
+        "{{ service }}/{{ contest }}/{{ problem | lower }}/testcases";
 
     pub fn generate_to(writer: &mut dyn Write) -> Result<()> {
         writeln!(

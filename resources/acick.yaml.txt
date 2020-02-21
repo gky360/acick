@@ -11,7 +11,7 @@ shell: [{bash}, "-e", "-c", "{{{{ command }}}}"]
 # Path at which the problems fetched from service are saved. [t, s]
 problem_path: "{{{{ service }}}}/{{{{ contest }}}}/{{{{ problem | lower }}}}/problem.yaml"
 # Directory in which the testcase files downloaded from AtCoder are saved. [t, s]
-testcases_dir: "{{{{ service }}}}/{{{{ contest }}}}/{{{{ problem | lower }}}}"
+testcases_dir: "{{{{ service }}}}/{{{{ contest }}}}/{{{{ problem | lower }}}}/testcases"
 
 # Session that communicates with service.
 session:
