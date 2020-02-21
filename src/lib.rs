@@ -23,7 +23,7 @@ mod service;
 
 use crate::cmd::{Cmd, Outcome};
 use crate::config::Config;
-use crate::console::Console;
+use crate::console::{Console, ConsoleConfig};
 use crate::model::{Contest, Service, ServiceKind};
 
 pub type Error = anyhow::Error;
@@ -66,17 +66,23 @@ pub struct Opt {
     /// Hides any messages except the final outcome of commands
     #[structopt(long, short, global = true)]
     quiet: bool,
+    /// Assumes "yes" as answer to all prompts and run non-interactively
+    #[structopt(long, short = "y", global = true)]
+    assume_yes: bool,
     #[structopt(subcommand)]
     cmd: Cmd,
 }
 
 impl Opt {
     pub fn run(&self) -> Result<()> {
+        let assume_yes = self.assume_yes;
+        let cnsl_conf = ConsoleConfig { assume_yes };
         let mut cnsl = if self.quiet {
-            Console::sink()
+            Console::sink(cnsl_conf)
         } else {
-            Console::term()
+            Console::term(cnsl_conf)
         };
+
         self.cmd.run(&mut cnsl, |outcome, cnsl| {
             self.finish(outcome, &mut io::stdout(), cnsl)
         })

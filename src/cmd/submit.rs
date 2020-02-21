@@ -16,9 +16,6 @@ pub struct SubmitOpt {
     /// Id of the problem to be submitted
     #[structopt(name = "problem")]
     problem_id: ProblemId,
-    /// Submits without prompting for confirmation
-    #[structopt(long, short)]
-    yes: bool,
     /// Opens the submission status in browser
     #[structopt(name = "open", long, short)]
     need_open: bool,
@@ -31,7 +28,7 @@ impl SubmitOpt {
             "submit problem {} to {}?",
             &self.problem_id, &conf.contest_id
         );
-        if !self.yes && !cnsl.confirm(&message, false)? {
+        if !cnsl.confirm(&message, false)? {
             return Err(Error::msg("Not submitted"));
         }
 
@@ -117,7 +114,6 @@ mod tests {
 
         let opt = SubmitOpt {
             problem_id: "c".into(),
-            yes: true,
             need_open: false,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;

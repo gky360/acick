@@ -19,27 +19,42 @@ enum Inner {
     Sink(io::Sink),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ConsoleConfig {
+    pub assume_yes: bool,
+}
+
+impl Default for ConsoleConfig {
+    fn default() -> Self {
+        Self { assume_yes: false }
+    }
+}
+
 #[derive(Debug)]
 pub struct Console {
     inner: Inner,
+    conf: ConsoleConfig,
 }
 
 impl Console {
-    pub fn term() -> Self {
+    pub fn term(conf: ConsoleConfig) -> Self {
         Self {
             inner: Inner::Term(Term::stderr()),
+            conf,
         }
     }
 
-    pub fn buf() -> Self {
+    pub fn buf(conf: ConsoleConfig) -> Self {
         Self {
             inner: Inner::Buf(Vec::new()),
+            conf,
         }
     }
 
-    pub fn sink() -> Self {
+    pub fn sink(conf: ConsoleConfig) -> Self {
         Self {
             inner: Inner::Sink(io::sink()),
+            conf,
         }
     }
 
@@ -64,6 +79,10 @@ impl Console {
     }
 
     pub fn confirm(&mut self, message: &str, default: bool) -> io::Result<bool> {
+        if self.conf.assume_yes {
+            return Ok(true);
+        }
+
         let prompt = format!("{} ({}) ", message, if default { "Y/n" } else { "y/N" });
         let input = self.prompt_and_read(&prompt, false)?;
         match input.to_lowercase().as_str() {

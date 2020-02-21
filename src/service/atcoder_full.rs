@@ -139,6 +139,7 @@ mod tests {
     use super::*;
     use crate::dropbox::Token;
     use crate::model::Compare;
+    use crate::ConsoleConfig;
 
     fn get_test_problems() -> Vec<Problem> {
         vec![
@@ -191,7 +192,7 @@ mod tests {
         let contest_id = ContestId::from("arc100");
         let problems = get_test_problems();
         let testcases_path = AbsPathBuf::try_new(test_dir.path().to_owned())?;
-        let mut cnsl = Console::buf();
+        let mut cnsl = Console::buf(ConsoleConfig::default());
 
         let result = fetch_full(
             &dropbox,

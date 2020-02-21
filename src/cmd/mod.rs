@@ -157,7 +157,7 @@ impl Default for ServiceContest {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{Config, Console};
+    use crate::{Config, Console, ConsoleConfig};
 
     use tempfile::TempDir;
 
@@ -168,7 +168,7 @@ pub mod tests {
         eprintln!("{}", std::env::current_dir()?.display());
 
         let conf = Config::default_test(test_dir);
-        let mut cnsl = Console::buf();
+        let mut cnsl = Console::buf(ConsoleConfig::default());
         let result = run(&conf, &mut cnsl);
 
         let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;

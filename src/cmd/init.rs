@@ -72,10 +72,11 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+    use crate::ConsoleConfig;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let cnsl = &mut Console::buf();
+        let cnsl = &mut Console::buf(ConsoleConfig::default());
 
         let test_dir = tempdir()?;
         let opt = InitOpt {
