@@ -50,7 +50,10 @@ pub fn fetch_full(
 
     // download and save testcase files
     problems.iter().try_for_each(|problem| {
-        fetch_problem_full(dropbox, &folder.name, problem, &testcases_path, cnsl)
+        // setup temp dir
+        let tmp_testcases_dir = tempdir()?;
+        let tmp_testcases_abs_dir = AbsPathBuf::try_new(tmp_testcases_dir.path().to_owned())?;
+        fetch_problem_full(dropbox, &folder.name, problem, &tmp_testcases_abs_dir, cnsl)
     })?;
 
     Ok(())
@@ -92,10 +95,6 @@ fn fetch_problem_full(
 ) -> Result<()> {
     let files = list_testcase_files(dropbox, folder_name, problem)?;
 
-    // setup temp dir
-    let tmp_testcases_dir = tempdir()?;
-    let tmp_testcases_abs_dir = AbsPathBuf::try_new(tmp_testcases_dir.path().to_owned())?;
-
     // setup progress bar
     let total_size = files.iter().map(|(_, file)| file.size).sum();
     let pb = cnsl.build_pb_bytes(total_size);
@@ -113,7 +112,7 @@ fn fetch_problem_full(
                 file.name
             );
             let mut reader = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
-            let abs_path = tmp_testcases_abs_dir.join(inout.as_ref()).join(file.name);
+            let abs_path = testcases_dir.join(inout.as_ref()).join(file.name);
             abs_path.save_pretty(
                 |mut file| {
                     io::copy(&mut reader, &mut file).context("Could not save testcase to file")?;
