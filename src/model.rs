@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::convert::{Infallible, TryFrom};
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::io::{self, Cursor, Read as _};
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -316,11 +317,31 @@ impl fmt::Display for Byte {
     }
 }
 
-#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
+pub trait AsSample {
+    fn name(&self) -> &str;
+
+    fn input(&self) -> Cursor<&[u8]>;
+
+    fn output(&self) -> Cursor<&[u8]>;
+
+    fn input_str(&self) -> io::Result<String> {
+        let mut buf = String::new();
+        self.input().read_to_string(&mut buf)?;
+        Ok(buf)
+    }
+
+    fn output_str(&self) -> io::Result<String> {
+        let mut buf = String::new();
+        self.output().read_to_string(&mut buf)?;
+        Ok(buf)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Sample {
-    pub name: String,
-    pub input: String,
-    pub output: String,
+    name: String,
+    input: String,
+    output: String,
 }
 
 impl Sample {
@@ -334,6 +355,28 @@ impl Sample {
             input: input.into(),
             output: output.into(),
         }
+    }
+}
+
+impl AsSample for Sample {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn input(&self) -> Cursor<&[u8]> {
+        Cursor::new(self.input.as_bytes())
+    }
+
+    fn output(&self) -> Cursor<&[u8]> {
+        Cursor::new(self.output.as_bytes())
+    }
+
+    fn input_str(&self) -> io::Result<String> {
+        Ok(self.input.clone())
+    }
+
+    fn output_str(&self) -> io::Result<String> {
+        Ok(self.output.clone())
     }
 }
 

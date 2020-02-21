@@ -7,7 +7,7 @@ use structopt::StructOpt;
 
 use crate::cmd::Outcome;
 use crate::judge::{Judge, StatusKind, TotalStatus};
-use crate::model::{Problem, ProblemId, Service};
+use crate::model::{AsSample as _, Problem, ProblemId, Service};
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -67,9 +67,9 @@ impl TestOpt {
                 "[{:>2}/{:>2}] Testing sample {} ... ",
                 i + 1,
                 n_samples,
-                sample.name
+                sample.name()
             )?;
-            let status = Judge::new(sample, time_limit, compare).test(run).await;
+            let status = Judge::new(sample, time_limit, compare).test(run).await?;
             writeln!(cnsl, "{}", status)?;
             status.describe(cnsl)?;
             statuses.push(status);
