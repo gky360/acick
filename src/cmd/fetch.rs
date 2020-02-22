@@ -1,4 +1,5 @@
 use std::fmt;
+use std::io::Write as _;
 
 use anyhow::Context as _;
 use serde::Serialize;
@@ -7,7 +8,7 @@ use structopt::StructOpt;
 use crate::cmd::Outcome;
 use crate::config::DBX_TOKEN_PATH;
 use crate::model::{Contest, Problem, ProblemId, Service, ServiceKind};
-use crate::service::AtcoderActor;
+use crate::service::{Act, AtcoderActor};
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -19,7 +20,7 @@ pub struct FetchOpt {
     /// Overwrites existing problem files and source files
     #[structopt(long, short = "w")]
     overwrite: bool,
-    /// Opens problems in browser
+    /// Opens submissions and problems page in browser
     #[structopt(name = "open", long, short)]
     need_open: bool,
     /// Fetches full testcases from dropbox (only available for AtCoder)
@@ -66,11 +67,12 @@ impl FetchOpt {
                 .context("Could not save source file from template")?;
         }
 
-        // open problem in browser if needed
+        // open submissions and problem url in browser if needed
         if need_open {
-            for problem in problems.iter() {
-                actor.open_problem_url(&conf.contest_id, problem, cnsl)?;
-            }
+            Self::open_urls(&*actor, &problems, conf, cnsl)
+                .context("Could not open a url in browser")
+                // coerce error
+                .unwrap_or_else(|err| writeln!(cnsl, "{:?}", err).unwrap_or(()));
         }
 
         if is_full {
@@ -86,6 +88,19 @@ impl FetchOpt {
             contest,
             problems,
         })
+    }
+
+    fn open_urls(
+        actor: &dyn Act,
+        problems: &[Problem],
+        conf: &Config,
+        cnsl: &mut Console,
+    ) -> Result<()> {
+        actor.open_submissions_url(&conf.contest_id, cnsl)?;
+        for problem in problems.iter() {
+            actor.open_problem_url(&conf.contest_id, problem, cnsl)?;
+        }
+        Ok(())
     }
 }
 
