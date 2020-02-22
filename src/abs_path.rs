@@ -34,7 +34,15 @@ impl AbsPathBuf {
     }
 
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
-        Self(self.0.join(path))
+        Self(self.0.join(path.as_ref().components().collect::<PathBuf>()))
+    }
+
+    pub fn parent(&self) -> Option<Self> {
+        if let Some(parent) = self.0.parent() {
+            Some(Self(parent.to_owned()))
+        } else {
+            None
+        }
     }
 
     pub fn search_dir_contains(&self, file_name: &str) -> Option<Self> {
@@ -173,8 +181,8 @@ impl AbsPathBuf {
     }
 
     pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
-        if let Some(dir) = self.0.parent() {
-            create_dir_all(&dir)?;
+        if let Some(dir) = self.parent() {
+            create_dir_all(dir.as_ref())?;
         }
         self.open(is_read, is_write)
     }
