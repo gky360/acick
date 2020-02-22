@@ -153,6 +153,7 @@ impl Testcases {
         let mut names = entries
             .iter()
             .filter_map(|entry| {
+                // check if entry is file
                 if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
                     Some(entry.file_name().to_string_lossy().into_owned())
                 } else {
@@ -160,6 +161,7 @@ impl Testcases {
                 }
             })
             .filter(|name| {
+                // filter by sample name if specified
                 sample_name
                     .as_ref()
                     .map(|sample_name| name == sample_name)
@@ -180,6 +182,19 @@ impl Testcases {
     pub fn len(&self) -> usize {
         self.len
     }
+
+    fn load_file(&self, inout: InOut, name: &str) -> Result<String> {
+        let mut content = String::new();
+        self.dir.join(inout.as_ref()).join(&name).load_pretty(
+            |mut file| {
+                file.read_to_string(&mut content)
+                    .with_context(|| format!("Could not load testcase {}put file", inout.as_ref()))
+            },
+            None,
+            None,
+        )?;
+        Ok(content)
+    }
 }
 
 impl Iterator for Testcases {
@@ -187,24 +202,8 @@ impl Iterator for Testcases {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.names_iter.next().map(|name| {
-            let mut input = String::new();
-            self.dir.join(InOut::In.as_ref()).join(&name).load_pretty(
-                |mut file| {
-                    file.read_to_string(&mut input)
-                        .context("Could not load testcase input file")
-                },
-                None,
-                None,
-            )?;
-            let mut output = String::new();
-            self.dir.join(InOut::Out.as_ref()).join(&name).load_pretty(
-                |mut file| {
-                    file.read_to_string(&mut output)
-                        .context("Could not load testcase output file")
-                },
-                None,
-                None,
-            )?;
+            let input = self.load_file(InOut::In, &name)?;
+            let output = self.load_file(InOut::Out, &name)?;
             Ok(Sample::new(name, input, output))
         })
     }
