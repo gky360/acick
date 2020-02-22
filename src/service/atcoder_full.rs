@@ -150,7 +150,7 @@ impl Testcases {
         let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())?
             .collect::<io::Result<Vec<_>>>()
             .context("Could not list testcase files")?;
-        let names = entries
+        let mut names = entries
             .iter()
             .filter_map(|entry| {
                 if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
@@ -166,6 +166,7 @@ impl Testcases {
                     .unwrap_or(true)
             })
             .collect::<Vec<_>>();
+        names.sort();
         let len = names.len();
         let names_iter = names.into_iter();
 
