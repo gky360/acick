@@ -145,35 +145,31 @@ pub struct Testcases {
 
 impl Testcases {
     pub fn load(dir: AbsPathBuf, sample_name: &Option<String>) -> Result<Self> {
+        if let Some(sample_name) = sample_name {
+            return Ok(Self {
+                dir,
+                len: 1,
+                names_iter: vec![sample_name.to_owned()].into_iter(),
+            });
+        }
+
         let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())?
             .collect::<io::Result<Vec<_>>>()
             .context("Could not list testcase files")?;
         let mut names = entries
             .iter()
-            .filter_map(|entry| {
+            .filter(|entry| {
                 // check if entry is file
-                if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
-                    Some(entry.file_name().to_string_lossy().into_owned())
-                } else {
-                    None
-                }
+                entry.file_type().map(|t| t.is_file()).unwrap_or(false)
             })
-            .filter(|name| {
-                // filter by sample name if specified
-                sample_name
-                    .as_ref()
-                    .map(|sample_name| name == sample_name)
-                    .unwrap_or(true)
-            })
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
             .collect::<Vec<_>>();
         names.sort();
-        let len = names.len();
-        let names_iter = names.into_iter();
 
         Ok(Self {
             dir,
-            len,
-            names_iter,
+            len: names.len(),
+            names_iter: names.into_iter(),
         })
     }
 
