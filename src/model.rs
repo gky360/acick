@@ -151,7 +151,6 @@ pub struct Problem {
     #[get_copy = "pub"]
     compare: Compare,
     #[set = "pub"]
-    #[get = "pub"]
     samples: Vec<Sample>,
 }
 
@@ -176,14 +175,15 @@ impl Problem {
         }
     }
 
-    pub fn take_samples(self, sample_name: &Option<String>) -> Vec<Sample> {
+    pub fn samples(&self, sample_name: &Option<String>) -> Vec<&dyn AsSample> {
+        let iter = self
+            .samples
+            .iter()
+            .map(|sample| -> &dyn AsSample { sample });
         if let Some(sample_name) = sample_name {
-            self.samples
-                .into_iter()
-                .filter(|sample| &sample.name == sample_name)
-                .collect()
+            iter.filter(|sample| sample.name() == sample_name).collect()
         } else {
-            self.samples
+            iter.collect()
         }
     }
 }
@@ -317,7 +317,7 @@ impl fmt::Display for Byte {
     }
 }
 
-pub trait AsSample {
+pub trait AsSample: fmt::Debug {
     fn name(&self) -> &str;
 
     fn input(&self) -> Cursor<&[u8]>;

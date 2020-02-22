@@ -7,7 +7,7 @@ use structopt::StructOpt;
 
 use crate::cmd::Outcome;
 use crate::judge::{Judge, StatusKind, TotalStatus};
-use crate::model::{AsSample as _, Problem, ProblemId, Service};
+use crate::model::{Problem, ProblemId, Service};
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -54,7 +54,7 @@ impl TestOpt {
     ) -> Result<TotalStatus> {
         let time_limit = problem.time_limit();
         let compare = problem.compare();
-        let samples = problem.take_samples(&self.sample_name);
+        let samples = problem.samples(&self.sample_name);
 
         // test source code with samples
         let n_samples = samples.len();

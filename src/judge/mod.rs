@@ -16,15 +16,15 @@ mod status;
 use diff::TextDiff;
 pub use status::{Status, StatusKind, TotalStatus};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Judge<T: AsSample> {
-    sample: T,
+#[derive(Debug)]
+pub struct Judge<'a> {
+    sample: &'a dyn AsSample,
     time_limit: Duration,
     cmp: Compare,
 }
 
-impl<T: AsSample> Judge<T> {
-    pub fn new(sample: T, time_limit: Duration, cmp: Compare) -> Self {
+impl<'a> Judge<'a> {
+    pub fn new(sample: &'a dyn AsSample, time_limit: Duration, cmp: Compare) -> Self {
         Self {
             sample,
             time_limit,
@@ -32,12 +32,12 @@ impl<T: AsSample> Judge<T> {
         }
     }
 
-    pub async fn test(self, command: Command) -> Result<Status> {
+    pub async fn test(&self, command: Command) -> Result<Status> {
         let Self {
             sample,
             time_limit,
             cmp,
-        } = self;
+        } = *self;
         let sample_name = sample.name().to_owned();
         let input = sample.input();
 
