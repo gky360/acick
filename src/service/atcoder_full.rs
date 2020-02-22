@@ -10,7 +10,7 @@ use tempfile::tempdir;
 
 use crate::abs_path::AbsPathBuf;
 use crate::dropbox::Dropbox;
-use crate::model::{ContestId, Problem, Sample};
+use crate::model::{AsSamples, ContestId, Problem, Sample};
 use crate::{Config, Console, Result};
 
 static DBX_TESTCASES_URL: &str =
@@ -137,53 +137,41 @@ fn fetch_problem_full(
 }
 
 #[derive(Debug, Clone)]
-pub struct Testcases {
+pub struct TestcaseIter {
     dir: AbsPathBuf,
     len: usize,
     max_name_len: usize,
     names_iter: IntoIter<String>,
 }
 
-impl Testcases {
+impl TestcaseIter {
     pub fn load(dir: AbsPathBuf, sample_name: &Option<String>) -> Result<Self> {
-        if let Some(sample_name) = sample_name {
-            return Ok(Self {
-                dir,
-                len: 1,
-                max_name_len: sample_name.len(),
-                names_iter: vec![sample_name.to_owned()].into_iter(),
-            });
-        }
-
-        let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())?
-            .collect::<io::Result<Vec<_>>>()
-            .context("Could not list testcase files")?;
-        let mut names = entries
-            .iter()
-            .filter(|entry| {
-                // check if entry is file
-                entry.file_type().map(|t| t.is_file()).unwrap_or(false)
-            })
-            .map(|entry| entry.file_name().to_string_lossy().into_owned())
-            .collect::<Vec<_>>();
-        names.sort();
+        let names = if let Some(sample_name) = sample_name {
+            vec![sample_name.to_owned()]
+        } else {
+            let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())?
+                .collect::<io::Result<Vec<_>>>()
+                .context("Could not list testcase files")?;
+            let mut names = entries
+                .iter()
+                .filter(|entry| {
+                    // check if entry is file
+                    entry.file_type().map(|t| t.is_file()).unwrap_or(false)
+                })
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .collect::<Vec<_>>();
+            names.sort();
+            names
+        };
 
         let max_name_len = names.iter().map(|name| name.len()).max().unwrap_or(0);
 
-        Ok(Self {
+        Ok(TestcaseIter {
             dir,
             len: names.len(),
             max_name_len,
             names_iter: names.into_iter(),
         })
-    }
-
-    pub fn len(&self) -> usize {
-        self.len
-    }
-
-    pub fn max_name_len(&self) -> usize {
-        self.max_name_len
     }
 
     fn load_file(&self, inout: InOut, name: &str) -> Result<String> {
@@ -196,7 +184,7 @@ impl Testcases {
     }
 }
 
-impl Iterator for Testcases {
+impl Iterator for TestcaseIter {
     type Item = Result<Sample>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -205,6 +193,16 @@ impl Iterator for Testcases {
             let output = self.load_file(InOut::Out, &name)?;
             Ok(Sample::new(name, input, output))
         })
+    }
+}
+
+impl AsSamples for TestcaseIter {
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn max_name_len(&self) -> usize {
+        self.max_name_len
     }
 }
 

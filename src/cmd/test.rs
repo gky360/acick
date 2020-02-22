@@ -7,7 +7,7 @@ use structopt::StructOpt;
 
 use crate::cmd::Outcome;
 use crate::judge::{Judge, StatusKind, TotalStatus};
-use crate::model::{Problem, ProblemId, Sample, Service};
+use crate::model::{AsSamples, Problem, ProblemId, Service};
 use crate::service::AtcoderActor;
 use crate::{Config, Console, Result};
 
@@ -57,7 +57,9 @@ impl TestOpt {
     ) -> Result<TotalStatus> {
         let time_limit = problem.time_limit();
         let compare = problem.compare();
-        let (n_samples, max_sample_name_len, samples) = self.load_samples(problem, conf)?;
+        let samples = self.load_samples(problem, conf)?;
+        let n_samples = samples.len();
+        let max_sample_name_len = samples.max_name_len();
 
         // test source code with samples
         let mut statuses = Vec::new();
@@ -84,25 +86,13 @@ impl TestOpt {
         Ok(total)
     }
 
-    fn load_samples<'a>(
-        &'a self,
-        problem: Problem,
-        conf: &Config,
-    ) -> Result<(usize, usize, Box<dyn Iterator<Item = Result<Sample>> + 'a>)> {
+    fn load_samples<'a>(&'a self, problem: Problem, conf: &Config) -> Result<Box<dyn AsSamples>> {
         if self.is_full {
             let testcases_dir = conf.testcases_abs_dir(problem.id())?;
             let testcases = AtcoderActor::load_testcases(testcases_dir, &self.sample_name)?;
-            Ok((
-                testcases.len(),
-                testcases.max_name_len(),
-                Box::new(testcases),
-            ))
+            Ok(Box::new(testcases))
         } else {
-            Ok((
-                problem.n_samples(),
-                problem.max_sample_name_len(),
-                problem.iter_samples(&self.sample_name),
-            ))
+            Ok(Box::new(problem.take_samples()))
         }
     }
 
