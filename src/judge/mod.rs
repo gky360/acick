@@ -7,7 +7,7 @@ use tokio::io::{AsyncWriteExt as _, BufWriter};
 use tokio::process::Command;
 use tokio::time::{timeout, Instant};
 
-use crate::model::{AsSample, Compare};
+use crate::model::{Compare, Sample};
 use crate::Result;
 
 mod diff;
@@ -17,14 +17,14 @@ use diff::TextDiff;
 pub use status::{Status, StatusKind, TotalStatus};
 
 #[derive(Debug)]
-pub struct Judge<'a> {
-    sample: &'a dyn AsSample,
+pub struct Judge {
+    sample: Sample,
     time_limit: Duration,
     cmp: Compare,
 }
 
-impl<'a> Judge<'a> {
-    pub fn new(sample: &'a dyn AsSample, time_limit: Duration, cmp: Compare) -> Self {
+impl Judge {
+    pub fn new(sample: Sample, time_limit: Duration, cmp: Compare) -> Self {
         Self {
             sample,
             time_limit,
@@ -32,17 +32,16 @@ impl<'a> Judge<'a> {
         }
     }
 
-    pub async fn test(&self, command: Command) -> Result<Status> {
+    pub async fn test(self, command: Command) -> Result<Status> {
         let Self {
             sample,
             time_limit,
             cmp,
-        } = *self;
-        let sample_name = sample.name().to_owned();
-        let input = sample.input();
+        } = self;
+        let (sample_name, sample_in, sample_out) = sample.take();
 
         let started_at = Instant::now();
-        let result = timeout(time_limit, Self::exec_child(command, input)).await;
+        let result = timeout(time_limit, Self::exec_child(command, sample_in)).await;
         let elapsed = started_at.elapsed();
 
         match result {
@@ -50,7 +49,7 @@ impl<'a> Judge<'a> {
             Ok(Err(err)) => Err(err),
             Ok(Ok(output)) if output.status.success() => {
                 let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-                let diff = TextDiff::new("expected", "actual", stdout, sample.output_str()?, cmp);
+                let diff = TextDiff::new("expected", "actual", stdout, sample_out, cmp);
                 if diff.is_any() {
                     Ok(Status::wa(sample_name, elapsed, diff))
                 } else {
@@ -65,7 +64,7 @@ impl<'a> Judge<'a> {
         }
     }
 
-    async fn exec_child(mut command: Command, mut input: io::Cursor<&[u8]>) -> Result<Output> {
+    async fn exec_child(mut command: Command, input: String) -> Result<Output> {
         let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -76,8 +75,12 @@ impl<'a> Judge<'a> {
 
         // async write to stdin may cause broken pipe error
         // when write is performed after the child exited
-        Self::ignore_broken_pipe(tokio::io::copy(&mut input, &mut stdin).await.map(|_| ()))
-            .context("Could not write input to stdin")?;
+        Self::ignore_broken_pipe(
+            tokio::io::copy(&mut input.as_bytes(), &mut stdin)
+                .await
+                .map(|_| ()),
+        )
+        .context("Could not write input to stdin")?;
         Self::ignore_broken_pipe(stdin.flush().await).context("Could not flush stdin")?;
 
         let output = child.wait_with_output().await.context("Failed to run")?;

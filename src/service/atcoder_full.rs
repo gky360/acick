@@ -1,4 +1,6 @@
-use std::io::{self, Write as _};
+use std::fs::read_dir;
+use std::io::{self, Read as _, Write as _};
+use std::vec::IntoIter;
 
 use anyhow::{anyhow, Context as _};
 use dropbox_sdk::files::FileMetadata;
@@ -8,7 +10,7 @@ use tempfile::tempdir;
 
 use crate::abs_path::AbsPathBuf;
 use crate::dropbox::Dropbox;
-use crate::model::{ContestId, Problem};
+use crate::model::{ContestId, Problem, Sample};
 use crate::{Config, Console, Result};
 
 static DBX_TESTCASES_URL: &str =
@@ -134,6 +136,77 @@ fn fetch_problem_full(
 
     pb.finish();
     Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub struct Testcases {
+    dir: AbsPathBuf,
+    len: usize,
+    names_iter: IntoIter<String>,
+}
+
+impl Testcases {
+    pub fn load(dir: AbsPathBuf, sample_name: &Option<String>) -> Result<Self> {
+        let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())?
+            .collect::<io::Result<Vec<_>>>()
+            .context("Could not list testcase files")?;
+        let names = entries
+            .iter()
+            .filter_map(|entry| {
+                if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                    Some(entry.file_name().to_string_lossy().into_owned())
+                } else {
+                    None
+                }
+            })
+            .filter(|name| {
+                sample_name
+                    .as_ref()
+                    .map(|sample_name| name == sample_name)
+                    .unwrap_or(true)
+            })
+            .collect::<Vec<_>>();
+        let len = names.len();
+        let names_iter = names.into_iter();
+
+        Ok(Self {
+            dir,
+            len,
+            names_iter,
+        })
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+}
+
+impl Iterator for Testcases {
+    type Item = Result<Sample>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.names_iter.next().map(|name| {
+            let mut input = String::new();
+            self.dir.join(InOut::In.as_ref()).join(&name).load_pretty(
+                |mut file| {
+                    file.read_to_string(&mut input)
+                        .context("Could not load testcase input file")
+                },
+                None,
+                None,
+            )?;
+            let mut output = String::new();
+            self.dir.join(InOut::Out.as_ref()).join(&name).load_pretty(
+                |mut file| {
+                    file.read_to_string(&mut output)
+                        .context("Could not load testcase output file")
+                },
+                None,
+                None,
+            )?;
+            Ok(Sample::new(name, input, output))
+        })
+    }
 }
 
 #[cfg(test)]

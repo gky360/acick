@@ -2,7 +2,6 @@ use std::cmp::Ordering;
 use std::convert::{Infallible, TryFrom};
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::io::{self, Cursor, Read as _};
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -10,6 +9,7 @@ use getset::{CopyGetters, Getters, Setters};
 use serde::{Deserialize, Serialize};
 
 use crate::macros::regex;
+use crate::Result;
 
 #[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
@@ -175,15 +175,22 @@ impl Problem {
         }
     }
 
-    pub fn samples(&self, sample_name: &Option<String>) -> Vec<&dyn AsSample> {
-        let iter = self
-            .samples
-            .iter()
-            .map(|sample| -> &dyn AsSample { sample });
+    pub fn n_samples(&self) -> usize {
+        self.samples.len()
+    }
+
+    pub fn iter_samples<'a>(
+        self,
+        sample_name: &'a Option<String>,
+    ) -> Box<dyn Iterator<Item = Result<Sample>> + 'a> {
+        let iter = self.samples.into_iter();
         if let Some(sample_name) = sample_name {
-            iter.filter(|sample| sample.name() == sample_name).collect()
+            Box::new(
+                iter.filter(move |sample| sample.name() == sample_name)
+                    .map(Ok),
+            )
         } else {
-            iter.collect()
+            Box::new(iter.map(Ok))
         }
     }
 }
@@ -317,30 +324,13 @@ impl fmt::Display for Byte {
     }
 }
 
-pub trait AsSample: fmt::Debug {
-    fn name(&self) -> &str;
-
-    fn input(&self) -> Cursor<&[u8]>;
-
-    fn output(&self) -> Cursor<&[u8]>;
-
-    fn input_str(&self) -> io::Result<String> {
-        let mut buf = String::new();
-        self.input().read_to_string(&mut buf)?;
-        Ok(buf)
-    }
-
-    fn output_str(&self) -> io::Result<String> {
-        let mut buf = String::new();
-        self.output().read_to_string(&mut buf)?;
-        Ok(buf)
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Sample {
+    #[get = "pub"]
     name: String,
+    #[get = "pub"]
     input: String,
+    #[get = "pub"]
     output: String,
 }
 
@@ -356,27 +346,9 @@ impl Sample {
             output: output.into(),
         }
     }
-}
 
-impl AsSample for Sample {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn input(&self) -> Cursor<&[u8]> {
-        Cursor::new(self.input.as_bytes())
-    }
-
-    fn output(&self) -> Cursor<&[u8]> {
-        Cursor::new(self.output.as_bytes())
-    }
-
-    fn input_str(&self) -> io::Result<String> {
-        Ok(self.input.clone())
-    }
-
-    fn output_str(&self) -> io::Result<String> {
-        Ok(self.output.clone())
+    pub fn take(self) -> (String, String, String) {
+        (self.name, self.input, self.output)
     }
 }
 

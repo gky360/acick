@@ -234,7 +234,7 @@ impl Config {
         self.expand_to_abs(problem_path, problem_id)
     }
 
-    fn testcases_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
+    pub fn testcases_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
         let testcases_dir = &self.body.testcases_dir;
         self.expand_to_abs(testcases_dir, problem_id)
     }

@@ -9,7 +9,7 @@ use crate::dropbox::{
     DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
 };
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
-use crate::service::atcoder_full::fetch_full;
+use crate::service::atcoder_full::{fetch_full, Testcases};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
@@ -84,6 +84,13 @@ impl AtcoderActor<'_> {
         .load_or_request(cnsl)?;
 
         fetch_full(&dropbox, contest_id, problems, conf, cnsl)
+    }
+
+    pub fn load_testcases(
+        testcases_dir: AbsPathBuf,
+        sample_name: &Option<String>,
+    ) -> Result<Testcases> {
+        Testcases::load(testcases_dir, sample_name)
     }
 }
 
