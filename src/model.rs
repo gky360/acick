@@ -179,6 +179,14 @@ impl Problem {
         self.samples.len()
     }
 
+    pub fn max_sample_name_len(&self) -> usize {
+        self.samples
+            .iter()
+            .map(|sample| sample.name.len())
+            .max()
+            .unwrap_or(0)
+    }
+
     pub fn iter_samples<'a>(
         self,
         sample_name: &'a Option<String>,

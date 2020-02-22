@@ -57,14 +57,7 @@ impl TestOpt {
     ) -> Result<TotalStatus> {
         let time_limit = problem.time_limit();
         let compare = problem.compare();
-        let (n_samples, samples): (usize, Box<dyn Iterator<Item = Result<Sample>>>) =
-            if self.is_full {
-                let testcases_dir = conf.testcases_abs_dir(problem.id())?;
-                let testcases = AtcoderActor::load_testcases(testcases_dir, &self.sample_name)?;
-                (testcases.len(), Box::new(testcases))
-            } else {
-                (problem.n_samples(), problem.iter_samples(&self.sample_name))
-            };
+        let (n_samples, max_sample_name_len, samples) = self.load_samples(problem, conf)?;
 
         // test source code with samples
         let mut statuses = Vec::new();
@@ -79,7 +72,7 @@ impl TestOpt {
                 n_samples,
                 if self.is_full { "testcase" } else { "sample" },
                 sample.name(),
-                l = if self.is_full { 16 } else { 2 }
+                l = max_sample_name_len,
             )?;
             let status = Judge::new(sample, time_limit, compare).test(run).await?;
             writeln!(cnsl, "{}", status)?;
@@ -89,6 +82,28 @@ impl TestOpt {
 
         let total = TotalStatus::new(statuses);
         Ok(total)
+    }
+
+    fn load_samples<'a>(
+        &'a self,
+        problem: Problem,
+        conf: &Config,
+    ) -> Result<(usize, usize, Box<dyn Iterator<Item = Result<Sample>> + 'a>)> {
+        if self.is_full {
+            let testcases_dir = conf.testcases_abs_dir(problem.id())?;
+            let testcases = AtcoderActor::load_testcases(testcases_dir, &self.sample_name)?;
+            Ok((
+                testcases.len(),
+                testcases.max_name_len(),
+                Box::new(testcases),
+            ))
+        } else {
+            Ok((
+                problem.n_samples(),
+                problem.max_sample_name_len(),
+                problem.iter_samples(&self.sample_name),
+            ))
+        }
     }
 
     #[tokio::main]

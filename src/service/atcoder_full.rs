@@ -140,6 +140,7 @@ fn fetch_problem_full(
 pub struct Testcases {
     dir: AbsPathBuf,
     len: usize,
+    max_name_len: usize,
     names_iter: IntoIter<String>,
 }
 
@@ -149,6 +150,7 @@ impl Testcases {
             return Ok(Self {
                 dir,
                 len: 1,
+                max_name_len: sample_name.len(),
                 names_iter: vec![sample_name.to_owned()].into_iter(),
             });
         }
@@ -166,15 +168,22 @@ impl Testcases {
             .collect::<Vec<_>>();
         names.sort();
 
+        let max_name_len = names.iter().map(|name| name.len()).max().unwrap_or(0);
+
         Ok(Self {
             dir,
             len: names.len(),
+            max_name_len,
             names_iter: names.into_iter(),
         })
     }
 
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    pub fn max_name_len(&self) -> usize {
+        self.max_name_len
     }
 
     fn load_file(&self, inout: InOut, name: &str) -> Result<String> {
