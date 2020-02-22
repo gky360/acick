@@ -135,7 +135,7 @@ impl Config {
     ) -> Result<bool> {
         let testcases_abs_dir = self.testcases_abs_dir(problem.id())?;
         if testcases_abs_dir.as_ref().exists() {
-            let message = format!("remove existing testcases dir {}?", from);
+            let message = format!("remove existing testcases dir {}?", testcases_abs_dir);
             if !cnsl.confirm(&message, false)? {
                 return Ok(false);
             }
