@@ -23,10 +23,7 @@ pub struct TestOpt {
 
 impl TestOpt {
     pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<TestOutcome> {
-        // load problem file
-        let problem = conf
-            .load_problem(&self.problem_id, cnsl)
-            .context("Could not load problem file.")?;
+        let problem = conf.load_problem(&self.problem_id, cnsl)?;
 
         let total = self.compile_and_test(problem, conf, cnsl)?;
 

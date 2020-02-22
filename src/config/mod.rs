@@ -169,11 +169,16 @@ impl Config {
 
     pub fn load_problem(&self, problem_id: &ProblemId, cnsl: &mut Console) -> Result<Problem> {
         let problem_abs_path = self.problem_abs_path(problem_id)?;
-        let problem: Problem = problem_abs_path.load_pretty(
-            |file| serde_yaml::from_reader(file).context("Could not read problem as yaml"),
-            Some(&self.base_dir),
-            cnsl,
-        )?;
+        let problem: Problem = problem_abs_path
+            .load_pretty(
+                |file| serde_yaml::from_reader(file).context("Could not read problem as yaml"),
+                Some(&self.base_dir),
+                cnsl,
+            )
+            .context(
+                "Could not load problem file. \
+                 Fetch problem data first by `acick fetch` command.",
+            )?;
         if problem.id() != problem_id {
             Err(anyhow!(
                 "Found mismatching problem id in problem file : {}",

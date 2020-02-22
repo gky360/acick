@@ -149,9 +149,12 @@ impl TestcaseIter {
         let names = if let Some(sample_name) = sample_name {
             vec![sample_name.to_owned()]
         } else {
-            let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())?
-                .collect::<io::Result<Vec<_>>>()
-                .context("Could not list testcase files")?;
+            let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())
+                .context(
+                    "Could not list testcase files. \
+                     Download testcase files first by `acick fetch --full` command.",
+                )?
+                .collect::<io::Result<Vec<_>>>()?;
             let mut names = entries
                 .iter()
                 .filter(|entry| {

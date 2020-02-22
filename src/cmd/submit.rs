@@ -33,9 +33,7 @@ impl SubmitOpt {
         }
 
         // load problem file
-        let problem = conf
-            .load_problem(&self.problem_id, cnsl)
-            .context("Could not load problem file.")?;
+        let problem = conf.load_problem(&self.problem_id, cnsl)?;
 
         // load source
         let source = conf
