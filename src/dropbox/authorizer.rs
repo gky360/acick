@@ -76,7 +76,7 @@ impl<'a> DbxAuthorizer<'a> {
         let token = self.token_path.load_pretty(
             |file| serde_json::from_reader(file).context("Could not load token from json file"),
             None,
-            Some(cnsl),
+            cnsl,
         )?;
 
         Ok(Some(token))
@@ -87,7 +87,7 @@ impl<'a> DbxAuthorizer<'a> {
             |file| serde_json::to_writer(file, token).context("Could not save token as json file"),
             true,
             None,
-            Some(cnsl),
+            cnsl,
         )?;
 
         Ok(())

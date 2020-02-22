@@ -38,11 +38,11 @@ impl InitOpt {
             |mut file| ConfigBody::generate_to(&mut file).context("Could not save config"),
             self.overwrite,
             Some(&cwd),
-            Some(cnsl),
+            cnsl,
         )?;
 
         // check if saved
-        if !is_saved {
+        if is_saved == None {
             return Err(anyhow!("Config file already exists : {}", config_path));
         }
 

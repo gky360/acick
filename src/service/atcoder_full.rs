@@ -121,14 +121,12 @@ fn fetch_problem_full(
             );
             let mut reader = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
             let abs_path = testcases_dir.join(inout.as_ref()).join(file.name);
-            abs_path.save_pretty(
+            abs_path.save(
                 |mut file| {
                     io::copy(&mut reader, &mut file).context("Could not save testcase to file")?;
                     Ok(())
                 },
                 true,
-                Some(&testcases_dir),
-                None,
             )?;
             pb.inc(file.size);
             Ok(())
@@ -185,14 +183,10 @@ impl Testcases {
 
     fn load_file(&self, inout: InOut, name: &str) -> Result<String> {
         let mut content = String::new();
-        self.dir.join(inout.as_ref()).join(&name).load_pretty(
-            |mut file| {
-                file.read_to_string(&mut content)
-                    .with_context(|| format!("Could not load testcase {}put file", inout.as_ref()))
-            },
-            None,
-            None,
-        )?;
+        self.dir.join(inout.as_ref()).join(&name).load(|mut file| {
+            file.read_to_string(&mut content)
+                .with_context(|| format!("Could not load testcase {}put file", inout.as_ref()))
+        })?;
         Ok(content)
     }
 }

@@ -61,68 +61,72 @@ impl AbsPathBuf {
         save: impl FnOnce(File) -> Result<()>,
         overwrite: bool,
         base_dir: Option<&AbsPathBuf>,
-        mut cnsl: Option<&mut Console>,
-    ) -> Result<bool> {
-        if let Some(ref mut cnsl) = cnsl {
-            write!(
-                cnsl,
-                "Saving {} ... ",
-                self.strip_prefix_if(base_dir).display()
-            )?;
-        }
-        let is_existed = self.as_ref().is_file();
-        let result = if !overwrite && is_existed {
-            Ok(false)
-        } else {
-            self.create_dir_all_and_open(false, true)
-                .with_context(|| format!("Could not open file : {}", self))
-                .and_then(|mut file| {
-                    // truncate file before write
-                    file.seek(SeekFrom::Start(0))?;
-                    file.set_len(0)?;
-                    Ok(file)
-                })
-                .and_then(save)
-                .map(|_| true)
-        };
+        cnsl: &mut Console,
+    ) -> Result<Option<bool>> {
+        write!(
+            cnsl,
+            "Saving {} ... ",
+            self.strip_prefix_if(base_dir).display()
+        )?;
+        let result = self.save(save, overwrite);
         let msg = match result {
-            Ok(true) if is_existed => "overwritten",
-            Ok(true) => "saved",
-            Ok(false) => "already exists",
+            Ok(Some(true)) => "overwritten",
+            Ok(Some(false)) => "saved",
+            Ok(None) => "already exists",
             Err(_) => "failed",
         };
-        if let Some(ref mut cnsl) = cnsl {
-            writeln!(cnsl, "{}", msg)?;
-        }
+        writeln!(cnsl, "{}", msg)?;
         result
+    }
+
+    // returns Some(true): overwritten, Some(false): created, None: skipped
+    pub fn save(
+        &self,
+        save: impl FnOnce(File) -> Result<()>,
+        overwrite: bool,
+    ) -> Result<Option<bool>> {
+        let is_existed = self.as_ref().is_file();
+        if !overwrite && is_existed {
+            return Ok(None);
+        }
+        self.create_dir_all_and_open(false, true)
+            .with_context(|| format!("Could not open file : {}", self))
+            .and_then(|mut file| {
+                // truncate file before write
+                file.seek(SeekFrom::Start(0))?;
+                file.set_len(0)?;
+                Ok(file)
+            })
+            .and_then(save)?;
+        Ok(Some(is_existed))
     }
 
     pub fn load_pretty<T>(
         &self,
         load: impl FnOnce(File) -> Result<T>,
         base_dir: Option<&AbsPathBuf>,
-        mut cnsl: Option<&mut Console>,
+        cnsl: &mut Console,
     ) -> Result<T> {
-        if let Some(ref mut cnsl) = cnsl {
-            write!(
-                cnsl,
-                "Loading {} ... ",
-                self.strip_prefix_if(base_dir).display()
-            )?;
-        }
-        let result = OpenOptions::new()
-            .read(true)
-            .open(&self.0)
-            .with_context(|| format!("Could not open file : {}", self))
-            .and_then(load);
+        write!(
+            cnsl,
+            "Loading {} ... ",
+            self.strip_prefix_if(base_dir).display()
+        )?;
+        let result = self.load(load);
         let msg = match result {
             Ok(_) => "loaded",
             Err(_) => "failed",
         };
-        if let Some(ref mut cnsl) = cnsl {
-            writeln!(cnsl, "{}", msg)?;
-        }
+        writeln!(cnsl, "{}", msg)?;
         result
+    }
+
+    pub fn load<T>(&self, load: impl FnOnce(File) -> Result<T>) -> Result<T> {
+        OpenOptions::new()
+            .read(true)
+            .open(&self.0)
+            .with_context(|| format!("Could not open file : {}", self))
+            .and_then(load)
     }
 
     pub fn remove_dir_all_pretty(

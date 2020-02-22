@@ -157,13 +157,13 @@ impl Config {
         problem: &Problem,
         overwrite: bool,
         cnsl: &mut Console,
-    ) -> Result<bool> {
+    ) -> Result<Option<bool>> {
         let problem_abs_path = self.problem_abs_path(problem.id())?;
         problem_abs_path.save_pretty(
             |file| serde_yaml::to_writer(file, &problem).context("Could not save problem as yaml"),
             overwrite,
             Some(&self.base_dir),
-            Some(cnsl),
+            cnsl,
         )
     }
 
@@ -172,7 +172,7 @@ impl Config {
         let problem: Problem = problem_abs_path.load_pretty(
             |file| serde_yaml::from_reader(file).context("Could not read problem as yaml"),
             Some(&self.base_dir),
-            Some(cnsl),
+            cnsl,
         )?;
         if problem.id() != problem_id {
             Err(anyhow!(
@@ -191,21 +191,21 @@ impl Config {
         problem: &Problem,
         overwrite: bool,
         cnsl: &mut Console,
-    ) -> Result<bool> {
+    ) -> Result<Option<bool>> {
         if service.id() != self.service_id || contest.id() != &self.contest_id {
             return Err(anyhow!("Found mismatching service id or contest id"));
         }
         let source_abs_path = self.source_abs_path(problem.id())?;
         let template = match &self.service().template {
             Some(template) => template,
-            None => return Ok(false), // skip if template is empty
+            None => return Ok(None), // skip if template is empty
         };
         let template_expanded = template.expand_with(service, contest, problem)?;
         source_abs_path.save_pretty(
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
             overwrite,
             Some(&self.base_dir),
-            Some(cnsl),
+            cnsl,
         )
     }
 
@@ -218,7 +218,7 @@ impl Config {
                 Ok(buf)
             },
             Some(&self.base_dir),
-            Some(cnsl),
+            cnsl,
         )
     }
 
@@ -355,7 +355,7 @@ impl ConfigBody {
         let body: Self = base_dir.join(Self::FILE_NAME).load_pretty(
             |file| serde_yaml::from_reader(file).context("Could not read config file as yaml"),
             Some(base_dir),
-            Some(cnsl),
+            cnsl,
         )?;
         body.validate()?;
         Ok(body)
