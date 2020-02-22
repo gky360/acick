@@ -13,11 +13,14 @@ use crate::{Console, Error, Result};
     Serialize, Deserialize, AsRefStr, Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash,
 )]
 #[serde(rename_all = "UPPERCASE")]
-#[strum(serialize_all = "UPPERCASE")]
 pub enum StatusKind {
+    #[strum(serialize = " A C ")]
     Ac,
+    #[strum(serialize = " W A ")]
     Wa,
+    #[strum(serialize = " TLE ")]
     Tle,
+    #[strum(serialize = " R E ")]
     Re,
 }
 
@@ -108,7 +111,7 @@ impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{} ({}ms)",
+            "{} ({:>4}ms)",
             self.kind().as_ref(),
             self.elapsed.as_millis()
         )
@@ -178,7 +181,7 @@ impl fmt::Display for TotalStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "{:3} (AC: {:>2}/{t:>2}, WA: {:>2}/{t:>2}, TLE: {:>2}/{t:>2}, RE: {:>2}/{t:>2})",
+            "{} (AC: {:>2}/{t:>2}, WA: {:>2}/{t:>2}, TLE: {:>2}/{t:>2}, RE: {:>2}/{t:>2})",
             self.kind.as_ref(),
             self.count.ac,
             self.count.wa,
