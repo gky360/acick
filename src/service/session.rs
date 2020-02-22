@@ -27,14 +27,14 @@ impl ExecSession for Client {
     }
 }
 
-pub struct RetryRequestBuilder<'a, 'b> {
+pub struct RetryRequestBuilder<'a> {
     inner: RequestBuilder,
     client: &'a Client,
     session: &'a SessionConfig,
-    cnsl: &'a mut Console<'b>,
+    cnsl: &'a mut Console,
 }
 
-impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
+impl<'a> RetryRequestBuilder<'a> {
     pub fn send_pretty(&mut self) -> Result<Response> {
         let Self {
             client,
@@ -81,21 +81,21 @@ impl<'a, 'b> RetryRequestBuilder<'a, 'b> {
 }
 
 pub trait WithRetry {
-    fn with_retry<'a, 'b>(
+    fn with_retry<'a>(
         self,
         client: &'a Client,
         session: &'a SessionConfig,
-        cnsl: &'a mut Console<'b>,
-    ) -> RetryRequestBuilder<'a, 'b>;
+        cnsl: &'a mut Console,
+    ) -> RetryRequestBuilder<'a>;
 }
 
 impl WithRetry for RequestBuilder {
-    fn with_retry<'a, 'b>(
+    fn with_retry<'a>(
         self,
         client: &'a Client,
         session: &'a SessionConfig,
-        cnsl: &'a mut Console<'b>,
-    ) -> RetryRequestBuilder<'a, 'b> {
+        cnsl: &'a mut Console,
+    ) -> RetryRequestBuilder<'a> {
         RetryRequestBuilder {
             inner: self,
             client,

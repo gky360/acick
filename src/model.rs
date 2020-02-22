@@ -8,6 +8,9 @@ use std::time::Duration;
 use getset::{CopyGetters, Getters, Setters};
 use serde::{Deserialize, Serialize};
 
+use crate::macros::regex;
+use crate::Result;
+
 #[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
     #[get_copy = "pub"]
@@ -71,8 +74,38 @@ impl Contest {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub struct ContestId(String);
+
+impl ContestId {
+    pub fn normalize(&self) -> String {
+        regex!(r"[-_]").replace_all(&self.0, "").to_lowercase()
+    }
+}
+
+impl PartialEq<ContestId> for ContestId {
+    fn eq(&self, other: &ContestId) -> bool {
+        self.normalize() == other.normalize()
+    }
+}
+
+impl PartialOrd for ContestId {
+    fn partial_cmp(&self, other: &ContestId) -> Option<Ordering> {
+        Some(self.normalize().cmp(&other.normalize()))
+    }
+}
+
+impl Ord for ContestId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.normalize().cmp(&other.normalize())
+    }
+}
+
+impl Hash for ContestId {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.normalize().hash(state);
+    }
+}
 
 impl<T: Into<String>> From<T> for ContestId {
     fn from(id: T) -> Self {
@@ -118,7 +151,6 @@ pub struct Problem {
     #[get_copy = "pub"]
     compare: Compare,
     #[set = "pub"]
-    #[get = "pub"]
     samples: Vec<Sample>,
 }
 
@@ -143,14 +175,22 @@ impl Problem {
         }
     }
 
-    pub fn take_samples(self, sample_name: &Option<String>) -> Vec<Sample> {
+    pub fn n_samples(&self) -> usize {
+        self.samples.len()
+    }
+
+    pub fn iter_samples<'a>(
+        self,
+        sample_name: &'a Option<String>,
+    ) -> Box<dyn Iterator<Item = Result<Sample>> + 'a> {
+        let iter = self.samples.into_iter();
         if let Some(sample_name) = sample_name {
-            self.samples
-                .into_iter()
-                .filter(|sample| &sample.name == sample_name)
-                .collect()
+            Box::new(
+                iter.filter(move |sample| sample.name() == sample_name)
+                    .map(Ok),
+            )
         } else {
-            self.samples
+            Box::new(iter.map(Ok))
         }
     }
 }
@@ -286,9 +326,12 @@ impl fmt::Display for Byte {
 
 #[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Sample {
-    pub name: String,
-    pub input: String,
-    pub output: String,
+    #[get = "pub"]
+    name: String,
+    #[get = "pub"]
+    input: String,
+    #[get = "pub"]
+    output: String,
 }
 
 impl Sample {
@@ -302,6 +345,10 @@ impl Sample {
             input: input.into(),
             output: output.into(),
         }
+    }
+
+    pub fn take(self) -> (String, String, String) {
+        (self.name, self.input, self.output)
     }
 }
 
@@ -338,3 +385,24 @@ pub type LangIdRef<'a> = &'a str;
 pub type LangName = String;
 
 pub type LangNameRef<'a> = &'a str;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn contest_id_eq() {
+        assert_eq!(ContestId::from("arc100"), ContestId::from("arc100"));
+        assert_eq!(ContestId::from("ARC100"), ContestId::from("arc100"));
+        assert_eq!(
+            ContestId::from("CodeFestival2017QualA"),
+            ContestId::from("code-festival-2017-quala")
+        );
+    }
+
+    #[test]
+    fn problem_id_eq() {
+        assert_eq!(ProblemId::from("A"), ProblemId::from("A"));
+        assert_eq!(ProblemId::from("a"), ProblemId::from("A"));
+    }
+}

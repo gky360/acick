@@ -3,16 +3,21 @@ use maplit::hashmap;
 use reqwest::blocking::{Client, Response};
 use reqwest::{StatusCode, Url};
 
+use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
+use crate::dropbox::{
+    DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
+};
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
+use crate::service::atcoder_full::{fetch_full, Testcases};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
 };
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
-use crate::service::{Act, ResponseExt as _};
-use crate::{Console, Error, Result};
+use crate::service::{open_in_browser, Act, ResponseExt as _};
+use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]
 pub struct AtcoderActor<'a> {
@@ -27,11 +32,18 @@ impl<'a> AtcoderActor<'a> {
 }
 
 impl AtcoderActor<'_> {
-    fn submissions_me_url(contest_id: &ContestId) -> Result<Url> {
+    fn problem_url(contest_id: &ContestId, problem: &Problem) -> Result<Url> {
+        let path = format!("/contests/{}/tasks/{}", contest_id, &problem.url_name());
+        BASE_URL
+            .join(&path)
+            .context(format!("Could not parse problem url : {}", path))
+    }
+
+    fn submissions_url(contest_id: &ContestId) -> Result<Url> {
         let path = format!("/contests/{}/submissions/me", contest_id);
         BASE_URL
             .join(&path)
-            .context(format!("Could not parse url path: {}", path))
+            .context(format!("Could not parse submissions url : {}", path))
     }
 
     fn validate_login_response(res: &Response) -> Result<()> {
@@ -48,10 +60,37 @@ impl AtcoderActor<'_> {
         let loc_url = res
             .location_url(&BASE_URL)
             .context("Could not extract redirection url from response")?;
-        if loc_url != Self::submissions_me_url(contest_id)? {
+        if loc_url != Self::submissions_url(contest_id)? {
             return Err(Error::msg("Found invalid redirection url"));
         }
         Ok(())
+    }
+
+    pub fn fetch_full(
+        contest_id: &ContestId,
+        problems: &[Problem],
+        token_path: &AbsPathBuf,
+        conf: &Config,
+        cnsl: &mut Console,
+    ) -> Result<()> {
+        // authorize Dropbox account
+        let dropbox = DbxAuthorizer::new(
+            DBX_APP_KEY,
+            DBX_APP_SECRET,
+            DBX_REDIRECT_PORT,
+            DBX_REDIRECT_PATH,
+            &token_path,
+        )
+        .load_or_request(cnsl)?;
+
+        fetch_full(&dropbox, contest_id, problems, conf, cnsl)
+    }
+
+    pub fn load_testcases(
+        testcases_dir: AbsPathBuf,
+        sample_name: &Option<String>,
+    ) -> Result<Testcases> {
+        Testcases::load(testcases_dir, sample_name)
     }
 }
 
@@ -186,5 +225,18 @@ impl Act for AtcoderActor<'_> {
             .context("Submission rejected by service")?;
 
         Ok(())
+    }
+
+    fn open_problem_url(
+        &self,
+        contest_id: &ContestId,
+        problem: &Problem,
+        cnsl: &mut Console,
+    ) -> Result<()> {
+        open_in_browser(&Self::problem_url(contest_id, problem)?.as_str(), cnsl)
+    }
+
+    fn open_submissions_url(&self, contest_id: &ContestId, cnsl: &mut Console) -> Result<()> {
+        open_in_browser(&Self::submissions_url(contest_id)?.as_str(), cnsl)
     }
 }

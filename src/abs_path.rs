@@ -1,6 +1,6 @@
 use std::env::current_dir;
 use std::fmt;
-use std::fs::{create_dir_all, File, OpenOptions};
+use std::fs::{create_dir_all, remove_dir_all, rename, File, OpenOptions};
 use std::io::{self, Seek as _, SeekFrom, Write as _};
 use std::path::{Path, PathBuf};
 
@@ -34,7 +34,15 @@ impl AbsPathBuf {
     }
 
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
-        Self(self.0.join(path))
+        Self(self.0.join(path.as_ref().components().collect::<PathBuf>()))
+    }
+
+    pub fn parent(&self) -> Option<Self> {
+        if let Some(parent) = self.0.parent() {
+            Some(Self(parent.to_owned()))
+        } else {
+            None
+        }
     }
 
     pub fn search_dir_contains(&self, file_name: &str) -> Option<Self> {
@@ -53,13 +61,15 @@ impl AbsPathBuf {
         save: impl FnOnce(File) -> Result<()>,
         overwrite: bool,
         base_dir: Option<&AbsPathBuf>,
-        cnsl: &mut Console,
+        mut cnsl: Option<&mut Console>,
     ) -> Result<bool> {
-        write!(
-            cnsl,
-            "Saving {} ... ",
-            self.strip_prefix_if(base_dir).display()
-        )?;
+        if let Some(ref mut cnsl) = cnsl {
+            write!(
+                cnsl,
+                "Saving {} ... ",
+                self.strip_prefix_if(base_dir).display()
+            )?;
+        }
         let is_existed = self.as_ref().is_file();
         let result = if !overwrite && is_existed {
             Ok(false)
@@ -75,20 +85,15 @@ impl AbsPathBuf {
                 .and_then(save)
                 .map(|_| true)
         };
-        let msg = if let Ok(is_saved) = result {
-            if is_saved {
-                if is_existed {
-                    "overwritten"
-                } else {
-                    "saved"
-                }
-            } else {
-                "already exists"
-            }
-        } else {
-            "failed"
+        let msg = match result {
+            Ok(true) if is_existed => "overwritten",
+            Ok(true) => "saved",
+            Ok(false) => "already exists",
+            Err(_) => "failed",
         };
-        writeln!(cnsl, "{}", msg)?;
+        if let Some(ref mut cnsl) = cnsl {
+            writeln!(cnsl, "{}", msg)?;
+        }
         result
     }
 
@@ -96,13 +101,15 @@ impl AbsPathBuf {
         &self,
         load: impl FnOnce(File) -> Result<T>,
         base_dir: Option<&AbsPathBuf>,
-        cnsl: &mut Console,
+        mut cnsl: Option<&mut Console>,
     ) -> Result<T> {
-        write!(
-            cnsl,
-            "Loading {} ... ",
-            self.strip_prefix_if(base_dir).display()
-        )?;
+        if let Some(ref mut cnsl) = cnsl {
+            write!(
+                cnsl,
+                "Loading {} ... ",
+                self.strip_prefix_if(base_dir).display()
+            )?;
+        }
         let result = OpenOptions::new()
             .read(true)
             .open(&self.0)
@@ -112,15 +119,76 @@ impl AbsPathBuf {
             Ok(_) => "loaded",
             Err(_) => "failed",
         };
-        writeln!(cnsl, "{}", msg)?;
+        if let Some(ref mut cnsl) = cnsl {
+            writeln!(cnsl, "{}", msg)?;
+        }
+        result
+    }
+
+    pub fn remove_dir_all_pretty(
+        &self,
+        base_dir: Option<&AbsPathBuf>,
+        mut cnsl: Option<&mut Console>,
+    ) -> Result<bool> {
+        if let Some(ref mut cnsl) = cnsl {
+            write!(
+                cnsl,
+                "Removing {} ... ",
+                self.strip_prefix_if(base_dir).display()
+            )?;
+        }
+        let result = if self.as_ref().exists() {
+            remove_dir_all(self.as_ref())
+                .map(|_| true)
+                .map_err(Into::into)
+        } else {
+            Ok(false)
+        };
+        let msg = match result {
+            Ok(true) => "removed",
+            Ok(false) => "not existed",
+            Err(_) => "failed",
+        };
+        if let Some(ref mut cnsl) = cnsl {
+            writeln!(cnsl, "{}", msg)?;
+        }
+        result
+    }
+
+    pub fn move_from_pretty(
+        &self,
+        from: &AbsPathBuf,
+        base_dir: Option<&AbsPathBuf>,
+        mut cnsl: Option<&mut Console>,
+    ) -> Result<()> {
+        if let Some(ref mut cnsl) = cnsl {
+            write!(
+                cnsl,
+                "Moving {} to {} ... ",
+                from.strip_prefix_if(base_dir).display(),
+                self.strip_prefix_if(base_dir).display()
+            )?;
+        }
+        let result = rename(from.as_ref(), self.as_ref()).map_err(Into::into);
+        let msg = match result {
+            Ok(_) => "moved",
+            Err(_) => "failed",
+        };
+        if let Some(ref mut cnsl) = cnsl {
+            writeln!(cnsl, "{}", msg)?;
+        }
         result
     }
 
     pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
-        if let Some(dir) = self.0.parent() {
-            create_dir_all(&dir)?;
+        if let Some(dir) = self.parent() {
+            create_dir_all(dir.as_ref())?;
         }
         self.open(is_read, is_write)
+    }
+
+    pub fn create_dir_all(&self) -> io::Result<()> {
+        create_dir_all(self.as_ref())
     }
 
     fn open(&self, is_read: bool, is_write: bool) -> io::Result<File> {

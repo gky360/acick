@@ -157,7 +157,7 @@ impl Default for ServiceContest {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::{Config, Console};
+    use crate::{Config, Console, ConsoleConfig};
 
     use tempfile::TempDir;
 
@@ -167,14 +167,12 @@ pub mod tests {
     ) -> Result<T> {
         eprintln!("{}", std::env::current_dir()?.display());
 
-        let conf = &Config::default_test(test_dir);
+        let conf = Config::default_test(test_dir);
+        let mut cnsl = Console::buf(ConsoleConfig::default());
+        let result = run(&conf, &mut cnsl);
 
-        let mut output_buf = Vec::new();
-        let cnsl = &mut Console::new(&mut output_buf);
-
-        let result = run(conf, cnsl);
-
-        eprintln!("{}", String::from_utf8_lossy(&output_buf));
+        let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
+        eprintln!("{}", output_str);
         result
     }
 }

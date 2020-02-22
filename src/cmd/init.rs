@@ -38,7 +38,7 @@ impl InitOpt {
             |mut file| ConfigBody::generate_to(&mut file).context("Could not save config"),
             self.overwrite,
             Some(&cwd),
-            cnsl,
+            Some(cnsl),
         )?;
 
         // check if saved
@@ -72,11 +72,11 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+    use crate::ConsoleConfig;
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        let mut output_buf = Vec::new();
-        let cnsl = &mut Console::new(&mut output_buf);
+        let cnsl = &mut Console::buf(ConsoleConfig::default());
 
         let test_dir = tempdir()?;
         let opt = InitOpt {

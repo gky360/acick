@@ -6,37 +6,10 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
 use crate::config::SessionConfig;
+use crate::macros::select;
 use crate::model::{LangId, LangNameRef};
 use crate::service::session::WithRetry as _;
 use crate::{Console, Error, Result};
-
-#[macro_export]
-macro_rules! regex {
-    ($expr:expr) => {{
-        static REGEX: ::once_cell::sync::Lazy<::regex::Regex> =
-            ::once_cell::sync::Lazy::new(|| ::regex::Regex::new($expr).unwrap());
-        &REGEX
-    }};
-    ($expr:expr,) => {
-        lazy_regex!($expr)
-    };
-}
-pub use regex;
-
-#[macro_export]
-macro_rules! select {
-    ($selectors:literal) => {{
-        static SELECTOR: ::once_cell::sync::Lazy<::scraper::selector::Selector> =
-            ::once_cell::sync::Lazy::new(|| {
-                ::scraper::selector::Selector::parse($selectors).unwrap()
-            });
-        &SELECTOR
-    }};
-    ($selectors:literal,) => {
-        selector!($selectors)
-    };
-}
-pub use select;
 
 pub trait HasUrl {
     fn url(&self) -> Result<Url>;

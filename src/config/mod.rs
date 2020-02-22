@@ -54,6 +54,8 @@ use std::fmt;
 use std::io::{Read as _, Write};
 
 use anyhow::{anyhow, Context as _};
+use dirs::{data_local_dir, home_dir};
+use lazy_static::lazy_static;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
@@ -69,6 +71,23 @@ use crate::service::{Act, AtcoderActor};
 use crate::{Console, Result, VERSION};
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
+
+static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
+
+lazy_static! {
+    static ref DATA_LOCAL_DIR: AbsPathBuf = {
+        let path = data_local_dir()
+            .unwrap_or_else(|| {
+                home_dir()
+                    .expect("Could not get home dir")
+                    .join(".local")
+                    .join("share")
+            })
+            .join(env!("CARGO_PKG_NAME"));
+        AbsPathBuf::try_new(path).unwrap()
+    };
+    pub static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
+}
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Config {
@@ -108,6 +127,31 @@ impl Config {
         }
     }
 
+    pub fn move_testcases_dir(
+        &self,
+        problem: &Problem,
+        from: &AbsPathBuf,
+        cnsl: &mut Console,
+    ) -> Result<bool> {
+        let testcases_abs_dir = self.testcases_abs_dir(problem.id())?;
+        if testcases_abs_dir.as_ref().exists() {
+            let message = format!(
+                "remove existing testcases dir {}?",
+                testcases_abs_dir.strip_prefix(&self.base_dir).display()
+            );
+            if !cnsl.confirm(&message, false)? {
+                return Ok(false);
+            }
+            testcases_abs_dir.remove_dir_all_pretty(Some(&self.base_dir), Some(cnsl))?;
+        } else if let Some(parent) = testcases_abs_dir.parent() {
+            parent.create_dir_all()?;
+        }
+
+        testcases_abs_dir.move_from_pretty(from, Some(&self.base_dir), Some(cnsl))?;
+
+        Ok(true)
+    }
+
     pub fn save_problem(
         &self,
         problem: &Problem,
@@ -119,7 +163,7 @@ impl Config {
             |file| serde_yaml::to_writer(file, &problem).context("Could not save problem as yaml"),
             overwrite,
             Some(&self.base_dir),
-            cnsl,
+            Some(cnsl),
         )
     }
 
@@ -128,7 +172,7 @@ impl Config {
         let problem: Problem = problem_abs_path.load_pretty(
             |file| serde_yaml::from_reader(file).context("Could not read problem as yaml"),
             Some(&self.base_dir),
-            cnsl,
+            Some(cnsl),
         )?;
         if problem.id() != problem_id {
             Err(anyhow!(
@@ -161,7 +205,7 @@ impl Config {
             |mut file| Ok(file.write_all(template_expanded.as_bytes())?),
             overwrite,
             Some(&self.base_dir),
-            cnsl,
+            Some(cnsl),
         )
     }
 
@@ -174,7 +218,7 @@ impl Config {
                 Ok(buf)
             },
             Some(&self.base_dir),
-            cnsl,
+            Some(cnsl),
         )
     }
 
@@ -191,6 +235,11 @@ impl Config {
     fn problem_abs_path(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
         let problem_path = &self.body.problem_path;
         self.expand_to_abs(problem_path, problem_id)
+    }
+
+    pub fn testcases_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
+        let testcases_dir = &self.body.testcases_dir;
+        self.expand_to_abs(testcases_dir, problem_id)
     }
 
     fn working_abs_dir(&self, problem_id: &ProblemId) -> Result<AbsPathBuf> {
@@ -253,6 +302,8 @@ pub struct ConfigBody {
     shell: Shell,
     #[serde(default = "ConfigBody::default_problem_path")]
     problem_path: TargetTempl,
+    #[serde(default = "ConfigBody::default_testcases_dir")]
+    testcases_dir: TargetTempl,
     #[serde(default)]
     session: SessionConfig,
     #[serde(default)]
@@ -264,6 +315,9 @@ impl ConfigBody {
 
     const DEFAULT_PROBLEM_PATH: &'static str =
         "{{ service }}/{{ contest }}/{{ problem | lower }}/problem.yaml";
+
+    const DEFAULT_TESTCASES_DIR: &'static str =
+        "{{ service }}/{{ contest }}/{{ problem | lower }}/testcases";
 
     pub fn generate_to(writer: &mut dyn Write) -> Result<()> {
         writeln!(
@@ -277,6 +331,10 @@ impl ConfigBody {
 
     fn default_problem_path() -> TargetTempl {
         Self::DEFAULT_PROBLEM_PATH.into()
+    }
+
+    fn default_testcases_dir() -> TargetTempl {
+        Self::DEFAULT_TESTCASES_DIR.into()
     }
 
     fn search(cnsl: &mut Console) -> Result<(Self, AbsPathBuf)> {
@@ -297,7 +355,7 @@ impl ConfigBody {
         let body: Self = base_dir.join(Self::FILE_NAME).load_pretty(
             |file| serde_yaml::from_reader(file).context("Could not read config file as yaml"),
             Some(base_dir),
-            cnsl,
+            Some(cnsl),
         )?;
         body.validate()?;
         Ok(body)
@@ -327,7 +385,8 @@ impl Default for ConfigBody {
         Self {
             version: VERSION.clone(),
             shell: Shell::default(),
-            problem_path: Self::DEFAULT_PROBLEM_PATH.into(),
+            problem_path: Self::default_problem_path(),
+            testcases_dir: Self::default_testcases_dir(),
             session: SessionConfig::default(),
             services: ServicesConfig::default(),
         }
@@ -401,6 +460,10 @@ int main() {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::OpenOptions;
+
+    use tempfile::tempdir;
+
     use super::*;
     use crate::config::template::TargetContext;
     use crate::tests::DEFAULT_PROBLEM;
@@ -420,8 +483,28 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn exec_default_atcoder_compile() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn exec_default_atcoder_compile() -> anyhow::Result<()> {
+        let test_dir = tempdir()?;
+
+        // prepare source file
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(format!("{}/Main.cpp", test_dir.path().display()))?;
+        file.write_all(
+            r#"
+#include <iostream>
+using namespace std;
+
+int main() {{
+    return 0;
+}}
+        "#
+            .as_bytes(),
+        )?;
+
+        // exec compile command
         let shell = Shell::default();
         let compile = ServiceConfig::default_for(ServiceKind::Atcoder).compile;
         let context = TargetContext::new(
@@ -429,9 +512,14 @@ mod tests {
             &DEFAULT_CONTEST.id(),
             &DEFAULT_PROBLEM.id(),
         );
-        let output = shell.exec_templ(&compile, &context)?;
-        println!("{:?}", output);
-        // TODO: assert success
+        let output = shell
+            .exec_templ(&compile, &context)?
+            .current_dir(test_dir.path())
+            .output()
+            .await?;
+        eprintln!("{:?}", output);
+        assert!(output.status.success());
+
         Ok(())
     }
 }

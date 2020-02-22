@@ -7,7 +7,8 @@ use structopt::StructOpt;
 
 use crate::cmd::Outcome;
 use crate::judge::{Judge, StatusKind, TotalStatus};
-use crate::model::{Problem, ProblemId, Service};
+use crate::model::{Problem, ProblemId, Sample, Service};
+use crate::service::AtcoderActor;
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -16,6 +17,8 @@ pub struct TestOpt {
     #[structopt(name = "problem")]
     problem_id: ProblemId,
     sample_name: Option<String>,
+    #[structopt(name = "full", long)]
+    is_full: bool,
 }
 
 impl TestOpt {
@@ -50,26 +53,35 @@ impl TestOpt {
         &self,
         problem: Problem,
         conf: &Config,
-        cnsl: &mut Console<'_>,
+        cnsl: &mut Console,
     ) -> Result<TotalStatus> {
         let time_limit = problem.time_limit();
         let compare = problem.compare();
-        let samples = problem.take_samples(&self.sample_name);
+        let (n_samples, samples): (usize, Box<dyn Iterator<Item = Result<Sample>>>) =
+            if self.is_full {
+                let testcases_dir = conf.testcases_abs_dir(problem.id())?;
+                let testcases = AtcoderActor::load_testcases(testcases_dir, &self.sample_name)?;
+                (testcases.len(), Box::new(testcases))
+            } else {
+                (problem.n_samples(), problem.iter_samples(&self.sample_name))
+            };
 
         // test source code with samples
-        let n_samples = samples.len();
         let mut statuses = Vec::new();
         writeln!(cnsl)?;
-        for (i, sample) in samples.into_iter().enumerate() {
+        for (i, sample) in samples.enumerate() {
+            let sample = sample?;
             let run = conf.exec_run(&self.problem_id)?;
             write!(
                 cnsl,
-                "[{:>2}/{:>2}] Testing sample {} ... ",
+                "[{:>2}/{:>2}] {} {:>l$} ... ",
                 i + 1,
                 n_samples,
-                sample.name
+                if self.is_full { "testcase" } else { "sample" },
+                sample.name(),
+                l = if self.is_full { 16 } else { 2 }
             )?;
-            let status = Judge::new(sample, time_limit, compare).test(run).await;
+            let status = Judge::new(sample, time_limit, compare).test(run).await?;
             writeln!(cnsl, "{}", status)?;
             status.describe(cnsl)?;
             statuses.push(status);
@@ -126,6 +138,7 @@ mod tests {
         let opt = TestOpt {
             problem_id: "c".into(),
             sample_name: None,
+            is_full: false,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())

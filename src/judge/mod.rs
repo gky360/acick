@@ -16,7 +16,7 @@ mod status;
 use diff::TextDiff;
 pub use status::{Status, StatusKind, TotalStatus};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 pub struct Judge {
     sample: Sample,
     time_limit: Duration,
@@ -32,36 +32,39 @@ impl Judge {
         }
     }
 
-    pub async fn test(self, command: Command) -> Status {
+    pub async fn test(self, command: Command) -> Result<Status> {
         let Self {
             sample,
             time_limit,
             cmp,
         } = self;
-        let sample_name = sample.name;
-        let input = sample.input.as_bytes();
+        let (sample_name, sample_in, sample_out) = sample.take();
 
         let started_at = Instant::now();
-        let result = timeout(time_limit, Self::exec_child(command, input)).await;
+        let result = timeout(time_limit, Self::exec_child(command, sample_in)).await;
         let elapsed = started_at.elapsed();
 
         match result {
-            Err(_) => Status::tle(sample_name, elapsed),
-            Ok(Err(err)) => Status::re(sample_name, elapsed, err),
+            Err(_) => Ok(Status::tle(sample_name, elapsed)),
+            Ok(Err(err)) => Err(err),
             Ok(Ok(output)) if output.status.success() => {
                 let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-                let diff = TextDiff::new("expected", "actual", stdout, sample.output, cmp);
+                let diff = TextDiff::new("expected", "actual", stdout, sample_out, cmp);
                 if diff.is_any() {
-                    Status::wa(sample_name, elapsed, diff)
+                    Ok(Status::wa(sample_name, elapsed, diff))
                 } else {
-                    Status::ac(sample_name, elapsed, diff)
+                    Ok(Status::ac(sample_name, elapsed))
                 }
             }
-            Ok(Ok(output)) => Status::re(sample_name, elapsed, anyhow!("{}", output.status)),
+            Ok(Ok(output)) => Ok(Status::re(
+                sample_name,
+                elapsed,
+                anyhow!("{}", output.status),
+            )),
         }
     }
 
-    async fn exec_child(mut command: Command, input: &[u8]) -> Result<Output> {
+    async fn exec_child(mut command: Command, input: String) -> Result<Output> {
         let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -72,8 +75,12 @@ impl Judge {
 
         // async write to stdin may cause broken pipe error
         // when write is performed after the child exited
-        Self::ignore_broken_pipe(stdin.write_all(input).await)
-            .context("Could not write input to stdin")?;
+        Self::ignore_broken_pipe(
+            tokio::io::copy(&mut input.as_bytes(), &mut stdin)
+                .await
+                .map(|_| ()),
+        )
+        .context("Could not write input to stdin")?;
         Self::ignore_broken_pipe(stdin.flush().await).context("Could not flush stdin")?;
 
         let output = child.wait_with_output().await.context("Failed to run")?;

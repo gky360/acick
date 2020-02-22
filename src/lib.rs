@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate strum;
 
-use std::io::Write;
+use std::io::{self, Write};
 
 use lazy_static::lazy_static;
 use semver::Version;
@@ -15,14 +15,16 @@ mod abs_path;
 mod cmd;
 pub mod config;
 mod console;
+mod dropbox;
 mod judge;
+mod macros;
 mod model;
 mod service;
 
-use cmd::{Cmd, Outcome};
-use config::Config;
-use console::Console;
-use model::{Contest, Service, ServiceKind};
+use crate::cmd::{Cmd, Outcome};
+use crate::config::Config;
+use crate::console::{Console, ConsoleConfig};
+use crate::model::{Contest, Service, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
@@ -53,6 +55,7 @@ impl Default for OutputFormat {
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Opt {
+    /// Format of output
     #[structopt(
         long,
         global = true,
@@ -60,15 +63,29 @@ pub struct Opt {
         possible_values = &OutputFormat::VARIANTS
     )]
     output: OutputFormat,
+    /// Hides any messages except the final outcome of commands
+    #[structopt(long, short, global = true)]
+    quiet: bool,
+    /// Assumes "yes" as answer to all prompts and run non-interactively
+    #[structopt(long, short = "y", global = true)]
+    assume_yes: bool,
     #[structopt(subcommand)]
     cmd: Cmd,
 }
 
 impl Opt {
-    pub fn run(&self, stdout: &mut dyn Write, stderr: &mut dyn Write) -> Result<()> {
-        let cnsl = &mut Console::new(stderr);
-        self.cmd
-            .run(cnsl, |outcome, cnsl| self.finish(outcome, stdout, cnsl))
+    pub fn run(&self) -> Result<()> {
+        let assume_yes = self.assume_yes;
+        let cnsl_conf = ConsoleConfig { assume_yes };
+        let mut cnsl = if self.quiet {
+            Console::sink(cnsl_conf)
+        } else {
+            Console::term(cnsl_conf)
+        };
+
+        self.cmd.run(&mut cnsl, |outcome, cnsl| {
+            self.finish(outcome, &mut io::stdout(), cnsl)
+        })
     }
 
     fn finish(

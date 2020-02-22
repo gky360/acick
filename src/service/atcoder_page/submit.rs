@@ -4,11 +4,10 @@ use reqwest::Url;
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
+use crate::macros::select;
 use crate::model::{ContestId, LangId, LangIdRef, LangName, LangNameRef};
 use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{
-    select, ElementRefExt as _, ExtractCsrfToken, ExtractLangId, HasUrl, Scrape,
-};
+use crate::service::scrape::{ElementRefExt as _, ExtractCsrfToken, ExtractLangId, HasUrl, Scrape};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
