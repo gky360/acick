@@ -74,10 +74,12 @@ impl TestOpt {
             let run = conf.exec_run(&self.problem_id)?;
             write!(
                 cnsl,
-                "[{:>2}/{:>2}] Testing sample {} ... ",
+                "[{:>2}/{:>2}] {} {:>l$} ... ",
                 i + 1,
                 n_samples,
-                sample.name()
+                if self.is_full { "testcase" } else { "sample" },
+                sample.name(),
+                l = if self.is_full { 16 } else { 2 }
             )?;
             let status = Judge::new(sample, time_limit, compare).test(run).await?;
             writeln!(cnsl, "{}", status)?;

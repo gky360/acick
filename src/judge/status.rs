@@ -24,7 +24,7 @@ pub enum StatusKind {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "UPPERCASE", tag = "kind")]
 enum StatusInner {
-    Ac { diff: TextDiff },
+    Ac,
     Wa { diff: TextDiff },
     Tle,
     Re { reason: String },
@@ -33,7 +33,7 @@ enum StatusInner {
 impl StatusInner {
     fn describe(&self, cnsl: &mut Console) -> Result<()> {
         match self {
-            Self::Ac { .. } => {}
+            Self::Ac => {}
             Self::Wa { diff } => writeln!(cnsl, "{}", diff)?,
             Self::Tle => {}
             Self::Re { reason } => writeln!(cnsl, "{}", reason)?,
@@ -61,11 +61,11 @@ pub struct Status {
 }
 
 impl Status {
-    pub fn ac(sample_name: String, elapsed: Duration, diff: TextDiff) -> Self {
+    pub fn ac(sample_name: String, elapsed: Duration) -> Self {
         Self {
             sample_name,
             elapsed,
-            inner: StatusInner::Ac { diff },
+            inner: StatusInner::Ac,
         }
     }
 

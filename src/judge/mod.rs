@@ -53,7 +53,7 @@ impl Judge {
                 if diff.is_any() {
                     Ok(Status::wa(sample_name, elapsed, diff))
                 } else {
-                    Ok(Status::ac(sample_name, elapsed, diff))
+                    Ok(Status::ac(sample_name, elapsed))
                 }
             }
             Ok(Ok(output)) => Ok(Status::re(
