@@ -16,6 +16,8 @@ pub struct TestOpt {
     #[structopt(name = "problem")]
     problem_id: ProblemId,
     sample_name: Option<String>,
+    #[structopt(name = "full", long)]
+    is_full: bool,
 }
 
 impl TestOpt {
@@ -126,6 +128,7 @@ mod tests {
         let opt = TestOpt {
             problem_id: "c".into(),
             sample_name: None,
+            is_full: false,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())
