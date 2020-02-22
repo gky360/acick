@@ -1,8 +1,9 @@
 use std::env;
 use std::io::{self, Write};
 
-use console::Term;
+use console::{Style, Term};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use lazy_static::lazy_static;
 
 static PB_TICK_INTERVAL_MS: u64 = 50;
 static PB_TEMPL_COUNT: &str =
@@ -174,3 +175,27 @@ impl Write for Console {
         self.as_mut_write().flush()
     }
 }
+
+macro_rules! def_color {
+    ($name:ident, $name_upper:ident, $style:expr) => {
+        lazy_static! {
+            static ref $name_upper: Style = $style;
+        }
+
+        pub fn $name<D>(val: D) -> console::StyledObject<D> {
+            crate::console::$name_upper.apply_to(val)
+        }
+    };
+}
+
+def_color!(sty_none, STY_NONE, Style::new());
+def_color!(sty_r, STY_R, Style::new().red());
+def_color!(sty_g, STY_G, Style::new().green());
+def_color!(sty_y, STY_Y, Style::new().yellow());
+def_color!(sty_dim, STY_DIM, Style::new().dim());
+def_color!(sty_r_under, STY_R_UNDER, Style::new().underlined().red());
+def_color!(sty_g_under, STY_G_UNDER, Style::new().underlined().green());
+def_color!(sty_y_under, STY_Y_UNDER, Style::new().underlined().yellow());
+def_color!(sty_r_rev, STY_R_REV, Style::new().bold().reverse().red());
+def_color!(sty_g_rev, STY_G_REV, Style::new().bold().reverse().green());
+def_color!(sty_y_rev, STY_Y_REV, Style::new().bold().reverse().yellow());

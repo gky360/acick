@@ -3,9 +3,14 @@ use std::fmt;
 use std::io::Write as _;
 use std::time::Duration;
 
+use console::StyledObject;
 use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 
+use crate::console::{
+    sty_dim, sty_g, sty_g_rev, sty_g_under, sty_none, sty_r, sty_r_rev, sty_r_under, sty_y,
+    sty_y_rev, sty_y_under,
+};
 use crate::judge::diff::TextDiff;
 use crate::{Console, Error, Result};
 
@@ -22,6 +27,49 @@ pub enum StatusKind {
     Tle,
     #[strum(serialize = " R E ")]
     Re,
+}
+
+impl StatusKind {
+    fn sty<D>(self, val: D) -> StyledObject<D> {
+        match self {
+            Self::Ac => sty_g(val),
+            Self::Wa => sty_r(val),
+            Self::Tle => sty_y(val),
+            Self::Re => sty_y(val),
+        }
+    }
+
+    fn sty_under<D>(self, val: D) -> StyledObject<D> {
+        match self {
+            Self::Ac => sty_g_under(val),
+            Self::Wa => sty_r_under(val),
+            Self::Tle => sty_y_under(val),
+            Self::Re => sty_y_under(val),
+        }
+    }
+
+    fn sty_under_if<D>(self, val: D, condition: bool) -> StyledObject<D> {
+        if condition {
+            self.sty_under(val)
+        } else {
+            sty_none(val)
+        }
+    }
+
+    fn sty_rev<D>(self, val: D) -> StyledObject<D> {
+        match self {
+            Self::Ac => sty_g_rev(val),
+            Self::Wa => sty_r_rev(val),
+            Self::Tle => sty_y_rev(val),
+            Self::Re => sty_y_rev(val),
+        }
+    }
+}
+
+impl fmt::Display for StatusKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.sty_rev(self.as_ref()))
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -109,12 +157,13 @@ impl Status {
 
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{} ({:>4}ms)",
-            self.kind().as_ref(),
-            self.elapsed.as_millis()
-        )
+        let elapsed = format!("({:>4}ms)", self.elapsed.as_millis());
+        let elapsed = if self.kind() == StatusKind::Tle {
+            StatusKind::Tle.sty(elapsed)
+        } else {
+            sty_dim(elapsed)
+        };
+        write!(f, "{} {}", self.kind(), elapsed)
     }
 }
 
@@ -179,14 +228,15 @@ impl TotalStatus {
 
 impl fmt::Display for TotalStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let StatusCount { ac, wa, tle, re } = self.count;
         write!(
             f,
             "{} (AC: {:>2}/{t:>2}, WA: {:>2}/{t:>2}, TLE: {:>2}/{t:>2}, RE: {:>2}/{t:>2})",
-            self.kind.as_ref(),
-            self.count.ac,
-            self.count.wa,
-            self.count.tle,
-            self.count.re,
+            self.kind,
+            ac,
+            StatusKind::Wa.sty_under_if(wa, wa > 0),
+            StatusKind::Tle.sty_under_if(tle, tle > 0),
+            StatusKind::Re.sty_under_if(re, re > 0),
             t = self.count.total()
         )
     }
