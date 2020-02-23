@@ -75,8 +75,8 @@ impl AtcoderActor<'_> {
     ) -> Result<()> {
         // authorize Dropbox account
         let dropbox = DbxAuthorizer::new(
-            DBX_APP_KEY,
-            DBX_APP_SECRET,
+            &DBX_APP_KEY,
+            &DBX_APP_SECRET,
             DBX_REDIRECT_PORT,
             DBX_REDIRECT_PATH,
             &token_path,

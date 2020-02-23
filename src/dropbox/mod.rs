@@ -6,6 +6,7 @@ use dropbox_sdk::files::{
     Metadata, PathROrId, SharedLink,
 };
 use dropbox_sdk::sharing::{self, GetSharedLinkFileArg, Path};
+use lazy_static::lazy_static;
 
 use crate::{Error, Result};
 
@@ -15,8 +16,11 @@ mod hyper_client;
 pub use authorizer::{DbxAuthorizer, Token};
 use hyper_client::HyperClient;
 
-pub static DBX_APP_KEY: &str = env!("ACICK_DBX_APP_KEY");
-pub static DBX_APP_SECRET: &str = env!("ACICK_DBX_APP_SECRET");
+lazy_static! {
+    pub static ref DBX_APP_KEY: &'static str = option_env!("ACICK_DBX_APP_KEY").unwrap();
+    pub static ref DBX_APP_SECRET: &'static str = option_env!("ACICK_DBX_APP_SECRET").unwrap();
+}
+
 pub static DBX_REDIRECT_PORT: u16 = 4100;
 pub static DBX_REDIRECT_PATH: &str = "/oauth2/callback";
 
