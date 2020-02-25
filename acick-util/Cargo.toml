@@ -21,3 +21,4 @@ regex = "1.3.3"
 serde = { version = "1.0.104", features = ["derive"] }
 shellexpand = "1.1.1"
 strum = { version = "0.17.1", features = ["derive"] }
+webbrowser = "0.5.2"

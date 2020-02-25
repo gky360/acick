@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
+use std::io::Write;
 use std::net::SocketAddr;
 
 use anyhow::Context as _;
@@ -14,10 +15,10 @@ use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
 use crate::abs_path::AbsPathBuf;
-use crate::dropbox::hyper_client::{HyperClient, Oauth2AuthorizeUrlBuilder, Oauth2Type};
-use crate::dropbox::{convert_dbx_err, Dropbox};
-use crate::service::open_in_browser;
-use crate::{Console, Result};
+use crate::hyper_client::{HyperClient, Oauth2AuthorizeUrlBuilder, Oauth2Type};
+use crate::web::open_in_browser;
+use crate::Result;
+use crate::{convert_dbx_err, Dropbox};
 
 static STATE_LEN: usize = 16;
 static DBX_CODE_PARAM: &str = "code";
@@ -56,7 +57,7 @@ impl<'a> DbxAuthorizer<'a> {
         }
     }
 
-    pub fn load_or_request(&self, cnsl: &mut Console) -> Result<Dropbox> {
+    pub fn load_or_request(&self, cnsl: &mut dyn Write) -> Result<Dropbox> {
         let load_result = self.load_token(cnsl)?;
         let token = match load_result {
             Some(token) if Self::validate_token(&token)? => token,
@@ -68,7 +69,7 @@ impl<'a> DbxAuthorizer<'a> {
         Ok(Dropbox::new(token))
     }
 
-    fn load_token(&self, cnsl: &mut Console) -> Result<Option<Token>> {
+    fn load_token(&self, cnsl: &mut dyn Write) -> Result<Option<Token>> {
         if !self.token_path.as_ref().exists() {
             return Ok(None);
         }
@@ -82,7 +83,7 @@ impl<'a> DbxAuthorizer<'a> {
         Ok(Some(token))
     }
 
-    fn save_token(&self, token: &Token, cnsl: &mut Console) -> Result<()> {
+    fn save_token(&self, token: &Token, cnsl: &mut dyn Write) -> Result<()> {
         self.token_path.save_pretty(
             |file| serde_json::to_writer(file, token).context("Could not save token as json file"),
             true,
@@ -104,7 +105,7 @@ impl<'a> DbxAuthorizer<'a> {
         .context("Could not validate access token")
     }
 
-    fn request_token(&self, cnsl: &mut Console) -> Result<Token> {
+    fn request_token(&self, cnsl: &mut dyn Write) -> Result<Token> {
         let code = self
             .authorize(cnsl)
             .context("Could not authorize acick on Dropbox")?;
@@ -121,7 +122,7 @@ impl<'a> DbxAuthorizer<'a> {
     }
 
     #[tokio::main]
-    async fn authorize(&self, cnsl: &mut Console) -> Result<String> {
+    async fn authorize(&self, cnsl: &mut dyn Write) -> Result<String> {
         let (tx, mut rx) = broadcast::channel::<String>(1);
 
         // generate random state
@@ -146,7 +147,8 @@ impl<'a> DbxAuthorizer<'a> {
             .redirect_uri(&self.redirect_uri)
             .state(&state)
             .build();
-        open_in_browser(auth_url.as_str(), cnsl)?;
+        open_in_browser(auth_url.as_str())?;
+        writeln!(cnsl, "Authorize Dropbox in web browser.")?;
 
         // wait for code to arrive and shutdown server
         let graceful = server.with_graceful_shutdown(async {

@@ -1,11 +1,9 @@
-use std::io::Write as _;
-
 use anyhow::Context as _;
 use reqwest::blocking::Response;
 use reqwest::header::LOCATION;
 use reqwest::Url;
 
-use crate::{Console, Error, Result};
+use crate::Result;
 
 mod act;
 mod atcoder;
@@ -33,18 +31,4 @@ impl ResponseExt for Response {
         base.join(loc_str)
             .context("Could not parse redirection url")
     }
-}
-
-pub fn open_in_browser(url: &str, cnsl: &mut Console) -> Result<()> {
-    if cfg!(test) {
-        unreachable!("Cannot open url in browser during test");
-    }
-    match webbrowser::open(url) {
-        Err(err) => Err(err.into()),
-        Ok(output) if !output.status.success() => {
-            Err(Error::msg("Process returned non-zero exit code"))
-        }
-        _ => Ok(writeln!(cnsl, "Opened in browser : {}", url)?),
-    }
-    .with_context(|| format!("Could not open url in browser : {}", url))
 }
