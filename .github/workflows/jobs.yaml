@@ -274,6 +274,9 @@ jobs:
       - name: "`cargo publish` (acick-util)"
         run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
         working-directory: "./acick-util"
+      - name: "`cargo publish` (acick-dropbox)"
+        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+        working-directory: "./acick-dropbox"
 
       - name: "`cargo publish` (acick)"
         run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
