@@ -36,7 +36,12 @@ pub struct AtcoderActor<'a> {
 }
 
 impl<'a> AtcoderActor<'a> {
-    pub fn new(client: Client, session: &'a SessionConfig) -> Self {
+    pub fn new(session: &'a SessionConfig) -> Self {
+        let client = session
+            .get_client_builder()
+            .build()
+            .expect("Could not setup client. \
+                TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
         AtcoderActor { client, session }
     }
 }

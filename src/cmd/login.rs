@@ -7,6 +7,7 @@ use structopt::StructOpt;
 
 use crate::cmd::Outcome;
 use crate::model::Service;
+use crate::service::{with_actor, Act};
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -15,6 +16,17 @@ pub struct LoginOpt {}
 
 impl LoginOpt {
     pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<LoginOutcome> {
+        with_actor(conf.service_id, conf.session(), |actor| {
+            self.run_inner(actor, conf, cnsl)
+        })
+    }
+
+    fn run_inner(
+        &self,
+        actor: &dyn Act,
+        conf: &Config,
+        cnsl: &mut Console,
+    ) -> Result<LoginOutcome> {
         let (user_env, pass_env) = conf.service_id.to_user_pass_env_names();
         let user = cnsl
             .get_env_or_prompt_and_read(user_env, "username: ", false)
@@ -24,7 +36,6 @@ impl LoginOpt {
             .context("Could not read password")?;
         writeln!(cnsl)?;
 
-        let actor = conf.build_actor();
         let is_not_already = actor.login(user.to_owned(), pass, cnsl)?;
 
         let outcome = LoginOutcome {

@@ -67,7 +67,6 @@ use crate::abs_path::AbsPathBuf;
 use crate::model::{
     string, Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
 };
-use crate::service::{Act, AtcoderActor};
 use crate::{Console, Result, VERSION};
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
@@ -114,19 +113,12 @@ impl Config {
         })
     }
 
-    pub fn service(&self) -> &ServiceConfig {
-        self.body.services.get(self.service_id)
+    pub fn session(&self) -> &SessionConfig {
+        &self.body.session
     }
 
-    pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
-        let client = self.body.session
-            .get_client_builder()
-            .build()
-            .expect("Could not setup client. \
-                TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
-        match self.service_id {
-            ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, &self.body.session)),
-        }
+    pub fn service(&self) -> &ServiceConfig {
+        self.body.services.get(self.service_id)
     }
 
     pub fn move_testcases_dir(

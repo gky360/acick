@@ -8,7 +8,7 @@ use structopt::StructOpt;
 use crate::cmd::Outcome;
 use crate::config::DBX_TOKEN_PATH;
 use crate::model::{Contest, Problem, ProblemId, Service, ServiceKind};
-use crate::service::{Act, AtcoderActor};
+use crate::service::{with_actor, Act, AtcoderActor};
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -42,6 +42,17 @@ impl FetchOpt {
 
 impl FetchOpt {
     pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<FetchOutcome> {
+        with_actor(conf.service_id, conf.session(), |actor| {
+            self.run_inner(actor, conf, cnsl)
+        })
+    }
+
+    fn run_inner(
+        &self,
+        actor: &dyn Act,
+        conf: &Config,
+        cnsl: &mut Console,
+    ) -> Result<FetchOutcome> {
         let Self {
             ref problem_id,
             overwrite,
@@ -50,7 +61,6 @@ impl FetchOpt {
         } = *self;
 
         // fetch data from service
-        let actor = conf.build_actor();
         let (contest, problems) = actor.fetch(&conf.contest_id, problem_id, cnsl)?;
 
         let service = Service::new(conf.service_id);
