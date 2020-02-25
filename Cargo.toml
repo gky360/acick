@@ -15,7 +15,7 @@ categories = ["command-line-utilities"]
 members = [".", "acick-util"]
 
 [dependencies]
-acick-util = { path = "./acick-util" }
+acick-util = { version = "0.0.6", path = "./acick-util" }
 anyhow = "1.0.26"
 bytefmt = "0.1.7"
 chrono = { version = "0.4.10", features = ["serde"] }
