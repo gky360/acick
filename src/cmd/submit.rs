@@ -8,6 +8,7 @@ use structopt::StructOpt;
 
 use crate::cmd::Outcome;
 use crate::model::{ProblemId, Service};
+use crate::service::{with_actor, Act};
 use crate::{Config, Console, Error, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
@@ -23,6 +24,17 @@ pub struct SubmitOpt {
 
 impl SubmitOpt {
     pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<SubmitOutcome> {
+        with_actor(conf.service_id, conf.session(), |actor| {
+            self.run_inner(actor, conf, cnsl)
+        })
+    }
+
+    pub fn run_inner(
+        &self,
+        actor: &dyn Act,
+        conf: &Config,
+        cnsl: &mut Console,
+    ) -> Result<SubmitOutcome> {
         // confirm
         let message = format!(
             "submit problem {} to {}?",
@@ -44,7 +56,6 @@ impl SubmitOpt {
         }
 
         // submit
-        let actor = conf.build_actor();
         let lang_name = conf.service().lang_name();
         actor.submit(&conf.contest_id, &problem, lang_name, &source, cnsl)?;
 

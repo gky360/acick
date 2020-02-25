@@ -1,0 +1,25 @@
+[package]
+name = "acick-dropbox"
+version = "0.0.7-alpha.1"
+authors = ["gky360 <gky360@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "Dropbox API client for acick crate"
+repository = "https://github.com/gky360/acick"
+documentation = "https://docs.rs/acick-dropbox"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+acick-util = { version = "0.0.7-alpha.1", path = "../acick-util" }
+anyhow = "1.0.26"
+dropbox-sdk = { version = "0.2.0", default_features = false, features = ["dbx_check", "dbx_files", "dbx_sharing"] }
+hyper = "0.13.2"
+hyper0_10 = { version = "0.10", package = "hyper" }
+hyper-sync-rustls = "0.3.0-rc.6"
+rand = "0.7.3"
+serde = { version = "1.0.104", features = ["derive"] }
+serde_json = "1.0.44"
+tokio = { version = "0.2.11", features = ["rt-core", "rt-threaded", "io-util", "time", "process", "macros", "sync"] }
+url = "2.1.1"

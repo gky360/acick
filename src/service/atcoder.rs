@@ -1,13 +1,14 @@
+use std::io::Write as _;
+
 use anyhow::{anyhow, Context as _};
+use lazy_static::lazy_static;
 use maplit::hashmap;
 use reqwest::blocking::{Client, Response};
 use reqwest::{StatusCode, Url};
 
 use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
-use crate::dropbox::{
-    DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
-};
+use crate::dropbox::DbxAuthorizer;
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
 use crate::service::atcoder_full::{fetch_full, TestcaseIter};
 use crate::service::atcoder_page::{
@@ -16,8 +17,17 @@ use crate::service::atcoder_page::{
 };
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
-use crate::service::{open_in_browser, Act, ResponseExt as _};
+use crate::service::{Act, ResponseExt as _};
+use crate::web::open_in_browser;
 use crate::{Config, Console, Error, Result};
+
+lazy_static! {
+    static ref DBX_APP_KEY: &'static str = option_env!("ACICK_DBX_APP_KEY").unwrap();
+    static ref DBX_APP_SECRET: &'static str = option_env!("ACICK_DBX_APP_SECRET").unwrap();
+}
+
+static DBX_REDIRECT_PORT: u16 = 4100;
+static DBX_REDIRECT_PATH: &str = "/oauth2/callback";
 
 #[derive(Debug)]
 pub struct AtcoderActor<'a> {
@@ -26,7 +36,12 @@ pub struct AtcoderActor<'a> {
 }
 
 impl<'a> AtcoderActor<'a> {
-    pub fn new(client: Client, session: &'a SessionConfig) -> Self {
+    pub fn new(session: &'a SessionConfig) -> Self {
+        let client = session
+            .get_client_builder()
+            .build()
+            .expect("Could not setup client. \
+                TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
         AtcoderActor { client, session }
     }
 }
@@ -233,10 +248,14 @@ impl Act for AtcoderActor<'_> {
         problem: &Problem,
         cnsl: &mut Console,
     ) -> Result<()> {
-        open_in_browser(&Self::problem_url(contest_id, problem)?.as_str(), cnsl)
+        open_in_browser(&Self::problem_url(contest_id, problem)?.as_str())?;
+        writeln!(cnsl, "Opened problem page in web browser.")?;
+        Ok(())
     }
 
     fn open_submissions_url(&self, contest_id: &ContestId, cnsl: &mut Console) -> Result<()> {
-        open_in_browser(&Self::submissions_url(contest_id)?.as_str(), cnsl)
+        open_in_browser(&Self::submissions_url(contest_id)?.as_str())?;
+        writeln!(cnsl, "Opened submissions page in web browser.")?;
+        Ok(())
     }
 }

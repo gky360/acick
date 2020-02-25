@@ -4,18 +4,18 @@ use anyhow::Context as _;
 use reqwest::blocking::{Client, Request, RequestBuilder, Response};
 use retry::{delay, retry, OperationResult};
 
-use crate::config::SessionConfig;
+use crate::config::{SessionConfig, COOKIES_PATH};
+use crate::service::CookieStorage;
 use crate::{Console, Error, Result};
 
 trait ExecSession {
-    fn exec_session(&self, request: Request, session: &SessionConfig) -> Result<Response>;
+    fn exec_session(&self, request: Request) -> Result<Response>;
 }
 
 impl ExecSession for Client {
-    fn exec_session(&self, mut request: Request, session: &SessionConfig) -> Result<Response> {
-        let mut storage = session
-            .open_cookie_storage()
-            .context("Could not open cookie storage")?;
+    fn exec_session(&self, mut request: Request) -> Result<Response> {
+        let mut storage =
+            CookieStorage::open(&COOKIES_PATH).context("Could not open cookie storage")?;
         storage
             .load_into(&mut request)
             .context("Could not load cookies into request")?;
@@ -36,21 +36,14 @@ pub struct RetryRequestBuilder<'a> {
 
 impl<'a> RetryRequestBuilder<'a> {
     pub fn send_pretty(&mut self) -> Result<Response> {
-        let Self {
-            client,
-            session,
-            cnsl,
-            ..
-        } = self;
+        let Self { client, cnsl, .. } = self;
         let req = self
             .inner
             .try_clone()
             .ok_or_else(|| Error::msg("Could not build request"))?
             .build()?;
         write!(cnsl, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
-        let result = client
-            .exec_session(req, session)
-            .context("Could not send request");
+        let result = client.exec_session(req).context("Could not send request");
         match &result {
             Ok(res) => writeln!(cnsl, "{}", res.status()),
             Err(_) => writeln!(cnsl, "failed"),

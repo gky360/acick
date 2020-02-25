@@ -67,12 +67,12 @@ use crate::abs_path::AbsPathBuf;
 use crate::model::{
     string, Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
 };
-use crate::service::{Act, AtcoderActor};
 use crate::{Console, Result, VERSION};
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
 
 static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
+static COOKIES_FILE_NAME: &str = "cookies.json";
 
 lazy_static! {
     static ref DATA_LOCAL_DIR: AbsPathBuf = {
@@ -87,6 +87,7 @@ lazy_static! {
         AbsPathBuf::try_new(path).unwrap()
     };
     pub static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
+    pub static ref COOKIES_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(COOKIES_FILE_NAME);
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -112,19 +113,12 @@ impl Config {
         })
     }
 
-    pub fn service(&self) -> &ServiceConfig {
-        self.body.services.get(self.service_id)
+    pub fn session(&self) -> &SessionConfig {
+        &self.body.session
     }
 
-    pub fn build_actor<'a>(&'a self) -> Box<dyn Act + 'a> {
-        let client = self.body.session
-            .get_client_builder()
-            .build()
-            .expect("Could not setup client. \
-                TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
-        match self.service_id {
-            ServiceKind::Atcoder => Box::new(AtcoderActor::new(client, &self.body.session)),
-        }
+    pub fn service(&self) -> &ServiceConfig {
+        self.body.services.get(self.service_id)
     }
 
     pub fn move_testcases_dir(
@@ -142,12 +136,12 @@ impl Config {
             if !cnsl.confirm(&message, false)? {
                 return Ok(false);
             }
-            testcases_abs_dir.remove_dir_all_pretty(Some(&self.base_dir), Some(cnsl))?;
+            testcases_abs_dir.remove_dir_all_pretty(Some(&self.base_dir), cnsl)?;
         } else if let Some(parent) = testcases_abs_dir.parent() {
             parent.create_dir_all()?;
         }
 
-        testcases_abs_dir.move_from_pretty(from, Some(&self.base_dir), Some(cnsl))?;
+        testcases_abs_dir.move_from_pretty(from, Some(&self.base_dir), cnsl)?;
 
         Ok(true)
     }

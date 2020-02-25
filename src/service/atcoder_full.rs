@@ -3,13 +3,12 @@ use std::io::{self, Read as _, Write as _};
 use std::vec::IntoIter;
 
 use anyhow::{anyhow, Context as _};
-use dropbox_sdk::files::FileMetadata;
 use rayon::prelude::*;
 use strum::IntoEnumIterator as _;
 use tempfile::tempdir;
 
 use crate::abs_path::AbsPathBuf;
-use crate::dropbox::Dropbox;
+use crate::dropbox::{Dropbox, FileMetadata};
 use crate::model::{AsSamples, ContestId, Problem, Sample};
 use crate::{Config, Console, Result};
 
