@@ -142,12 +142,12 @@ impl Config {
             if !cnsl.confirm(&message, false)? {
                 return Ok(false);
             }
-            testcases_abs_dir.remove_dir_all_pretty(Some(&self.base_dir), Some(cnsl))?;
+            testcases_abs_dir.remove_dir_all_pretty(Some(&self.base_dir), cnsl)?;
         } else if let Some(parent) = testcases_abs_dir.parent() {
             parent.create_dir_all()?;
         }
 
-        testcases_abs_dir.move_from_pretty(from, Some(&self.base_dir), Some(cnsl))?;
+        testcases_abs_dir.move_from_pretty(from, Some(&self.base_dir), cnsl)?;
 
         Ok(true)
     }

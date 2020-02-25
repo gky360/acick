@@ -132,56 +132,55 @@ impl AbsPathBuf {
     pub fn remove_dir_all_pretty(
         &self,
         base_dir: Option<&AbsPathBuf>,
-        mut cnsl: Option<&mut dyn Write>,
+        cnsl: &mut dyn Write,
     ) -> Result<bool> {
-        if let Some(ref mut cnsl) = cnsl {
-            write!(
-                cnsl,
-                "Removing {} ... ",
-                self.strip_prefix_if(base_dir).display()
-            )?;
-        }
-        let result = if self.as_ref().exists() {
-            remove_dir_all(self.as_ref())
-                .map(|_| true)
-                .map_err(Into::into)
-        } else {
-            Ok(false)
-        };
+        write!(
+            cnsl,
+            "Removing {} ... ",
+            self.strip_prefix_if(base_dir).display()
+        )?;
+        let result = self.remove_dir_all();
         let msg = match result {
             Ok(true) => "removed",
             Ok(false) => "not existed",
             Err(_) => "failed",
         };
-        if let Some(ref mut cnsl) = cnsl {
-            writeln!(cnsl, "{}", msg)?;
-        }
+        writeln!(cnsl, "{}", msg)?;
         result
+    }
+
+    fn remove_dir_all(&self) -> Result<bool> {
+        if !self.as_ref().exists() {
+            return Ok(false);
+        }
+        remove_dir_all(self.as_ref())?;
+        Ok(true)
     }
 
     pub fn move_from_pretty(
         &self,
         from: &AbsPathBuf,
         base_dir: Option<&AbsPathBuf>,
-        mut cnsl: Option<&mut dyn Write>,
+        cnsl: &mut dyn Write,
     ) -> Result<()> {
-        if let Some(ref mut cnsl) = cnsl {
-            write!(
-                cnsl,
-                "Moving {} to {} ... ",
-                from.strip_prefix_if(base_dir).display(),
-                self.strip_prefix_if(base_dir).display()
-            )?;
-        }
-        let result = rename(from.as_ref(), self.as_ref()).map_err(Into::into);
+        write!(
+            cnsl,
+            "Moving {} to {} ... ",
+            from.strip_prefix_if(base_dir).display(),
+            self.strip_prefix_if(base_dir).display()
+        )?;
+        let result = self.move_from(from);
         let msg = match result {
             Ok(_) => "moved",
             Err(_) => "failed",
         };
-        if let Some(ref mut cnsl) = cnsl {
-            writeln!(cnsl, "{}", msg)?;
-        }
+        writeln!(cnsl, "{}", msg)?;
         result
+    }
+
+    fn move_from(&self, from: &AbsPathBuf) -> Result<()> {
+        rename(from.as_ref(), self.as_ref())?;
+        Ok(())
     }
 
     pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
