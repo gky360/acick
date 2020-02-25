@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context as _};
 use serde::Serialize;
 
-pub type Result<T> = anyhow::Result<T>;
+use crate::Result;
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AbsPathBuf(PathBuf);

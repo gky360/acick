@@ -9,7 +9,7 @@ use fs2::FileExt as _;
 use reqwest::blocking::{Request, Response};
 use reqwest::header::{HeaderValue, COOKIE, SET_COOKIE};
 
-use crate::util::AbsPathBuf;
+use crate::abs_path::AbsPathBuf;
 use crate::{Error, Result};
 
 pub struct CookieStorage {

@@ -13,10 +13,10 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
+use crate::abs_path::AbsPathBuf;
 use crate::dropbox::hyper_client::{HyperClient, Oauth2AuthorizeUrlBuilder, Oauth2Type};
 use crate::dropbox::{convert_dbx_err, Dropbox};
 use crate::service::open_in_browser;
-use crate::util::AbsPathBuf;
 use crate::{Console, Result};
 
 static STATE_LEN: usize = 16;

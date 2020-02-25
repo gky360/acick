@@ -11,15 +11,15 @@ use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
 
-pub use acick_util as util;
+use acick_util::abs_path;
+use acick_util::console;
+use acick_util::model;
 
 mod cmd;
 pub mod config;
-mod console;
 mod dropbox;
 mod judge;
 mod macros;
-mod model;
 mod service;
 
 use crate::cmd::{Cmd, Outcome};

@@ -6,9 +6,9 @@ use reqwest::blocking::{Client, ClientBuilder};
 use reqwest::redirect::Policy;
 use serde::{Deserialize, Serialize};
 
+use crate::abs_path::AbsPathBuf;
 use crate::config::DATA_LOCAL_DIR;
 use crate::service::CookieStorage;
-use crate::util::AbsPathBuf;
 use crate::Result;
 
 static USER_AGENT: &str = concat!(

@@ -9,7 +9,7 @@ use std::vec::IntoIter;
 use getset::{CopyGetters, Getters, Setters};
 use serde::{Deserialize, Serialize};
 
-use crate::macros::regex;
+use crate::regex;
 use crate::Result;
 
 #[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]

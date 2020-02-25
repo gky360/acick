@@ -8,9 +8,9 @@ use rayon::prelude::*;
 use strum::IntoEnumIterator as _;
 use tempfile::tempdir;
 
+use crate::abs_path::AbsPathBuf;
 use crate::dropbox::Dropbox;
 use crate::model::{AsSamples, ContestId, Problem, Sample};
-use crate::util::AbsPathBuf;
 use crate::{Config, Console, Result};
 
 static DBX_TESTCASES_URL: &str =
