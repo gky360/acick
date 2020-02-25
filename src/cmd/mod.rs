@@ -122,6 +122,7 @@ pub struct ServiceContest {
     #[structopt(
         name = "service",
         long,
+        short,
         global = true,
         env = "ACICK_SERVICE",
         default_value = DEFAULT_SERVICE.id().into(),
@@ -131,6 +132,7 @@ pub struct ServiceContest {
     #[structopt(
         name = "contest",
         long,
+        short,
         global = true,
         env = "ACICK_CONTEST",
         default_value = DEFAULT_CONTEST.id().as_ref(),

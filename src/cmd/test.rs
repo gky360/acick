@@ -7,7 +7,7 @@ use structopt::StructOpt;
 
 use crate::cmd::Outcome;
 use crate::judge::{Judge, StatusKind, TotalStatus};
-use crate::model::{Problem, ProblemId, Sample, Service};
+use crate::model::{AsSamples, Problem, ProblemId, Service};
 use crate::service::AtcoderActor;
 use crate::{Config, Console, Result};
 
@@ -23,10 +23,7 @@ pub struct TestOpt {
 
 impl TestOpt {
     pub fn run(&self, conf: &Config, cnsl: &mut Console) -> Result<TestOutcome> {
-        // load problem file
-        let problem = conf
-            .load_problem(&self.problem_id, cnsl)
-            .context("Could not load problem file.")?;
+        let problem = conf.load_problem(&self.problem_id, cnsl)?;
 
         let total = self.compile_and_test(problem, conf, cnsl)?;
 
@@ -57,14 +54,9 @@ impl TestOpt {
     ) -> Result<TotalStatus> {
         let time_limit = problem.time_limit();
         let compare = problem.compare();
-        let (n_samples, samples): (usize, Box<dyn Iterator<Item = Result<Sample>>>) =
-            if self.is_full {
-                let testcases_dir = conf.testcases_abs_dir(problem.id())?;
-                let testcases = AtcoderActor::load_testcases(testcases_dir, &self.sample_name)?;
-                (testcases.len(), Box::new(testcases))
-            } else {
-                (problem.n_samples(), problem.iter_samples(&self.sample_name))
-            };
+        let samples = self.load_samples(problem, conf)?;
+        let n_samples = samples.len();
+        let max_sample_name_len = samples.max_name_len();
 
         // test source code with samples
         let mut statuses = Vec::new();
@@ -79,7 +71,7 @@ impl TestOpt {
                 n_samples,
                 if self.is_full { "testcase" } else { "sample" },
                 sample.name(),
-                l = if self.is_full { 16 } else { 2 }
+                l = max_sample_name_len,
             )?;
             let status = Judge::new(sample, time_limit, compare).test(run).await?;
             writeln!(cnsl, "{}", status)?;
@@ -89,6 +81,16 @@ impl TestOpt {
 
         let total = TotalStatus::new(statuses);
         Ok(total)
+    }
+
+    fn load_samples<'a>(&'a self, problem: Problem, conf: &Config) -> Result<Box<dyn AsSamples>> {
+        if self.is_full {
+            let testcases_dir = conf.testcases_abs_dir(problem.id())?;
+            let testcases = AtcoderActor::load_testcases(testcases_dir, &self.sample_name)?;
+            Ok(Box::new(testcases))
+        } else {
+            Ok(Box::new(problem.take_samples()))
+        }
     }
 
     #[tokio::main]

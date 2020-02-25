@@ -9,7 +9,7 @@ use crate::dropbox::{
     DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
 };
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
-use crate::service::atcoder_full::{fetch_full, Testcases};
+use crate::service::atcoder_full::{fetch_full, TestcaseIter};
 use crate::service::atcoder_page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
@@ -75,8 +75,8 @@ impl AtcoderActor<'_> {
     ) -> Result<()> {
         // authorize Dropbox account
         let dropbox = DbxAuthorizer::new(
-            DBX_APP_KEY,
-            DBX_APP_SECRET,
+            &DBX_APP_KEY,
+            &DBX_APP_SECRET,
             DBX_REDIRECT_PORT,
             DBX_REDIRECT_PATH,
             &token_path,
@@ -89,8 +89,8 @@ impl AtcoderActor<'_> {
     pub fn load_testcases(
         testcases_dir: AbsPathBuf,
         sample_name: &Option<String>,
-    ) -> Result<Testcases> {
-        Testcases::load(testcases_dir, sample_name)
+    ) -> Result<TestcaseIter> {
+        TestcaseIter::load(testcases_dir, sample_name)
     }
 }
 

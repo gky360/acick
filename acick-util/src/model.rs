@@ -4,11 +4,12 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use std::time::Duration;
+use std::vec::IntoIter;
 
 use getset::{CopyGetters, Getters, Setters};
 use serde::{Deserialize, Serialize};
 
-use crate::macros::regex;
+use crate::regex;
 use crate::Result;
 
 #[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
@@ -179,6 +180,14 @@ impl Problem {
         self.samples.len()
     }
 
+    pub fn max_sample_name_len(&self) -> usize {
+        self.samples
+            .iter()
+            .map(|sample| sample.name.len())
+            .max()
+            .unwrap_or(0)
+    }
+
     pub fn iter_samples<'a>(
         self,
         sample_name: &'a Option<String>,
@@ -192,6 +201,10 @@ impl Problem {
         } else {
             Box::new(iter.map(Ok))
         }
+    }
+
+    pub fn take_samples(self) -> SampleIter {
+        self.samples.into()
     }
 }
 
@@ -349,6 +362,51 @@ impl Sample {
 
     pub fn take(self) -> (String, String, String) {
         (self.name, self.input, self.output)
+    }
+}
+
+pub trait AsSamples: Iterator<Item = Result<Sample>> {
+    fn len(&self) -> usize;
+
+    fn max_name_len(&self) -> usize;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SampleIter {
+    len: usize,
+    max_name_len: usize,
+    iter: IntoIter<Sample>,
+}
+
+impl Iterator for SampleIter {
+    type Item = Result<Sample>;
+
+    fn next(&mut self) -> Option<Result<Sample>> {
+        self.iter.next().map(Ok)
+    }
+}
+
+impl AsSamples for SampleIter {
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn max_name_len(&self) -> usize {
+        self.max_name_len
+    }
+}
+
+impl From<Vec<Sample>> for SampleIter {
+    fn from(samples: Vec<Sample>) -> Self {
+        Self {
+            len: samples.len(),
+            max_name_len: samples.iter().map(|s| s.name.len()).max().unwrap_or(0),
+            iter: samples.into_iter(),
+        }
     }
 }
 

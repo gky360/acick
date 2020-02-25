@@ -39,6 +39,53 @@ jobs:
           command: fmt
           args: --all -- --check
 
+  doc:
+    strategy:
+      fail-fast: true
+      matrix:
+        target_triple:
+          - x86_64-pc-windows-msvc
+          - x86_64-pc-windows-gnu
+          - x86_64-apple-darwin
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+        include:
+          - target_triple: x86_64-pc-windows-msvc
+            host_triple: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target_triple: x86_64-pc-windows-gnu
+            host_triple: x86_64-pc-windows-gnu
+            os: windows-latest
+          - target_triple: x86_64-apple-darwin
+            host_triple: x86_64-apple-darwin
+            os: macos-latest
+          - target_triple: x86_64-unknown-linux-gnu
+            host_triple: x86_64-unknown-linux-gnu
+            os: ubuntu-18.04
+          - target_triple: x86_64-unknown-linux-musl
+            host_triple: x86_64-unknown-linux-gnu
+            os: ubuntu-18.04
+
+    name: Doc (${{ matrix.target_triple }})
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Install toolchain and target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable-${{ matrix.host_triple }}
+          target: ${{ matrix.target_triple }}
+          default: true
+
+      - name: "`cargo doc`"
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --workspace --all-features
+
   build:
     strategy:
       fail-fast: false
@@ -154,7 +201,7 @@ jobs:
 
     name: GitHub Release (${{ matrix.target_triple }})
     runs-on: ${{ matrix.os }}
-    needs: [rustfmt, build]
+    needs: [rustfmt, doc, build]
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
@@ -211,7 +258,7 @@ jobs:
   publish:
     name: "`cargo pubish`"
     runs-on: ubuntu-18.04
-    needs: [rustfmt, build, release]
+    needs: [rustfmt, doc, build, release]
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
@@ -224,8 +271,10 @@ jobs:
           toolchain: stable-x86_64-unknown-linux-gnu
           default: true
 
-      - name: "`cargo publish`"
-        uses: actions-rs/cargo@v1
-        with:
-          command: publish
-          args: --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+      - name: "`cargo publish` (acick-util)"
+        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+        working-directory: "./acick-util"
+
+      - name: "`cargo publish` (acick)"
+        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+        working-directory: "."

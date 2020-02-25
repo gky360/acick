@@ -10,7 +10,7 @@ use tempfile::tempdir;
 
 use crate::abs_path::AbsPathBuf;
 use crate::dropbox::Dropbox;
-use crate::model::{ContestId, Problem, Sample};
+use crate::model::{AsSamples, ContestId, Problem, Sample};
 use crate::{Config, Console, Result};
 
 static DBX_TESTCASES_URL: &str =
@@ -121,14 +121,12 @@ fn fetch_problem_full(
             );
             let mut reader = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
             let abs_path = testcases_dir.join(inout.as_ref()).join(file.name);
-            abs_path.save_pretty(
+            abs_path.save(
                 |mut file| {
                     io::copy(&mut reader, &mut file).context("Could not save testcase to file")?;
                     Ok(())
                 },
                 true,
-                Some(&testcases_dir),
-                None,
             )?;
             pb.inc(file.size);
             Ok(())
@@ -139,74 +137,75 @@ fn fetch_problem_full(
 }
 
 #[derive(Debug, Clone)]
-pub struct Testcases {
+pub struct TestcaseIter {
     dir: AbsPathBuf,
     len: usize,
+    max_name_len: usize,
     names_iter: IntoIter<String>,
 }
 
-impl Testcases {
+impl TestcaseIter {
     pub fn load(dir: AbsPathBuf, sample_name: &Option<String>) -> Result<Self> {
-        let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())?
-            .collect::<io::Result<Vec<_>>>()
-            .context("Could not list testcase files")?;
-        let mut names = entries
-            .iter()
-            .filter_map(|entry| {
-                if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
-                    Some(entry.file_name().to_string_lossy().into_owned())
-                } else {
-                    None
-                }
-            })
-            .filter(|name| {
-                sample_name
-                    .as_ref()
-                    .map(|sample_name| name == sample_name)
-                    .unwrap_or(true)
-            })
-            .collect::<Vec<_>>();
-        names.sort();
-        let len = names.len();
-        let names_iter = names.into_iter();
+        let names = if let Some(sample_name) = sample_name {
+            vec![sample_name.to_owned()]
+        } else {
+            let entries = read_dir(dir.join(InOut::In.as_ref()).as_ref())
+                .context(
+                    "Could not list testcase files. \
+                     Download testcase files first by `acick fetch --full` command.",
+                )?
+                .collect::<io::Result<Vec<_>>>()?;
+            let mut names = entries
+                .iter()
+                .filter(|entry| {
+                    // check if entry is file
+                    entry.file_type().map(|t| t.is_file()).unwrap_or(false)
+                })
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .collect::<Vec<_>>();
+            names.sort();
+            names
+        };
 
-        Ok(Self {
+        let max_name_len = names.iter().map(|name| name.len()).max().unwrap_or(0);
+
+        Ok(TestcaseIter {
             dir,
-            len,
-            names_iter,
+            len: names.len(),
+            max_name_len,
+            names_iter: names.into_iter(),
         })
     }
 
-    pub fn len(&self) -> usize {
-        self.len
+    fn load_file(&self, inout: InOut, name: &str) -> Result<String> {
+        let mut content = String::new();
+        self.dir.join(inout.as_ref()).join(&name).load(|mut file| {
+            file.read_to_string(&mut content)
+                .with_context(|| format!("Could not load testcase {}put file", inout.as_ref()))
+        })?;
+        Ok(content)
     }
 }
 
-impl Iterator for Testcases {
+impl Iterator for TestcaseIter {
     type Item = Result<Sample>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.names_iter.next().map(|name| {
-            let mut input = String::new();
-            self.dir.join(InOut::In.as_ref()).join(&name).load_pretty(
-                |mut file| {
-                    file.read_to_string(&mut input)
-                        .context("Could not load testcase input file")
-                },
-                None,
-                None,
-            )?;
-            let mut output = String::new();
-            self.dir.join(InOut::Out.as_ref()).join(&name).load_pretty(
-                |mut file| {
-                    file.read_to_string(&mut output)
-                        .context("Could not load testcase output file")
-                },
-                None,
-                None,
-            )?;
+            let input = self.load_file(InOut::In, &name)?;
+            let output = self.load_file(InOut::Out, &name)?;
             Ok(Sample::new(name, input, output))
         })
+    }
+}
+
+impl AsSamples for TestcaseIter {
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn max_name_len(&self) -> usize {
+        self.max_name_len
     }
 }
 
