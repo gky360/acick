@@ -84,7 +84,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --all-features
+          args: --workspace --all-features
 
   build:
     strategy:
@@ -271,8 +271,10 @@ jobs:
           toolchain: stable-x86_64-unknown-linux-gnu
           default: true
 
-      - name: "`cargo publish`"
-        uses: actions-rs/cargo@v1
-        with:
-          command: publish
-          args: --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+      - name: "`cargo publish` (acick-util)"
+        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+        working-directory: "./acick-util"
+
+      - name: "`cargo publish` (acick)"
+        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+        working-directory: "."
