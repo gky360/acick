@@ -3,6 +3,11 @@ name = "acick-dropbox"
 version = "0.0.7-alpha.1"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "Dropbox API client for acick crate"
+repository = "https://github.com/gky360/acick"
+documentation = "https://docs.rs/acick-dropbox"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
