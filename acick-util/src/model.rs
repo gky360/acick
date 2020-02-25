@@ -369,6 +369,10 @@ pub trait AsSamples: Iterator<Item = Result<Sample>> {
     fn len(&self) -> usize;
 
     fn max_name_len(&self) -> usize;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 #[derive(Debug, Clone)]
