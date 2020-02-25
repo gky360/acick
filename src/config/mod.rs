@@ -73,6 +73,7 @@ pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
 
 static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
+static COOKIES_FILE_NAME: &str = "cookies.json";
 
 lazy_static! {
     static ref DATA_LOCAL_DIR: AbsPathBuf = {
@@ -87,6 +88,7 @@ lazy_static! {
         AbsPathBuf::try_new(path).unwrap()
     };
     pub static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
+    pub static ref COOKIES_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(COOKIES_FILE_NAME);
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
