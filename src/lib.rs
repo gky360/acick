@@ -11,7 +11,8 @@ use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
 
-mod abs_path;
+pub use acick_util as util;
+
 mod cmd;
 pub mod config;
 mod console;

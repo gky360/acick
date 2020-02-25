@@ -1,13 +1,13 @@
 use std::env::current_dir;
 use std::fmt;
 use std::fs::{create_dir_all, remove_dir_all, rename, File, OpenOptions};
-use std::io::{self, Seek as _, SeekFrom, Write as _};
+use std::io::{self, Seek as _, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context as _};
 use serde::Serialize;
 
-use crate::{Console, Result};
+pub type Result<T> = anyhow::Result<T>;
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AbsPathBuf(PathBuf);
@@ -61,7 +61,7 @@ impl AbsPathBuf {
         save: impl FnOnce(File) -> Result<()>,
         overwrite: bool,
         base_dir: Option<&AbsPathBuf>,
-        cnsl: &mut Console,
+        cnsl: &mut dyn Write,
     ) -> Result<Option<bool>> {
         write!(
             cnsl,
@@ -105,7 +105,7 @@ impl AbsPathBuf {
         &self,
         load: impl FnOnce(File) -> Result<T>,
         base_dir: Option<&AbsPathBuf>,
-        cnsl: &mut Console,
+        cnsl: &mut dyn Write,
     ) -> Result<T> {
         write!(
             cnsl,
@@ -132,7 +132,7 @@ impl AbsPathBuf {
     pub fn remove_dir_all_pretty(
         &self,
         base_dir: Option<&AbsPathBuf>,
-        mut cnsl: Option<&mut Console>,
+        mut cnsl: Option<&mut dyn Write>,
     ) -> Result<bool> {
         if let Some(ref mut cnsl) = cnsl {
             write!(
@@ -163,7 +163,7 @@ impl AbsPathBuf {
         &self,
         from: &AbsPathBuf,
         base_dir: Option<&AbsPathBuf>,
-        mut cnsl: Option<&mut Console>,
+        mut cnsl: Option<&mut dyn Write>,
     ) -> Result<()> {
         if let Some(ref mut cnsl) = cnsl {
             write!(

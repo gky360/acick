@@ -3,7 +3,6 @@ use maplit::hashmap;
 use reqwest::blocking::{Client, Response};
 use reqwest::{StatusCode, Url};
 
-use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
 use crate::dropbox::{
     DbxAuthorizer, DBX_APP_KEY, DBX_APP_SECRET, DBX_REDIRECT_PATH, DBX_REDIRECT_PORT,
@@ -17,6 +16,7 @@ use crate::service::atcoder_page::{
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
 use crate::service::{open_in_browser, Act, ResponseExt as _};
+use crate::util::AbsPathBuf;
 use crate::{Config, Console, Error, Result};
 
 #[derive(Debug)]

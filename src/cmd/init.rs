@@ -5,9 +5,9 @@ use anyhow::{anyhow, Context as _};
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::abs_path::AbsPathBuf;
 use crate::cmd::Outcome;
 use crate::config::ConfigBody;
+use crate::util::AbsPathBuf;
 use crate::{Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
