@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "acick"
-version = "0.0.6"
+version = "0.0.7-alpha.1"
 dependencies = [
- "acick-util 0.0.6",
+ "acick-util 0.0.7-alpha.1",
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "console 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "acick-util"
-version = "0.0.6"
+version = "0.0.7-alpha.1"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytefmt 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
