@@ -272,10 +272,10 @@ jobs:
           default: true
 
       - name: "`cargo publish` (acick-util)"
-        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 60
         working-directory: "./acick-util"
       - name: "`cargo publish` (acick-dropbox)"
-        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 60
         working-directory: "./acick-dropbox"
 
       - name: "`cargo publish` (acick)"
