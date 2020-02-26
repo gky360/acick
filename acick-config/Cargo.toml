@@ -1,0 +1,28 @@
+[package]
+name = "acick-config"
+version = "0.0.7-alpha.1"
+authors = ["gky360 <gky360@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "Dropbox API client for acick crate"
+repository = "https://github.com/gky360/acick/tree/master/acick-config"
+documentation = "https://docs.rs/acick-config"
+readme = "README.md"
+
+[dev-dependencies]
+tempfile = "3.1.0"
+
+[dependencies]
+acick-util = { version = "0.0.7-alpha.1", path = "../acick-util" }
+anyhow = "1.0.26"
+dirs = "2.0.2"
+getset = "0.0.9"
+heck = "0.3.1"
+humantime-serde = "1.0.0"
+lazy_static = "1.4.0"
+semver = "0.9.0"
+serde = { version = "1.0.104", features = ["derive"] }
+serde_json = "1.0.44"
+serde_yaml = "0.8.11"
+tera = "1.0.2"
+tokio = { version = "0.2.11", features = ["rt-core", "process", "macros"] }

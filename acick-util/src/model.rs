@@ -7,10 +7,25 @@ use std::time::Duration;
 use std::vec::IntoIter;
 
 use getset::{CopyGetters, Getters, Setters};
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
 use crate::regex;
 use crate::Result;
+
+lazy_static! {
+    pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::default());
+    pub static ref DEFAULT_CONTEST: Contest = Contest::new("arc100", "AtCoder Regular Contest 100");
+    pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
+        "C",
+        "Linear Approximation",
+        "arc100_a",
+        Duration::from_secs(2),
+        "1024 MB".parse().unwrap(),
+        Compare::Default,
+        vec![],
+    );
+}
 
 #[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
@@ -50,6 +65,12 @@ impl ServiceKind {
         match self {
             Self::Atcoder => ("ACICK_ATCODER_USERNAME", "ACICK_ATCODER_PASSWORD"),
         }
+    }
+}
+
+impl Default for ServiceKind {
+    fn default() -> Self {
+        Self::Atcoder
     }
 }
 

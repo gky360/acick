@@ -269,7 +269,7 @@ mod tests {
         });
         let contest_id = ContestId::from("arc100");
         let problems = get_test_problems();
-        let conf = Config::default_test(&test_dir);
+        let conf = Config::default_in_tmp(test_dir.path());
         let mut cnsl = Console::buf(ConsoleConfig::default());
 
         let result = fetch_full(&dropbox, &contest_id, &problems[0..1], &conf, &mut cnsl);
