@@ -42,4 +42,4 @@ serde_yaml = "0.8.11"
 structopt = "0.3.7"
 strum = { version = "0.17.1", features = ["derive"] }
 tempfile = "3.1.0"
-tokio = { version = "0.2.11", features = ["rt-core", "rt-threaded", "io-util", "time", "process", "macros", "sync"] }
+tokio = { version = "0.2.11", features = ["rt-core", "time", "macros"] }
