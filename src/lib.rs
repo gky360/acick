@@ -5,12 +5,11 @@ extern crate strum;
 
 use std::io::{self, Write};
 
-use lazy_static::lazy_static;
-use semver::Version;
 use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
 
+use acick_config as config;
 use acick_dropbox as dropbox;
 use acick_util::abs_path;
 use acick_util::console;
@@ -18,7 +17,6 @@ use acick_util::model;
 use acick_util::web;
 
 mod cmd;
-pub mod config;
 mod judge;
 mod macros;
 mod service;
@@ -26,16 +24,9 @@ mod service;
 use crate::cmd::{Cmd, Outcome};
 use crate::config::Config;
 use crate::console::{Console, ConsoleConfig};
-use crate::model::{Contest, Service, ServiceKind};
 
 pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
-
-lazy_static! {
-    static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
-    static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::Atcoder);
-    static ref DEFAULT_CONTEST: Contest = Contest::new("arc100", "AtCoder Regular Contest 100");
-}
 
 #[derive(
     Serialize, EnumString, EnumVariantNames, IntoStaticStr, Debug, Copy, Clone, PartialEq, Eq, Hash,
@@ -106,26 +97,5 @@ impl Opt {
         } else {
             Ok(())
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::time::Duration;
-
-    use lazy_static::lazy_static;
-
-    use crate::model::{Compare, Problem};
-
-    lazy_static! {
-        pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
-            "C",
-            "Linear Approximation",
-            "arc100_a",
-            Duration::from_secs(2),
-            "1024 MB".parse().unwrap(),
-            Compare::Default,
-            Vec::new()
-        );
     }
 }

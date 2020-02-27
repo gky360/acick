@@ -60,16 +60,27 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
+use acick_util::abs_path;
+use acick_util::console;
+use acick_util::model;
+
 mod session_config;
 mod template;
 
 use crate::abs_path::AbsPathBuf;
+use crate::console::Console;
 use crate::model::{
     string, Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
 };
-use crate::{Console, Result, VERSION};
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
+
+pub type Error = anyhow::Error;
+pub type Result<T> = anyhow::Result<T>;
+
+lazy_static! {
+    static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+}
 
 static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
 static COOKIES_FILE_NAME: &str = "cookies.json";
@@ -270,17 +281,14 @@ impl Config {
         command.current_dir(working_abs_dir.as_ref());
         Ok(command)
     }
-}
 
-#[cfg(test)]
-impl Config {
-    pub fn default_test(test_dir: &tempfile::TempDir) -> Self {
-        let service_contest = crate::cmd::ServiceContest::default();
+    pub fn default_in_dir(base_dir: AbsPathBuf) -> Self {
+        use crate::model::{DEFAULT_CONTEST, DEFAULT_SERVICE};
 
         Self {
-            service_id: service_contest.service_id,
-            contest_id: service_contest.contest_id,
-            base_dir: AbsPathBuf::try_new(test_dir.path().join(env!("CARGO_PKG_NAME"))).unwrap(),
+            service_id: DEFAULT_SERVICE.id(),
+            contest_id: DEFAULT_CONTEST.id().clone(),
+            base_dir,
             body: ConfigBody::default(),
         }
     }
@@ -464,9 +472,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
-    use crate::config::template::TargetContext;
-    use crate::tests::DEFAULT_PROBLEM;
-    use crate::{DEFAULT_CONTEST, DEFAULT_SERVICE};
+    use crate::model::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
+    use crate::template::TargetContext;
 
     #[test]
     fn generate_and_deserialize() -> anyhow::Result<()> {
@@ -508,8 +515,8 @@ int main() {{
         let compile = ServiceConfig::default_for(ServiceKind::Atcoder).compile;
         let context = TargetContext::new(
             DEFAULT_SERVICE.id(),
-            &DEFAULT_CONTEST.id(),
-            &DEFAULT_PROBLEM.id(),
+            DEFAULT_CONTEST.id(),
+            DEFAULT_PROBLEM.id(),
         );
         let output = shell
             .exec_templ(&compile, &context)?

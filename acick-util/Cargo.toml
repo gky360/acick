@@ -1,11 +1,11 @@
 [package]
 name = "acick-util"
-version = "0.0.7-alpha.1"
+version = "0.0.7-alpha.2"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
 license = "MIT"
 description = "Utils for acick crate"
-repository = "https://github.com/gky360/acick"
+repository = "https://github.com/gky360/acick/tree/master/acick-util"
 documentation = "https://docs.rs/acick-util"
 readme = "README.md"
 

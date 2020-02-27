@@ -6,7 +6,7 @@ use structopt::StructOpt;
 use strum::VariantNames;
 
 use crate::model::{ContestId, ServiceKind};
-use crate::{Config, Console, OutputFormat, Result, DEFAULT_CONTEST, DEFAULT_SERVICE};
+use crate::{Config, Console, OutputFormat, Result};
 
 mod fetch;
 mod init;
@@ -21,6 +21,8 @@ pub use login::{LoginOpt, LoginOutcome};
 pub use show::{ShowOpt, ShowOutcome};
 pub use submit::{SubmitOpt, SubmitOutcome};
 pub use test::{TestOpt, TestOutcome};
+
+use crate::model::{DEFAULT_CONTEST, DEFAULT_SERVICE};
 
 pub trait Outcome: OutcomeSerialize {
     fn is_error(&self) -> bool;
@@ -159,6 +161,7 @@ impl Default for ServiceContest {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::abs_path::AbsPathBuf;
     use crate::{Config, Console, ConsoleConfig};
 
     use tempfile::TempDir;
@@ -169,7 +172,8 @@ pub mod tests {
     ) -> Result<T> {
         eprintln!("{}", std::env::current_dir()?.display());
 
-        let conf = Config::default_test(test_dir);
+        let base_dir = AbsPathBuf::try_new(test_dir.path().to_owned()).unwrap();
+        let conf = Config::default_in_dir(base_dir);
         let mut cnsl = Console::buf(ConsoleConfig::default());
         let result = run(&conf, &mut cnsl);
 

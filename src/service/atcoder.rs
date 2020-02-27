@@ -4,6 +4,7 @@ use anyhow::{anyhow, Context as _};
 use lazy_static::lazy_static;
 use maplit::hashmap;
 use reqwest::blocking::{Client, Response};
+use reqwest::redirect::Policy;
 use reqwest::{StatusCode, Url};
 
 use crate::abs_path::AbsPathBuf;
@@ -26,6 +27,14 @@ lazy_static! {
     static ref DBX_APP_SECRET: &'static str = option_env!("ACICK_DBX_APP_SECRET").unwrap();
 }
 
+static USER_AGENT: &str = concat!(
+    env!("CARGO_PKG_NAME"),
+    "-",
+    env!("CARGO_PKG_VERSION"),
+    " (",
+    env!("CARGO_PKG_REPOSITORY"),
+    ")"
+);
 static DBX_REDIRECT_PORT: u16 = 4100;
 static DBX_REDIRECT_PATH: &str = "/oauth2/callback";
 
@@ -37,8 +46,11 @@ pub struct AtcoderActor<'a> {
 
 impl<'a> AtcoderActor<'a> {
     pub fn new(session: &'a SessionConfig) -> Self {
-        let client = session
-            .get_client_builder()
+        let client = Client::builder()
+            .referer(false)
+            .redirect(Policy::none()) // redirects manually
+            .user_agent(USER_AGENT)
+            .timeout(Some(session.timeout()))
             .build()
             .expect("Could not setup client. \
                 TLS backend cannot be initialized, or the resolver cannot load the system configuration.");
