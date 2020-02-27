@@ -269,7 +269,8 @@ mod tests {
         });
         let contest_id = ContestId::from("arc100");
         let problems = get_test_problems();
-        let conf = Config::default_in_tmp(test_dir.path());
+        let base_dir = AbsPathBuf::try_new(test_dir.path().to_owned()).unwrap();
+        let conf = Config::default_in_dir(base_dir);
         let mut cnsl = Console::buf(ConsoleConfig::default());
 
         let result = fetch_full(&dropbox, &contest_id, &problems[0..1], &conf, &mut cnsl);
@@ -278,10 +279,10 @@ mod tests {
         result?;
 
         let paths = &[
-            "acick/atcoder/arc100/c/testcases/in/sample_04.txt",
-            "acick/atcoder/arc100/c/testcases/in/subtask_1_11.txt",
-            "acick/atcoder/arc100/c/testcases/out/sample_04.txt",
-            "acick/atcoder/arc100/c/testcases/out/subtask_1_11.txt",
+            "atcoder/arc100/c/testcases/in/sample_04.txt",
+            "atcoder/arc100/c/testcases/in/subtask_1_11.txt",
+            "atcoder/arc100/c/testcases/out/sample_04.txt",
+            "atcoder/arc100/c/testcases/out/subtask_1_11.txt",
         ];
         for path in paths {
             assert!(test_dir.path().join(path).is_file());

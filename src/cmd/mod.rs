@@ -161,6 +161,7 @@ impl Default for ServiceContest {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::abs_path::AbsPathBuf;
     use crate::{Config, Console, ConsoleConfig};
 
     use tempfile::TempDir;
@@ -171,7 +172,8 @@ pub mod tests {
     ) -> Result<T> {
         eprintln!("{}", std::env::current_dir()?.display());
 
-        let conf = Config::default_in_tmp(test_dir.path());
+        let base_dir = AbsPathBuf::try_new(test_dir.path().to_owned()).unwrap();
+        let conf = Config::default_in_dir(base_dir);
         let mut cnsl = Console::buf(ConsoleConfig::default());
         let result = run(&conf, &mut cnsl);
 

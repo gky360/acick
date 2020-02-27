@@ -52,7 +52,6 @@
 
 use std::fmt;
 use std::io::{Read as _, Write};
-use std::path::Path;
 
 use anyhow::{anyhow, Context as _};
 use dirs::{data_local_dir, home_dir};
@@ -283,13 +282,13 @@ impl Config {
         Ok(command)
     }
 
-    pub fn default_in_tmp(tmp_dir: &Path) -> Self {
+    pub fn default_in_dir(base_dir: AbsPathBuf) -> Self {
         use crate::model::{DEFAULT_CONTEST, DEFAULT_SERVICE};
 
         Self {
             service_id: DEFAULT_SERVICE.id(),
             contest_id: DEFAULT_CONTEST.id().clone(),
-            base_dir: AbsPathBuf::try_new(tmp_dir.join(env!("CARGO_PKG_NAME"))).unwrap(),
+            base_dir,
             body: ConfigBody::default(),
         }
     }
