@@ -329,7 +329,7 @@ impl ConfigBody {
     pub fn generate_to(writer: &mut dyn Write) -> Result<()> {
         writeln!(
             writer,
-            include_str!("../../resources/acick.yaml.txt"),
+            include_str!("../resources/acick.yaml.txt"),
             version = &*VERSION,
             bash = Shell::find_bash().display()
         )
