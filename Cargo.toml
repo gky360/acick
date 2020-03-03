@@ -12,9 +12,10 @@ keywords = ["windows", "cli"]
 categories = ["command-line-utilities"]
 
 [workspace]
-members = [".", "acick-util", "acick-dropbox", "acick-config"]
+members = [".", "acick-util", "acick-dropbox", "acick-config", "acick-atcoder"]
 
 [dependencies]
+acick-atcoder = { version = "0.0.7-alpha.2", path = "./acick-atcoder" }
 acick-config = { version = "0.0.7-alpha.2", path = "./acick-config" }
 acick-dropbox = { version = "0.0.7-alpha.2", path = "./acick-dropbox" }
 acick-util = { version = "0.0.7-alpha.2", path = "./acick-util" }

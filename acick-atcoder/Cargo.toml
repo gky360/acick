@@ -1,0 +1,12 @@
+[package]
+name = "acick-atcoder"
+version = "0.0.7-alpha.2"
+authors = ["gky360 <gky360@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "Tools for acick crate to interact with AtCoder"
+repository = "https://github.com/gky360/acick/tree/master/acick-atcoder"
+documentation = "https://docs.rs/acick-atcoder"
+readme = "README.md"
+
+[dependencies]
