@@ -15,7 +15,6 @@ tempfile = "3.1.0"
 [dependencies]
 acick-util = { version = "0.0.7-alpha.2", path = "../acick-util" }
 anyhow = "1.0.26"
-dirs = "2.0.2"
 getset = "0.0.9"
 heck = "0.3.1"
 humantime-serde = "1.0.0"

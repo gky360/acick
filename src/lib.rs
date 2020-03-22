@@ -18,7 +18,6 @@ use acick_util::web;
 
 mod cmd;
 mod judge;
-mod macros;
 mod service;
 
 use crate::cmd::{Cmd, Outcome};

@@ -1,13 +1,14 @@
 use std::str::FromStr;
+use std::time::Duration;
 
 use anyhow::Context as _;
 use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
-use crate::config::SessionConfig;
-use crate::macros::select;
+// use crate::config::SessionConfig;
 use crate::model::{LangId, LangNameRef};
+use crate::select;
 use crate::service::session::WithRetry as _;
 use crate::{Console, Error, Result};
 
@@ -19,12 +20,13 @@ pub trait Fetch: HasUrl {
     fn fetch(
         &self,
         client: &Client,
-        session: &SessionConfig,
+        retry_limit: usize,
+        retry_interval: Duration,
         cnsl: &mut Console,
     ) -> Result<(StatusCode, Html)> {
         let res = client
             .get(self.url()?)
-            .with_retry(client, session, cnsl)
+            .with_retry(client, retry_limit, retry_interval, cnsl)
             .retry_send()?;
         let status = res.status();
         let html = res.text().map(|text| Html::parse_document(&text))?;
