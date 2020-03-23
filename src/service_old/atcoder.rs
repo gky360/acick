@@ -22,9 +22,21 @@ use crate::service_old::atcoder_page::{
 use crate::web::open_in_browser;
 use crate::{Config, Console, Error, Result};
 
+// TODO: remove allow(clippy::unknown_clippy_lints)
+// when clippy::option_env_unwrap comes into stable
 lazy_static! {
-    static ref DBX_APP_KEY: &'static str = option_env!("ACICK_DBX_APP_KEY").unwrap();
-    static ref DBX_APP_SECRET: &'static str = option_env!("ACICK_DBX_APP_SECRET").unwrap();
+    // Use option_env for builds on crates.io.
+    // crates.io does not know these secrets.
+    static ref DBX_APP_KEY: &'static str = {
+        #[allow(clippy::unknown_clippy_lints)]
+        #[allow(clippy::option_env_unwrap)]
+        option_env!("ACICK_DBX_APP_KEY").unwrap()
+    };
+    static ref DBX_APP_SECRET: &'static str = {
+        #[allow(clippy::unknown_clippy_lints)]
+        #[allow(clippy::option_env_unwrap)]
+        option_env!("ACICK_DBX_APP_SECRET").unwrap()
+    };
 }
 
 static USER_AGENT: &str = concat!(

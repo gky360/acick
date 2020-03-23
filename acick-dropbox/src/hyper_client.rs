@@ -16,7 +16,6 @@ use hyper0_10::header::{
     Authorization, Bearer, ByteRangeSpec, Connection, ContentLength, ContentType, Range,
 };
 use hyper0_10::{self, Url};
-use serde_json;
 use url::form_urlencoded::Serializer as UrlEncoder;
 
 const USER_AGENT: &str = concat!("Dropbox-APIv2-Rust/", env!("CARGO_PKG_VERSION"));
