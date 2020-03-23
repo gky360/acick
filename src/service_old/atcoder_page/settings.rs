@@ -3,8 +3,8 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::service::atcoder_page::{HasHeader, BASE_URL};
 use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
+use crate::service_old::atcoder_page::{HasHeader, BASE_URL};
 use crate::{Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,7 +20,12 @@ impl<'a> SettingsPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<SettingsPage<'a>> {
-        let (status, html) = self.fetch(client, self.session, cnsl)?;
+        let (status, html) = self.fetch(
+            client,
+            self.session.retry_limit(),
+            self.session.retry_interval(),
+            cnsl,
+        )?;
         match status {
             StatusCode::OK => Ok(SettingsPage {
                 builder: self,

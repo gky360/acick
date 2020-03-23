@@ -11,14 +11,14 @@ use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
 use crate::dropbox::DbxAuthorizer;
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
-use crate::service::atcoder_full::{fetch_full, TestcaseIter};
-use crate::service::atcoder_page::{
-    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
-    TasksPrintPageBuilder, BASE_URL,
-};
 use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
 use crate::service::{Act, ResponseExt as _};
+use crate::service_old::atcoder_full::{fetch_full, TestcaseIter};
+use crate::service_old::atcoder_page::{
+    HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
+    TasksPrintPageBuilder, BASE_URL,
+};
 use crate::web::open_in_browser;
 use crate::{Config, Console, Error, Result};
 
@@ -147,7 +147,12 @@ impl Act for AtcoderActor<'_> {
         let res = client
             .post(login_page.url()?)
             .form(&payload)
-            .with_retry(client, session, cnsl)
+            .with_retry(
+                client,
+                session.retry_limit(),
+                session.retry_interval(),
+                cnsl,
+            )
             .retry_send()?;
 
         // check if login succeeded
@@ -244,7 +249,12 @@ impl Act for AtcoderActor<'_> {
         let res = client
             .post(submit_page.url()?)
             .form(&payload)
-            .with_retry(client, session, cnsl)
+            .with_retry(
+                client,
+                session.retry_limit(),
+                session.retry_interval(),
+                cnsl,
+            )
             .retry_send()?;
 
         // check response

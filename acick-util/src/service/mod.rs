@@ -5,25 +5,13 @@ use reqwest::Url;
 
 use crate::Result;
 
-mod act;
+pub mod act;
 mod cookie;
-mod scrape;
-mod session;
+pub mod scrape;
+pub mod session;
 
 pub use self::cookie::CookieStorage;
 pub use act::Act;
-// pub use atcoder::AtcoderActor;
-
-// use crate::model::ServiceKind;
-
-// pub fn with_actor<F, R>(service_id: ServiceKind, session: &SessionConfig, f: F) -> R
-// where
-//     F: FnOnce(&dyn Act) -> R,
-// {
-//     match service_id {
-//         ServiceKind::Atcoder => f(&AtcoderActor::new(session)),
-//     }
-// }
 
 pub trait ResponseExt {
     fn location_url(&self, base: &Url) -> Result<Url>;

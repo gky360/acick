@@ -3,8 +3,8 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::service::atcoder_page::{HasHeader, BASE_URL};
 use crate::service::scrape::{ExtractCsrfToken, Fetch as _, HasUrl, Scrape};
+use crate::service_old::atcoder_page::{HasHeader, BASE_URL};
 use crate::{Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,17 +20,22 @@ impl<'a> LoginPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<LoginPage<'a>> {
-        self.fetch(client, self.session, cnsl)
-            .and_then(|(status, html)| {
-                if status == StatusCode::OK {
-                    Ok(LoginPage {
-                        builder: self,
-                        content: html,
-                    })
-                } else {
-                    Err(Error::msg("Received invalid response"))
-                }
-            })
+        self.fetch(
+            client,
+            self.session.retry_limit(),
+            self.session.retry_interval(),
+            cnsl,
+        )
+        .and_then(|(status, html)| {
+            if status == StatusCode::OK {
+                Ok(LoginPage {
+                    builder: self,
+                    content: html,
+                })
+            } else {
+                Err(Error::msg("Received invalid response"))
+            }
+        })
     }
 }
 

@@ -3,22 +3,16 @@ use reqwest::blocking::Response;
 use reqwest::header::LOCATION;
 use reqwest::Url;
 
+use crate::config::SessionConfig;
+use crate::model::ServiceKind;
+use crate::service::act::Act;
 use crate::Result;
 
-mod act;
 mod atcoder;
 mod atcoder_full;
 mod atcoder_page;
-mod cookie;
-mod scrape;
-mod session;
 
-pub use self::cookie::CookieStorage;
-pub use act::Act;
 pub use atcoder::AtcoderActor;
-
-use crate::config::SessionConfig;
-use crate::model::ServiceKind;
 
 pub fn with_actor<F, R>(service_id: ServiceKind, session: &SessionConfig, f: F) -> R
 where

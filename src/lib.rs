@@ -11,14 +11,11 @@ use strum::VariantNames;
 
 use acick_config as config;
 use acick_dropbox as dropbox;
-use acick_util::abs_path;
-use acick_util::console;
-use acick_util::model;
-use acick_util::web;
+use acick_util::{abs_path, console, model, service, web};
 
 mod cmd;
 mod judge;
-mod service;
+mod service_old;
 
 use crate::cmd::{Cmd, Outcome};
 use crate::config::Config;

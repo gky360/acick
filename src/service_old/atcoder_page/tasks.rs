@@ -1,3 +1,4 @@
+use acick_util::select;
 use anyhow::Context as _;
 use humantime::parse_duration;
 use reqwest::blocking::Client;
@@ -5,10 +6,9 @@ use reqwest::Url;
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::macros::select;
 use crate::model::{Compare, ContestId, Problem, ProblemId};
-use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
 use crate::service::scrape::{ElementRefExt as _, HasUrl, Scrape};
+use crate::service_old::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

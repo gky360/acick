@@ -8,7 +8,8 @@ use structopt::StructOpt;
 
 use crate::cmd::Outcome;
 use crate::model::{ProblemId, Service};
-use crate::service::{with_actor, Act};
+use crate::service::Act;
+use crate::service_old::with_actor;
 use crate::{Config, Console, Error, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]

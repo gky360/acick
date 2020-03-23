@@ -20,7 +20,7 @@ pub type Error = anyhow::Error;
 pub type Result<T> = anyhow::Result<T>;
 
 lazy_static! {
-    static ref DATA_LOCAL_DIR: AbsPathBuf = {
+    pub static ref DATA_LOCAL_DIR: AbsPathBuf = {
         let path = data_local_dir()
             .unwrap_or_else(|| {
                 home_dir()

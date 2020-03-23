@@ -8,7 +8,7 @@ use structopt::StructOpt;
 use crate::cmd::Outcome;
 use crate::judge::{Judge, StatusKind, TotalStatus};
 use crate::model::{AsSamples, Problem, ProblemId, Service};
-use crate::service::AtcoderActor;
+use crate::service_old::AtcoderActor;
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
