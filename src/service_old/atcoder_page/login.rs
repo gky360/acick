@@ -20,22 +20,19 @@ impl<'a> LoginPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<LoginPage<'a>> {
-        self.fetch(
+        let (status, html) = self.fetch(
             client,
             self.session.retry_limit(),
             self.session.retry_interval(),
             cnsl,
-        )
-        .and_then(|(status, html)| {
-            if status == StatusCode::OK {
-                Ok(LoginPage {
-                    builder: self,
-                    content: html,
-                })
-            } else {
-                Err(Error::msg("Received invalid response"))
-            }
-        })
+        )?;
+        match status {
+            StatusCode::OK => Ok(LoginPage {
+                builder: self,
+                content: html,
+            }),
+            _ => Err(Error::msg("Received invalid response")),
+        }
     }
 }
 

@@ -6,7 +6,6 @@ use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
-// use crate::config::SessionConfig;
 use crate::model::{LangId, LangNameRef};
 use crate::select;
 use crate::service::session::WithRetry as _;

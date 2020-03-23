@@ -6,7 +6,6 @@ use lazy_static::lazy_static;
 use reqwest::blocking::{Client, Request, RequestBuilder, Response};
 use retry::{delay, retry, OperationResult};
 
-// use crate::config::{SessionConfig, COOKIES_PATH};
 use crate::abs_path::AbsPathBuf;
 use crate::service::CookieStorage;
 use crate::DATA_LOCAL_DIR;
