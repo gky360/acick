@@ -10,8 +10,8 @@ use scraper::{ElementRef, Html, Selector};
 
 use crate::config::SessionConfig;
 use crate::model::{ContestId, ProblemId, Sample};
+use crate::page::{FetchRestricted, BASE_URL};
 use crate::service::scrape::{parse_zenkaku_digits, ElementRefExt as _, HasUrl, Scrape};
-use crate::service_old::atcoder_page::{FetchRestricted, BASE_URL};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

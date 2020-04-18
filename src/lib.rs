@@ -9,13 +9,12 @@ use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
 
+use acick_atcoder as atcoder;
 use acick_config as config;
-use acick_dropbox as dropbox;
-use acick_util::{abs_path, console, model, service, web};
+use acick_util::{abs_path, console, model, service};
 
 mod cmd;
 mod judge;
-mod service_old;
 
 use crate::cmd::{Cmd, Outcome};
 use crate::config::Config;

@@ -3,8 +3,8 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
+use crate::page::{HasHeader, BASE_URL};
 use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
-use crate::service_old::atcoder_page::{HasHeader, BASE_URL};
 use crate::{Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -5,11 +5,11 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
+use crate::atcoder::AtcoderActor;
 use crate::cmd::{with_actor, Outcome};
 use crate::config::DBX_TOKEN_PATH;
 use crate::model::{Contest, Problem, ProblemId, Service, ServiceKind};
 use crate::service::Act;
-use crate::service_old::AtcoderActor;
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]

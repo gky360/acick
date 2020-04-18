@@ -24,8 +24,8 @@ pub use show::{ShowOpt, ShowOutcome};
 pub use submit::{SubmitOpt, SubmitOutcome};
 pub use test::{TestOpt, TestOutcome};
 
+use crate::atcoder::AtcoderActor;
 use crate::model::{DEFAULT_CONTEST, DEFAULT_SERVICE};
-use crate::service_old::atcoder::AtcoderActor;
 
 pub trait Outcome: OutcomeSerialize {
     fn is_error(&self) -> bool;

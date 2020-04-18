@@ -7,8 +7,8 @@ use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
 use crate::model::{Compare, ContestId, Problem, ProblemId};
+use crate::page::{FetchRestricted, HasHeader, BASE_URL};
 use crate::service::scrape::{ElementRefExt as _, HasUrl, Scrape};
-use crate::service_old::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
