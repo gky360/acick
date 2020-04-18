@@ -5,7 +5,9 @@ use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
 
+use crate::config::SessionConfig;
 use crate::model::{ContestId, ServiceKind};
+use crate::service::act::Act;
 use crate::{Config, Console, OutputFormat, Result};
 
 mod fetch;
@@ -23,6 +25,7 @@ pub use submit::{SubmitOpt, SubmitOutcome};
 pub use test::{TestOpt, TestOutcome};
 
 use crate::model::{DEFAULT_CONTEST, DEFAULT_SERVICE};
+use crate::service_old::atcoder::AtcoderActor;
 
 pub trait Outcome: OutcomeSerialize {
     fn is_error(&self) -> bool;
@@ -155,6 +158,15 @@ impl Default for ServiceContest {
             service_id: DEFAULT_SERVICE.id(),
             contest_id: DEFAULT_CONTEST.id().clone(),
         }
+    }
+}
+
+pub fn with_actor<F, R>(service_id: ServiceKind, session: &SessionConfig, f: F) -> R
+where
+    F: FnOnce(&dyn Act) -> R,
+{
+    match service_id {
+        ServiceKind::Atcoder => f(&AtcoderActor::new(session)),
     }
 }
 
