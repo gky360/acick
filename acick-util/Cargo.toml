@@ -1,6 +1,6 @@
 [package]
 name = "acick-util"
-version = "0.0.7-alpha.2"
+version = "0.0.7-alpha.3"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
 license = "MIT"
