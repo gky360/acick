@@ -54,15 +54,12 @@ use std::fmt;
 use std::io::{Read as _, Write};
 
 use anyhow::{anyhow, Context as _};
-use dirs::{data_local_dir, home_dir};
 use lazy_static::lazy_static;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-use acick_util::abs_path;
-use acick_util::console;
-use acick_util::model;
+use acick_util::{abs_path, console, model, DATA_LOCAL_DIR};
 
 mod session_config;
 mod template;
@@ -83,22 +80,9 @@ lazy_static! {
 }
 
 static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
-static COOKIES_FILE_NAME: &str = "cookies.json";
 
 lazy_static! {
-    static ref DATA_LOCAL_DIR: AbsPathBuf = {
-        let path = data_local_dir()
-            .unwrap_or_else(|| {
-                home_dir()
-                    .expect("Could not get home dir")
-                    .join(".local")
-                    .join("share")
-            })
-            .join(env!("CARGO_PKG_NAME"));
-        AbsPathBuf::try_new(path).unwrap()
-    };
     pub static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
-    pub static ref COOKIES_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(COOKIES_FILE_NAME);
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]

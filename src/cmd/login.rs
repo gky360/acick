@@ -5,9 +5,9 @@ use anyhow::Context as _;
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::cmd::Outcome;
+use crate::cmd::{with_actor, Outcome};
 use crate::model::Service;
-use crate::service::{with_actor, Act};
+use crate::service::Act;
 use crate::{Config, Console, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]

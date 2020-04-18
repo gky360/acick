@@ -1,12 +1,12 @@
+use acick_util::select;
 use anyhow::Context as _;
 use reqwest::blocking::Client;
 use reqwest::Url;
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::macros::select;
 use crate::model::{ContestId, LangId, LangIdRef, LangName, LangNameRef};
-use crate::service::atcoder_page::{FetchRestricted, HasHeader, BASE_URL};
+use crate::page::{FetchRestricted, HasHeader, BASE_URL};
 use crate::service::scrape::{ElementRefExt as _, ExtractCsrfToken, ExtractLangId, HasUrl, Scrape};
 use crate::{Console, Result};
 

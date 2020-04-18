@@ -6,9 +6,9 @@ use chrono::{offset::Local, DateTime, SecondsFormat};
 use serde::Serialize;
 use structopt::StructOpt;
 
-use crate::cmd::Outcome;
+use crate::cmd::{with_actor, Outcome};
 use crate::model::{ProblemId, Service};
-use crate::service::{with_actor, Act};
+use crate::service::Act;
 use crate::{Config, Console, Error, Result};
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]

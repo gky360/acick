@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use acick_util::{regex, select};
 use anyhow::Context as _;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -8,9 +9,8 @@ use reqwest::Url;
 use scraper::{ElementRef, Html, Selector};
 
 use crate::config::SessionConfig;
-use crate::macros::{regex, select};
 use crate::model::{ContestId, ProblemId, Sample};
-use crate::service::atcoder_page::{FetchRestricted, BASE_URL};
+use crate::page::{FetchRestricted, BASE_URL};
 use crate::service::scrape::{parse_zenkaku_digits, ElementRefExt as _, HasUrl, Scrape};
 use crate::{Console, Result};
 

@@ -215,9 +215,9 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+    use crate::console::ConsoleConfig;
     use crate::dropbox::Token;
     use crate::model::Compare;
-    use crate::ConsoleConfig;
 
     fn get_test_problems() -> Vec<Problem> {
         vec![

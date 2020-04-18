@@ -1,3 +1,4 @@
+use acick_util::select;
 use anyhow::Context as _;
 use lazy_static::lazy_static;
 use reqwest::blocking::Client;
@@ -5,7 +6,6 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::macros::select;
 use crate::service::scrape::{ElementRefExt as _, Fetch, Scrape};
 use crate::{Console, Error, Result};
 
@@ -68,7 +68,12 @@ pub trait FetchRestricted: Fetch {
         session: &SessionConfig,
         cnsl: &mut Console,
     ) -> Result<Html> {
-        let (status, html) = self.fetch(client, session, cnsl)?;
+        let (status, html) = self.fetch(
+            client,
+            session.retry_limit(),
+            session.retry_interval(),
+            cnsl,
+        )?;
         match status {
             StatusCode::OK => Ok(html),
             StatusCode::FOUND => Err(Error::msg("User not logged in")),

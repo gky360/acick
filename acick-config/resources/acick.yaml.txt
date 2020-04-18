@@ -2,7 +2,7 @@
 # acick config file
 #
 # For details, see
-# https://docs.rs/acick/{version}/acick/config/index.html
+# https://docs.rs/acick-config/{version}/acick_config/
 
 # Version of acick that generated this config file.
 version: {version}

@@ -10,9 +10,9 @@ use reqwest::{StatusCode, Url};
 use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
 use crate::dropbox::DbxAuthorizer;
+use crate::full::{fetch_full, TestcaseIter};
 use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
-use crate::service::atcoder_full::{fetch_full, TestcaseIter};
-use crate::service::atcoder_page::{
+use crate::page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
 };
@@ -159,7 +159,12 @@ impl Act for AtcoderActor<'_> {
         let res = client
             .post(login_page.url()?)
             .form(&payload)
-            .with_retry(client, session, cnsl)
+            .with_retry(
+                client,
+                session.retry_limit(),
+                session.retry_interval(),
+                cnsl,
+            )
             .retry_send()?;
 
         // check if login succeeded
@@ -256,7 +261,12 @@ impl Act for AtcoderActor<'_> {
         let res = client
             .post(submit_page.url()?)
             .form(&payload)
-            .with_retry(client, session, cnsl)
+            .with_retry(
+                client,
+                session.retry_limit(),
+                session.retry_interval(),
+                cnsl,
+            )
             .retry_send()?;
 
         // check response
