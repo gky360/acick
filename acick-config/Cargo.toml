@@ -1,6 +1,6 @@
 [package]
 name = "acick-config"
-version = "0.0.7-alpha.3"
+version = "0.0.8"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -13,7 +13,7 @@ readme = "README.md"
 tempfile = "3.1.0"
 
 [dependencies]
-acick-util = { version = "0.0.7-alpha.3", path = "../acick-util" }
+acick-util = { version = "0.0.8", path = "../acick-util" }
 anyhow = "1.0.26"
 getset = "0.0.9"
 heck = "0.3.1"
