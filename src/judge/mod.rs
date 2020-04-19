@@ -49,7 +49,7 @@ impl Judge {
             Ok(Err(err)) => Err(err),
             Ok(Ok(output)) if output.status.success() => {
                 let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-                let diff = TextDiff::new("expected", "actual", stdout, sample_out, cmp);
+                let diff = TextDiff::new("expected", "actual", sample_out, stdout, cmp);
                 if diff.is_any() {
                     Ok(Status::wa(sample_name, elapsed, diff))
                 } else {
