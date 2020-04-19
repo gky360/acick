@@ -61,8 +61,14 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
+        let test_dir = tempdir()?;
+
+        let login_opt = crate::cmd::LoginOpt {};
+        run_with(&test_dir, |conf, cnsl| login_opt.run(conf, cnsl))?;
+
         let opt = MeOpt {};
-        let outcome = run_with(&tempdir()?, |conf, cnsl| opt.run(conf, cnsl))?;
+        let outcome = run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
+
         assert_eq!(outcome.service.id(), ServiceKind::Atcoder);
         assert_eq!(&outcome.username, "acick_test");
         Ok(())
