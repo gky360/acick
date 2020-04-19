@@ -13,6 +13,7 @@ use crate::{Config, Console, OutputFormat, Result};
 mod fetch;
 mod init;
 mod login;
+mod me;
 mod show;
 mod submit;
 mod test;
@@ -20,6 +21,7 @@ mod test;
 pub use fetch::FetchOpt;
 pub use init::{InitOpt, InitOutcome};
 pub use login::{LoginOpt, LoginOutcome};
+pub use me::{MeOpt, MeOutcome};
 pub use show::{ShowOpt, ShowOutcome};
 pub use submit::{SubmitOpt, SubmitOutcome};
 pub use test::{TestOpt, TestOutcome};
@@ -69,6 +71,13 @@ pub enum Cmd {
         #[structopt(flatten)]
         opt: ShowOpt,
     },
+    /// Gets info of user currently logged in to service
+    Me {
+        #[structopt(flatten)]
+        sc: ServiceContest,
+        #[structopt(flatten)]
+        opt: MeOpt,
+    },
     /// Logs in to service
     #[structopt(visible_alias("l"))]
     Login {
@@ -114,6 +123,7 @@ impl Cmd {
         match self {
             Self::Init(opt) => finish(&opt.run(cnsl)?, cnsl),
             Self::Show { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?)?, cnsl),
+            Self::Me { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
             Self::Login { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
             Self::Fetch { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
             Self::Test { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
@@ -161,7 +171,7 @@ impl Default for ServiceContest {
     }
 }
 
-pub fn with_actor<F, R>(service_id: ServiceKind, session: &SessionConfig, f: F) -> R
+fn with_actor<F, R>(service_id: ServiceKind, session: &SessionConfig, f: F) -> R
 where
     F: FnOnce(&dyn Act) -> R,
 {

@@ -134,13 +134,20 @@ impl AtcoderActor<'_> {
 }
 
 impl Act for AtcoderActor<'_> {
+    fn current_user(&self, cnsl: &mut Console) -> Result<Option<String>> {
+        let Self { client, session } = self;
+        let login_page = LoginPageBuilder::new(session).build(client, cnsl)?;
+        login_page.current_user()
+    }
+
     fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool> {
         let Self { client, session } = self;
 
         // check if user is already logged in
         let login_page = LoginPageBuilder::new(session).build(client, cnsl)?;
-        if login_page.is_logged_in()? {
-            let current_user = login_page.current_user()?;
+        let current_user = login_page.current_user()?;
+        if let Some(current_user) = current_user {
+            // already logged in
             if current_user != user {
                 return Err(anyhow!("Logged in as another user: {}", current_user));
             }
@@ -171,11 +178,13 @@ impl Act for AtcoderActor<'_> {
         Self::validate_login_response(&res).context("Login rejected by service")?;
         let settings_page = SettingsPageBuilder::new(session).build(client, cnsl)?;
         let current_user = settings_page.current_user()?;
-        if current_user != user {
-            return Err(anyhow!("Logged in as another user: {}", current_user));
+        match current_user {
+            None => Err(anyhow!("Failed to log in")),
+            Some(current_user) if current_user != user => {
+                Err(anyhow!("Logged in as another user: {}", current_user))
+            }
+            _ => Ok(true),
         }
-
-        Ok(true)
     }
 
     fn fetch(

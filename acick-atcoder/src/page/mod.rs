@@ -40,19 +40,22 @@ pub trait HasHeader: Scrape {
         Ok(ret)
     }
 
-    fn current_user(&self) -> Result<String> {
+    fn current_user(&self) -> Result<Option<String>> {
         if !self.is_logged_in()? {
-            return Err(Error::msg("Not logged in"));
+            return Ok(None);
         }
         self.select_header()?
             .select(select!("a.dropdown-toggle"))
             .nth(1)
             .ok_or_else(|| Error::msg("Could not find element"))
-            .map(|elem| elem.inner_text().trim().to_owned())
+            .map(|elem| Some(elem.inner_text().trim().to_owned()))
     }
 
     fn is_logged_in_as(&self, user: &str) -> Result<bool> {
-        Ok(self.is_logged_in()? && self.current_user()? == user)
+        match self.current_user()? {
+            None => Ok(false),
+            Some(current_user) => Ok(current_user == user),
+        }
     }
 
     fn extract_contest_name(&self) -> Option<String> {
