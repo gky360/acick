@@ -168,6 +168,7 @@ impl Act for AtcoderActor<'_> {
             .form(&payload)
             .with_retry(
                 client,
+                session.cookies_path(),
                 session.retry_limit(),
                 session.retry_interval(),
                 cnsl,
@@ -272,6 +273,7 @@ impl Act for AtcoderActor<'_> {
             .form(&payload)
             .with_retry(
                 client,
+                session.cookies_path(),
                 session.retry_limit(),
                 session.retry_interval(),
                 cnsl,

@@ -2,29 +2,21 @@ use std::io::Write as _;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use lazy_static::lazy_static;
 use reqwest::blocking::{Client, Request, RequestBuilder, Response};
 use retry::{delay, retry, OperationResult};
 
 use crate::abs_path::AbsPathBuf;
 use crate::service::CookieStorage;
-use crate::DATA_LOCAL_DIR;
 use crate::{Console, Error, Result};
 
-static COOKIES_FILE_NAME: &str = "cookies.json";
-
-lazy_static! {
-    static ref COOKIES_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(COOKIES_FILE_NAME);
-}
-
 trait ExecSession {
-    fn exec_session(&self, request: Request) -> Result<Response>;
+    fn exec_session(&self, cookies_path: &AbsPathBuf, request: Request) -> Result<Response>;
 }
 
 impl ExecSession for Client {
-    fn exec_session(&self, mut request: Request) -> Result<Response> {
+    fn exec_session(&self, cookies_path: &AbsPathBuf, mut request: Request) -> Result<Response> {
         let mut storage =
-            CookieStorage::open(&COOKIES_PATH).context("Could not open cookie storage")?;
+            CookieStorage::open(cookies_path).context("Could not open cookie storage")?;
         storage
             .load_into(&mut request)
             .context("Could not load cookies into request")?;
@@ -39,6 +31,7 @@ impl ExecSession for Client {
 pub struct RetryRequestBuilder<'a> {
     inner: RequestBuilder,
     client: &'a Client,
+    cookies_path: &'a AbsPathBuf,
     retry_limit: usize,
     retry_interval: Duration,
     cnsl: &'a mut Console,
@@ -53,7 +46,9 @@ impl<'a> RetryRequestBuilder<'a> {
             .ok_or_else(|| Error::msg("Could not build request"))?
             .build()?;
         write!(cnsl, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
-        let result = client.exec_session(req).context("Could not send request");
+        let result = client
+            .exec_session(self.cookies_path, req)
+            .context("Could not send request");
         match &result {
             Ok(res) => writeln!(cnsl, "{}", res.status()),
             Err(_) => writeln!(cnsl, "failed"),
@@ -87,6 +82,7 @@ pub trait WithRetry {
     fn with_retry<'a>(
         self,
         client: &'a Client,
+        cookies_path: &'a AbsPathBuf,
         retry_limit: usize,
         retry_interval: Duration,
         cnsl: &'a mut Console,
@@ -97,6 +93,7 @@ impl WithRetry for RequestBuilder {
     fn with_retry<'a>(
         self,
         client: &'a Client,
+        cookies_path: &'a AbsPathBuf,
         retry_limit: usize,
         retry_interval: Duration,
         cnsl: &'a mut Console,
@@ -104,6 +101,7 @@ impl WithRetry for RequestBuilder {
         RetryRequestBuilder {
             inner: self,
             client,
+            cookies_path,
             retry_limit,
             retry_interval,
             cnsl,

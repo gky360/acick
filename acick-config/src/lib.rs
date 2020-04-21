@@ -67,7 +67,7 @@ mod template;
 use crate::abs_path::AbsPathBuf;
 use crate::console::Console;
 use crate::model::{
-    string, Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
+    Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
 };
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
@@ -287,7 +287,7 @@ impl fmt::Display for Config {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ConfigBody {
-    #[serde(with = "string")]
+    #[serde(with = "string_serde")]
     version: Version,
     #[serde(default)]
     shell: Shell,
@@ -446,6 +446,32 @@ int main() {
 
     pub fn lang_name(&self) -> LangNameRef {
         &self.lang_name
+    }
+}
+
+mod string_serde {
+    use std::fmt::Display;
+    use std::str::FromStr;
+
+    use serde::{de, Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Display,
+        S: Serializer,
+    {
+        serializer.collect_str(value)
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: FromStr,
+        T::Err: Display,
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
     }
 }
 

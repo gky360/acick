@@ -22,6 +22,7 @@ impl<'a> SettingsPageBuilder<'a> {
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<SettingsPage<'a>> {
         let (status, html) = self.fetch(
             client,
+            self.session.cookies_path(),
             self.session.retry_limit(),
             self.session.retry_interval(),
             cnsl,

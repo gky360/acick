@@ -3,11 +3,16 @@ use std::fmt;
 use std::fs::{create_dir_all, remove_dir_all, rename, File, OpenOptions};
 use std::io::{self, Seek as _, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use anyhow::{anyhow, Context as _};
-use serde::Serialize;
+use serde::{de, Deserialize, Deserializer, Serialize};
 
-use crate::Result;
+use crate::{Error, Result};
+
+fn expand<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
+    Ok(shellexpand::full(&path.as_ref().to_string_lossy())?.parse()?)
+}
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AbsPathBuf(PathBuf);
@@ -21,8 +26,8 @@ impl AbsPathBuf {
         }
     }
 
-    fn expand<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
-        Ok(shellexpand::full(&path.as_ref().to_string_lossy())?.parse()?)
+    fn from_shell_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+        Self::try_new(expand(path)?)
     }
 
     pub fn cwd() -> Result<Self> {
@@ -30,7 +35,7 @@ impl AbsPathBuf {
     }
 
     pub fn join_expand<P: AsRef<Path>>(&self, path: P) -> Result<Self> {
-        Ok(self.join(Self::expand(path)?))
+        Ok(self.join(expand(path)?))
     }
 
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
@@ -220,6 +225,25 @@ impl AbsPathBuf {
 impl AsRef<PathBuf> for AbsPathBuf {
     fn as_ref(&self) -> &PathBuf {
         &self.0
+    }
+}
+
+impl FromStr for AbsPathBuf {
+    type Err = Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Self::from_shell_path(s)
+    }
+}
+
+impl<'de> Deserialize<'de> for AbsPathBuf {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
     }
 }
 

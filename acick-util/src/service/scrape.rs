@@ -6,6 +6,7 @@ use reqwest::blocking::Client;
 use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html, Selector};
 
+use crate::abs_path::AbsPathBuf;
 use crate::model::{LangId, LangNameRef};
 use crate::select;
 use crate::service::session::WithRetry as _;
@@ -19,13 +20,14 @@ pub trait Fetch: HasUrl {
     fn fetch(
         &self,
         client: &Client,
+        cookies_path: &AbsPathBuf,
         retry_limit: usize,
         retry_interval: Duration,
         cnsl: &mut Console,
     ) -> Result<(StatusCode, Html)> {
         let res = client
             .get(self.url()?)
-            .with_retry(client, retry_limit, retry_interval, cnsl)
+            .with_retry(client, cookies_path, retry_limit, retry_interval, cnsl)
             .retry_send()?;
         let status = res.status();
         let html = res.text().map(|text| Html::parse_document(&text))?;

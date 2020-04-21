@@ -73,6 +73,7 @@ pub trait FetchRestricted: Fetch {
     ) -> Result<Html> {
         let (status, html) = self.fetch(
             client,
+            session.cookies_path(),
             session.retry_limit(),
             session.retry_interval(),
             cnsl,
