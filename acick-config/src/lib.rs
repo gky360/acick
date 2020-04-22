@@ -67,7 +67,8 @@ mod template;
 use crate::abs_path::AbsPathBuf;
 use crate::console::Console;
 use crate::model::{
-    string, Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
+    Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
+    DEFAULT_CONTEST, DEFAULT_SERVICE,
 };
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
@@ -89,7 +90,7 @@ lazy_static! {
 pub struct Config {
     pub service_id: ServiceKind,
     pub contest_id: ContestId,
-    base_dir: AbsPathBuf,
+    pub base_dir: AbsPathBuf,
     body: ConfigBody,
 }
 
@@ -267,13 +268,13 @@ impl Config {
     }
 
     pub fn default_in_dir(base_dir: AbsPathBuf) -> Self {
-        use crate::model::{DEFAULT_CONTEST, DEFAULT_SERVICE};
+        let body = ConfigBody::default_in_dir(&base_dir);
 
         Self {
             service_id: DEFAULT_SERVICE.id(),
             contest_id: DEFAULT_CONTEST.id().clone(),
             base_dir,
-            body: ConfigBody::default(),
+            body,
         }
     }
 }
@@ -287,7 +288,7 @@ impl fmt::Display for Config {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ConfigBody {
-    #[serde(with = "string")]
+    #[serde(with = "string_serde")]
     version: Version,
     #[serde(default)]
     shell: Shell,
@@ -318,6 +319,17 @@ impl ConfigBody {
             bash = Shell::find_bash().display()
         )
         .context("Could not write config")
+    }
+
+    fn default_in_dir(base_dir: &AbsPathBuf) -> Self {
+        Self {
+            version: VERSION.clone(),
+            shell: Shell::default(),
+            problem_path: Self::default_problem_path(),
+            testcases_dir: Self::default_testcases_dir(),
+            session: SessionConfig::default_in_dir(base_dir),
+            services: ServicesConfig::default(),
+        }
     }
 
     fn default_problem_path() -> TargetTempl {
@@ -446,6 +458,32 @@ int main() {
 
     pub fn lang_name(&self) -> LangNameRef {
         &self.lang_name
+    }
+}
+
+mod string_serde {
+    use std::fmt::Display;
+    use std::str::FromStr;
+
+    use serde::{de, Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Display,
+        S: Serializer,
+    {
+        serializer.collect_str(value)
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: FromStr,
+        T::Err: Display,
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
     }
 }
 

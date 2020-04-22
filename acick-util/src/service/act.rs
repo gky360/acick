@@ -2,6 +2,8 @@ use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
 use crate::{Console, Result};
 
 pub trait Act {
+    fn current_user(&self, cnsl: &mut Console) -> Result<Option<String>>;
+
     fn login(&self, user: String, pass: String, cnsl: &mut Console) -> Result<bool>;
 
     fn fetch(
