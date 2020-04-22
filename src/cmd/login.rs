@@ -85,6 +85,7 @@ mod tests {
     use super::*;
     use crate::cmd::tests::run_with;
 
+    #[test]
     fn check_envs_for_user_and_pass() -> anyhow::Result<()> {
         assert!(!env::var("ACICK_ATCODER_USERNAME")?.is_empty());
         assert!(!env::var("ACICK_ATCODER_PASSWORD")?.is_empty());
@@ -93,8 +94,6 @@ mod tests {
 
     #[test]
     fn run_default() -> anyhow::Result<()> {
-        check_envs_for_user_and_pass()?;
-
         let opt = LoginOpt {};
         run_with(&tempdir()?, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())

@@ -90,7 +90,7 @@ lazy_static! {
 pub struct Config {
     pub service_id: ServiceKind,
     pub contest_id: ContestId,
-    base_dir: AbsPathBuf,
+    pub base_dir: AbsPathBuf,
     body: ConfigBody,
 }
 

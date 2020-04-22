@@ -13,6 +13,7 @@ use crate::{Config, Console, OutputFormat, Result};
 mod fetch;
 mod init;
 mod login;
+mod logout;
 mod me;
 mod show;
 mod submit;
@@ -21,6 +22,7 @@ mod test;
 pub use fetch::FetchOpt;
 pub use init::{InitOpt, InitOutcome};
 pub use login::{LoginOpt, LoginOutcome};
+pub use logout::{LogoutOpt, LogoutOutcome};
 pub use me::{MeOpt, MeOutcome};
 pub use show::{ShowOpt, ShowOutcome};
 pub use submit::{SubmitOpt, SubmitOutcome};
@@ -86,6 +88,13 @@ pub enum Cmd {
         #[structopt(flatten)]
         opt: LoginOpt,
     },
+    /// Logs out from all services
+    Logout {
+        #[structopt(skip)]
+        sc: ServiceContest,
+        #[structopt(flatten)]
+        opt: LogoutOpt,
+    },
     // Participate(ParticipateOpt),
     /// Fetches problems from service
     #[structopt(visible_alias("f"))]
@@ -125,6 +134,7 @@ impl Cmd {
             Self::Show { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?)?, cnsl),
             Self::Me { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
             Self::Login { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
+            Self::Logout { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
             Self::Fetch { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
             Self::Test { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
             Self::Submit { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
