@@ -13,6 +13,10 @@ lazy_static! {
     static ref COOKIES_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(COOKIES_FILE_NAME);
 }
 
+const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
+const DEFAULT_RETRY_LIMIT: usize = 4;
+const DEFAULT_RETRY_INTERVAL: Duration = Duration::from_secs(2);
+
 #[derive(Serialize, Deserialize, Getters, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(default)]
 pub struct SessionConfig {
@@ -30,6 +34,15 @@ pub struct SessionConfig {
 }
 
 impl SessionConfig {
+    pub fn default_in_dir(base_dir: &AbsPathBuf) -> Self {
+        Self {
+            timeout: DEFAULT_TIMEOUT,
+            cookies_path: base_dir.join(COOKIES_FILE_NAME),
+            retry_limit: DEFAULT_RETRY_LIMIT,
+            retry_interval: DEFAULT_RETRY_INTERVAL,
+        }
+    }
+
     fn default_cookies_path() -> AbsPathBuf {
         COOKIES_PATH.clone()
     }
@@ -38,10 +51,10 @@ impl SessionConfig {
 impl Default for SessionConfig {
     fn default() -> Self {
         Self {
-            timeout: Duration::from_secs(30),
+            timeout: DEFAULT_TIMEOUT,
             cookies_path: Self::default_cookies_path(),
-            retry_limit: 4,
-            retry_interval: Duration::from_secs(2),
+            retry_limit: DEFAULT_RETRY_LIMIT,
+            retry_interval: DEFAULT_RETRY_INTERVAL,
         }
     }
 }

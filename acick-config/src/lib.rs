@@ -68,6 +68,7 @@ use crate::abs_path::AbsPathBuf;
 use crate::console::Console;
 use crate::model::{
     Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
+    DEFAULT_CONTEST, DEFAULT_SERVICE,
 };
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
@@ -267,13 +268,13 @@ impl Config {
     }
 
     pub fn default_in_dir(base_dir: AbsPathBuf) -> Self {
-        use crate::model::{DEFAULT_CONTEST, DEFAULT_SERVICE};
+        let body = ConfigBody::default_in_dir(&base_dir);
 
         Self {
             service_id: DEFAULT_SERVICE.id(),
             contest_id: DEFAULT_CONTEST.id().clone(),
             base_dir,
-            body: ConfigBody::default(),
+            body,
         }
     }
 }
@@ -318,6 +319,17 @@ impl ConfigBody {
             bash = Shell::find_bash().display()
         )
         .context("Could not write config")
+    }
+
+    fn default_in_dir(base_dir: &AbsPathBuf) -> Self {
+        Self {
+            version: VERSION.clone(),
+            shell: Shell::default(),
+            problem_path: Self::default_problem_path(),
+            testcases_dir: Self::default_testcases_dir(),
+            session: SessionConfig::default_in_dir(base_dir),
+            services: ServicesConfig::default(),
+        }
     }
 
     fn default_problem_path() -> TargetTempl {
