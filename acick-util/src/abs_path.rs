@@ -1,6 +1,6 @@
 use std::env::current_dir;
 use std::fmt;
-use std::fs::{create_dir_all, remove_dir_all, rename, File, OpenOptions};
+use std::fs;
 use std::io::{self, Seek as _, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -63,7 +63,7 @@ impl AbsPathBuf {
 
     pub fn save_pretty(
         &self,
-        save: impl FnOnce(File) -> Result<()>,
+        save: impl FnOnce(fs::File) -> Result<()>,
         overwrite: bool,
         base_dir: Option<&AbsPathBuf>,
         cnsl: &mut dyn Write,
@@ -87,7 +87,7 @@ impl AbsPathBuf {
     // returns Some(true): overwritten, Some(false): created, None: skipped
     pub fn save(
         &self,
-        save: impl FnOnce(File) -> Result<()>,
+        save: impl FnOnce(fs::File) -> Result<()>,
         overwrite: bool,
     ) -> Result<Option<bool>> {
         let is_existed = self.as_ref().is_file();
@@ -108,7 +108,7 @@ impl AbsPathBuf {
 
     pub fn load_pretty<T>(
         &self,
-        load: impl FnOnce(File) -> Result<T>,
+        load: impl FnOnce(fs::File) -> Result<T>,
         base_dir: Option<&AbsPathBuf>,
         cnsl: &mut dyn Write,
     ) -> Result<T> {
@@ -126,8 +126,8 @@ impl AbsPathBuf {
         result
     }
 
-    pub fn load<T>(&self, load: impl FnOnce(File) -> Result<T>) -> Result<T> {
-        OpenOptions::new()
+    pub fn load<T>(&self, load: impl FnOnce(fs::File) -> Result<T>) -> Result<T> {
+        fs::OpenOptions::new()
             .read(true)
             .open(&self.0)
             .with_context(|| format!("Could not open file : {}", self))
@@ -158,8 +158,37 @@ impl AbsPathBuf {
         if !self.as_ref().exists() {
             return Ok(false);
         }
-        remove_dir_all(self.as_ref())?;
+        fs::remove_dir_all(self.as_ref())?;
         Ok(true)
+    }
+
+    pub fn remove_file_pretty(
+        &self,
+        base_dir: Option<&AbsPathBuf>,
+        cnsl: &mut dyn Write,
+    ) -> Result<bool> {
+        write!(
+            cnsl,
+            "Removing {} ... ",
+            self.strip_prefix_if(base_dir).display()
+        )?;
+        let result = if self.as_ref().exists() {
+            self.remove_file().map(|_| true)
+        } else {
+            Ok(false)
+        };
+        let msg = match result {
+            Ok(true) => "removed",
+            Ok(false) => "not existed",
+            Err(_) => "failed",
+        };
+        writeln!(cnsl, "{}", msg)?;
+        result
+    }
+
+    fn remove_file(&self) -> Result<()> {
+        fs::remove_file(self.as_ref())?;
+        Ok(())
     }
 
     pub fn move_from_pretty(
@@ -184,23 +213,23 @@ impl AbsPathBuf {
     }
 
     fn move_from(&self, from: &AbsPathBuf) -> Result<()> {
-        rename(from.as_ref(), self.as_ref())?;
+        fs::rename(from.as_ref(), self.as_ref())?;
         Ok(())
     }
 
-    pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
+    pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<fs::File> {
         if let Some(dir) = self.parent() {
-            create_dir_all(dir.as_ref())?;
+            fs::create_dir_all(dir.as_ref())?;
         }
         self.open(is_read, is_write)
     }
 
     pub fn create_dir_all(&self) -> io::Result<()> {
-        create_dir_all(self.as_ref())
+        fs::create_dir_all(self.as_ref())
     }
 
-    fn open(&self, is_read: bool, is_write: bool) -> io::Result<File> {
-        OpenOptions::new()
+    fn open(&self, is_read: bool, is_write: bool) -> io::Result<fs::File> {
+        fs::OpenOptions::new()
             .read(is_read)
             .write(is_write)
             .create(true)
