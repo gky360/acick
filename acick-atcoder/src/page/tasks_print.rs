@@ -122,46 +122,44 @@ struct StatementElem<'a>(ElementRef<'a>);
 
 impl StatementElem<'_> {
     fn extract_samples(&self) -> Vec<Sample> {
-        static IN_JA: &Lazy<Regex> = regex!(r"\A[\s\n]*入力例\s*(\d{1,2})[.\n]*\z");
-        static OUT_JA: &Lazy<Regex> = regex!(r"\A[\s\n]*出力例\s*(\d{1,2})[.\n]*\z");
-        static IN_EN: &Lazy<Regex> = regex!(r"\ASample Input\s?([0-9]{1,2}).*\z");
-        static OUT_EN: &Lazy<Regex> = regex!(r"\ASample Output\s?([0-9]{1,2}).*\z");
+        static IN_OUT_REGEXS: &[(&Lazy<Regex>, &Lazy<Regex>)] = &[
+            (
+                regex!(r"\ASample Input\s?([0-9]{1,2}).*\z"),
+                regex!(r"\ASample Output\s?([0-9]{1,2}).*\z"),
+            ),
+            (
+                regex!(r"\A[\s\n]*入力例\s*(\d{1,2})[.\n]*\z"),
+                regex!(r"\A[\s\n]*出力例\s*(\d{1,2})[.\n]*\z"),
+            ),
+        ];
+        static PS: &[&Lazy<Selector>] = &[
+            // Current style (Japanese)
+            select!("span.lang > span.lang-ja > div.part > section > h3, span.lang > span.lang-ja > div.part > section > pre"),
+            // Current style (English)
+            select!("span.lang > span.lang-en > div.part > section > h3, span.lang > span.lang-en > div.part > section > pre"),
+            // ARC019..ARC057 \ {ARC019/C, ARC046/D, ARC050, ARC052/{A, C}, ARC053, ARC055},
+            // ABC007..ABC040 \ {ABC036}, ATC001, ATC002
+            select!("div.part > section > h3, div.part > section > pre"),
+            // ARC002..ARC018, ARC019/C, ABC001..ABC006
+            select!("div.part > h3, div.part > section > pre"),
+            // ARC001, dwacon2018-final/{A, B}
+            select!("h3, section > pre"),
+            // ARC046/D, ARC050, ARC052/{A, C}, ARC053, ARC055, ABC036, ABC041
+            select!("section > h3, section > pre"),
+            // ABC034
+            select!("span.lang > span.lang-ja > section > h3, span.lang > span.lang-ja > section > pre"),
+            // practice contest (Japanese)
+            select!("span.lang > span.lang-ja > div.part > h3, span.lang > span.lang-ja > div.part > section > pre"),
+        ];
 
-        // Current style (Japanese)
-        static P1: &Lazy<Selector> = select!(
-            "span.lang > span.lang-ja > div.part > section > h3, span.lang > span.lang-ja > div.part > section > pre"
-        );
-        // Current style (English)
-        static P2: &Lazy<Selector> = select!(
-            "span.lang > span.lang-en > div.part > section > h3, span.lang > span.lang-en > div.part > section > pre"
-        );
-        // ARC019..ARC057 \ {ARC019/C, ARC046/D, ARC050, ARC052/{A, C}, ARC053, ARC055},
-        // ABC007..ABC040 \ {ABC036}, ATC001, ATC002
-        static P3: &Lazy<Selector> = select!("div.part > section > h3, div.part > section > pre");
-        // ARC002..ARC018, ARC019/C, ABC001..ABC006
-        static P4: &Lazy<Selector> = select!("div.part > h3, div.part > section > pre");
-        // ARC001, dwacon2018-final/{A, B}
-        static P5: &Lazy<Selector> = select!("h3, section > pre");
-        // ARC046/D, ARC050, ARC052/{A, C}, ARC053, ARC055, ABC036, ABC041
-        static P6: &Lazy<Selector> = select!("section > h3, section > pre");
-        // ABC034
-        static P7: &Lazy<Selector> = select!(
-            "span.lang > span.lang-ja > section > h3, span.lang > span.lang-ja > section > pre"
-        );
-        // practice contest (Japanese)
-        static P8: &Lazy<Selector> = select!(
-            "span.lang > span.lang-ja > div.part > h3, span.lang > span.lang-ja > div.part > section > pre"
-        );
-
-        self.try_extract_samples(P1, IN_JA, OUT_JA)
-            .or_else(|| self.try_extract_samples(P2, IN_EN, OUT_EN))
-            .or_else(|| self.try_extract_samples(P3, IN_JA, OUT_JA))
-            .or_else(|| self.try_extract_samples(P4, IN_JA, OUT_JA))
-            .or_else(|| self.try_extract_samples(P5, IN_JA, OUT_JA))
-            .or_else(|| self.try_extract_samples(P6, IN_JA, OUT_JA))
-            .or_else(|| self.try_extract_samples(P7, IN_JA, OUT_JA))
-            .or_else(|| self.try_extract_samples(P8, IN_JA, OUT_JA))
-            .unwrap_or_default()
+        for p in PS {
+            for (re_in, re_out) in IN_OUT_REGEXS {
+                if let Some(samples) = self.try_extract_samples(p, re_in, re_out) {
+                    return samples;
+                }
+            }
+        }
+        return vec![];
     }
 
     fn try_extract_samples(
