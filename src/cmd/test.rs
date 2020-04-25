@@ -144,7 +144,7 @@ impl fmt::Display for TestOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(
             f,
-            "Tested {} {} {} {} ({} {}s, compile: {:.2}s, test: {:.2}s)",
+            "{} {} {} {} ({} {}s, compile: {:.2}s, test: {:.2}s)",
             self.service.id(),
             self.contest_id,
             self.problem_id,

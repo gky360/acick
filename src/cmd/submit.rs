@@ -94,7 +94,7 @@ impl fmt::Display for SubmitOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Submitted {} {} {} {} ({}, {} Bytes)",
+            "{} {} {} {} ({}, {} Bytes)",
             self.service.id(),
             self.contest_id,
             self.problem_id,
