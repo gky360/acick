@@ -284,7 +284,7 @@ impl AsRef<str> for ProblemId {
 
 impl fmt::Display for ProblemId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(&self.normalize())
     }
 }
 
