@@ -16,11 +16,17 @@ use crate::{Config, Console, Result};
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct TestOpt {
+    /// Id of the problem to be tested
     #[structopt(name = "problem")]
     problem_id: ProblemId,
+    /// If specified, uses only one sample
     sample_name: Option<String>,
+    /// Tests using full testcases (only available for AtCoder)
     #[structopt(name = "full", long)]
     is_full: bool,
+    /// Outpus one line per one sample
+    #[structopt(long)]
+    one_line: bool,
 }
 
 fn testcase_or_sample(is_full: bool) -> &'static str {
@@ -96,7 +102,9 @@ impl TestOpt {
             )?;
             let status = Judge::new(sample, time_limit, compare).test(run).await?;
             writeln!(cnsl, "{}", status)?;
-            status.describe(cnsl)?;
+            if !self.one_line {
+                status.describe(cnsl)?;
+            }
             statuses.push(status);
         }
         let elapsed = started_at.elapsed();
@@ -182,6 +190,7 @@ mod tests {
             problem_id: "c".into(),
             sample_name: None,
             is_full: false,
+            one_line: false,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())
