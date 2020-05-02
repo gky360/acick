@@ -84,6 +84,10 @@ impl TestOpt {
         let n_samples = samples.len();
         let max_sample_name_len = samples.max_name_len();
 
+        if n_samples == 0 {
+            return Err(anyhow!("Found no samples"));
+        }
+
         // test source code with samples
         let started_at = Instant::now();
         let mut statuses = Vec::new();
@@ -119,7 +123,7 @@ impl TestOpt {
             let testcases = AtcoderActor::load_testcases(testcases_dir, &self.sample_name)?;
             Ok(Box::new(testcases))
         } else {
-            Ok(Box::new(problem.take_samples()))
+            Ok(Box::new(problem.take_samples(&self.sample_name)))
         }
     }
 
