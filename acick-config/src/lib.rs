@@ -445,7 +445,7 @@ int main() {
     fn default_for(service_id: ServiceKind) -> Self {
         match service_id {
             ServiceKind::Atcoder => Self {
-                lang_name: "C++14 (GCC 5.4.1)".into(),
+                lang_name: "C++ (GCC 9.2.1)".into(),
                 working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
                 compile: "set -x && g++ -std=gnu++1y -O2 -o ./a.out ./Main.cpp".into(),
