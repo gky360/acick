@@ -224,6 +224,10 @@ impl TotalStatus {
             statuses,
         }
     }
+
+    pub fn count(&self) -> usize {
+        self.count.total()
+    }
 }
 
 impl fmt::Display for TotalStatus {

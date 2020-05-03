@@ -206,7 +206,7 @@ pub mod tests {
 
         let base_dir = AbsPathBuf::try_new(test_dir.path().to_owned()).unwrap();
         let conf = Config::default_in_dir(base_dir);
-        let mut cnsl = Console::buf(ConsoleConfig::default());
+        let mut cnsl = Console::buf(ConsoleConfig { assume_yes: true });
         let result = run(&conf, &mut cnsl);
 
         let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;

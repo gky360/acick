@@ -224,8 +224,16 @@ impl Problem {
         }
     }
 
-    pub fn take_samples(self) -> SampleIter {
-        self.samples.into()
+    pub fn take_samples(self, sample_name: &Option<String>) -> SampleIter {
+        if let Some(sample_name) = sample_name {
+            self.samples
+                .into_iter()
+                .filter(|sample| &sample.name == sample_name)
+                .collect::<Vec<_>>()
+                .into()
+        } else {
+            self.samples.into()
+        }
     }
 }
 
@@ -284,7 +292,7 @@ impl AsRef<str> for ProblemId {
 
 impl fmt::Display for ProblemId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.0)
+        f.write_str(&self.normalize())
     }
 }
 

@@ -7,7 +7,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 
 use crate::cmd::{with_actor, Outcome};
-use crate::model::{ProblemId, Service};
+use crate::model::{ContestId, LangName, ProblemId, Service};
 use crate::service::Act;
 use crate::{Config, Console, Error, Result};
 
@@ -17,6 +17,9 @@ pub struct SubmitOpt {
     /// Id of the problem to be submitted
     #[structopt(name = "problem")]
     problem_id: ProblemId,
+    /// Overrides the language name specified in config file
+    #[structopt(long, short)]
+    lang_name: Option<LangName>,
     /// Opens the submission status in browser
     #[structopt(name = "open", long, short)]
     need_open: bool,
@@ -56,7 +59,10 @@ impl SubmitOpt {
         }
 
         // submit
-        let lang_name = conf.service().lang_name();
+        let lang_name = match &self.lang_name {
+            Some(lang_name) => lang_name,
+            None => conf.service().lang_name(),
+        };
         actor.submit(&conf.contest_id, &problem, lang_name, &source, cnsl)?;
 
         // open submissions in browser if needed
@@ -69,7 +75,11 @@ impl SubmitOpt {
 
         Ok(SubmitOutcome {
             service: Service::new(conf.service_id),
+            contest_id: conf.contest_id.to_owned(),
+            problem_id: self.problem_id.to_owned(),
+            problem_name: problem.name().to_owned(),
             submitted_at: Local::now(),
+            lang_name: lang_name.to_owned(),
             source_bytes: source.len(),
         })
     }
@@ -80,7 +90,11 @@ pub type LocalDateTime = DateTime<Local>;
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SubmitOutcome {
     service: Service,
+    contest_id: ContestId,
+    problem_id: ProblemId,
+    problem_name: String,
     submitted_at: LocalDateTime,
+    lang_name: String,
     source_bytes: usize,
 }
 
@@ -88,10 +102,14 @@ impl fmt::Display for SubmitOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Submitted source to {} ({}, {} Bytes)",
+            "{} {} {} {} (time: {}, lang: {}, code size: {} Bytes)",
             self.service.id(),
+            self.contest_id,
+            self.problem_id,
+            self.problem_name,
             self.submitted_at
                 .to_rfc3339_opts(SecondsFormat::Secs, false),
+            self.lang_name,
             self.source_bytes
         )
     }
@@ -123,6 +141,7 @@ mod tests {
 
         let opt = SubmitOpt {
             problem_id: "c".into(),
+            lang_name: Some("C++14 (GCC 5.4.1)".into()),
             need_open: false,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;

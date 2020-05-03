@@ -83,7 +83,11 @@ impl Opt {
         cnsl: &mut Console,
     ) -> Result<()> {
         cnsl.flush()?;
-        writeln!(stdout)?;
+        if self.quiet {
+            stdout.flush()?;
+        } else {
+            writeln!(stdout)?;
+        }
 
         outcome.print(stdout, self.output)?;
 
