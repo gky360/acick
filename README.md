@@ -47,7 +47,32 @@ $ cargo install acick
 
 ## Usage
 
-WIP
+```
+acick 0.0.9
+
+USAGE:
+    acick [FLAGS] [OPTIONS] <SUBCOMMAND>
+
+FLAGS:
+    -y, --assume-yes    Assumes "yes" as answer to all prompts and run non-interactively
+    -h, --help          Prints help information
+    -q, --quiet         Hides any messages except the final outcome of commands
+    -V, --version       Prints version information
+
+OPTIONS:
+        --output <output>    Format of output [default: default]  [possible values: default, debug, json, yaml]
+
+SUBCOMMANDS:
+    fetch     Fetches problems from service [aliases: f, f]
+    help      Prints this message or the help of the given subcommand(s)
+    init      Creates config file
+    login     Logs in to service [aliases: l, l]
+    logout    Logs out from all services
+    me        Gets info of user currently logged in to service
+    show      Shows current config
+    submit    Submits source code to service [aliases: s, s]
+    test      Tests source code with sample inputs and outputs [aliases: t, t]
+```
 
 ## License
 
