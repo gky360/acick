@@ -15,11 +15,21 @@
  \/__/\/_/\/____/ \/_/\/____/ \/_/\/_/
 ```
 
-WIP project
+Command line tools for programming contests.
+
+## Features
+
+- Supports some online programming contest services
+    - [AtCoder](https://atcoder.jp/)
+    - (WIP) [Aizu Online Judge](http://judge.u-aizu.ac.jp/)
+- Downloads samples as YAML
+- Downloads system testcases
+- Compiles and tests your source code with downloaded samples
+- Submits your source code
 
 ## Requirements
 
-- Linux / OS X / Windows
+- OS: Linux / OS X / Windows
 
 ## Installation
 
