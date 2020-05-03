@@ -47,6 +47,7 @@ $ cargo install acick
 
 ## Usage
 
+<!-- __ACICK_USAGE_BEGIN__ -->
 ```
 acick 0.0.9
 
@@ -73,6 +74,7 @@ SUBCOMMANDS:
     submit    Submits source code to service [aliases: s, s]
     test      Tests source code with sample inputs and outputs [aliases: t, t]
 ```
+<!-- __ACICK_USAGE_END__ -->
 
 ## License
 
