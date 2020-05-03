@@ -6,7 +6,7 @@ use structopt::StructOpt;
 use strum::VariantNames;
 
 use crate::config::SessionConfig;
-use crate::model::{ContestId, ServiceKind};
+use crate::model::{ContestId, ServiceKind, DEFAULT_CONTEST_ID_STR};
 use crate::service::act::Act;
 use crate::{Config, Console, OutputFormat, Result};
 
@@ -29,7 +29,6 @@ pub use submit::{SubmitOpt, SubmitOutcome};
 pub use test::{TestOpt, TestOutcome};
 
 use crate::atcoder::AtcoderActor;
-use crate::model::{DEFAULT_CONTEST, DEFAULT_SERVICE};
 
 pub trait Outcome: OutcomeSerialize {
     fn is_error(&self) -> bool;
@@ -150,7 +149,7 @@ pub struct ServiceContest {
         short,
         global = true,
         env = "ACICK_SERVICE",
-        default_value = DEFAULT_SERVICE.id().into(),
+        default_value = ServiceKind::default().into(),
         possible_values = &ServiceKind::VARIANTS,
     )]
     pub service_id: ServiceKind,
@@ -160,7 +159,7 @@ pub struct ServiceContest {
         short,
         global = true,
         env = "ACICK_CONTEST",
-        default_value = DEFAULT_CONTEST.id().as_ref(),
+        default_value = DEFAULT_CONTEST_ID_STR,
     )]
     pub contest_id: ContestId,
 }
@@ -175,8 +174,8 @@ impl ServiceContest {
 impl Default for ServiceContest {
     fn default() -> Self {
         Self {
-            service_id: DEFAULT_SERVICE.id(),
-            contest_id: DEFAULT_CONTEST.id().clone(),
+            service_id: ServiceKind::default(),
+            contest_id: ContestId::default(),
         }
     }
 }

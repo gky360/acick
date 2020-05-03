@@ -312,7 +312,6 @@ impl Default for Shell {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
 
     #[test]
     fn expand_cmd_templ() -> anyhow::Result<()> {
@@ -326,9 +325,9 @@ mod tests {
     fn expand_problem_templ() -> anyhow::Result<()> {
         let templ = ProblemTempl::from("{{ service.id | snake_case }}/{{ contest.id | kebab_case }}/{{ problem.id | camel_case }}/Main.cpp");
         let problem_context = ProblemContext {
-            service: &DEFAULT_SERVICE,
-            contest: &DEFAULT_CONTEST,
-            problem: &DEFAULT_PROBLEM,
+            service: &Service::default(),
+            contest: &Contest::default(),
+            problem: &Problem::default(),
         };
         templ.expand(&problem_context)?;
         Ok(())
