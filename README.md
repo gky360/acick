@@ -3,6 +3,7 @@
 [![jobs](https://github.com/gky360/acick/workflows/jobs/badge.svg)](https://github.com/gky360/acick/actions)
 [![crates.io](https://img.shields.io/crates/v/acick.svg)](https://crates.io/crates/acick)
 [![docs](https://docs.rs/acick/badge.svg)](https://docs.rs/acick)
+[![codecov](https://codecov.io/gh/gky360/acick/branch/master/graph/badge.svg)](https://codecov.io/gh/gky360/acick)
 
 ```
                            __         
