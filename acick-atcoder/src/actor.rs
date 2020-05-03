@@ -11,7 +11,7 @@ use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
 use crate::dropbox::DbxAuthorizer;
 use crate::full::{fetch_full, TestcaseIter};
-use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
+use crate::model::{Contest, ContestId, LangName, LangNameRef, Problem, ProblemId};
 use crate::page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
@@ -246,20 +246,35 @@ impl Act for AtcoderActor<'_> {
         Ok((contest, problems))
     }
 
-    fn submit(
+    fn submit<'a>(
         &self,
         contest_id: &ContestId,
         problem: &Problem,
-        lang_name: LangNameRef,
+        lang_names: &'a [LangName],
         source: &str,
         cnsl: &mut Console,
-    ) -> Result<()> {
+    ) -> Result<LangNameRef<'a>> {
         let Self { client, session } = self;
 
-        // prepare payload
+        // get submit page
         let submit_page = SubmitPageBuilder::new(contest_id, session).build(client, cnsl)?;
+
+        // extract lang id
+        let (lang_id, lang_name) = lang_names
+            .iter()
+            .find_map(|lang_name| match submit_page.extract_lang_id(lang_name) {
+                Some(lang_id) => Some((lang_id, lang_name)),
+                None => None,
+            })
+            .with_context(|| {
+                format!(
+                    "Could not find available language from the given language list: {}",
+                    lang_names.join(", ")
+                )
+            })?;
+
+        // prepare payload
         let csrf_token = submit_page.extract_csrf_token()?;
-        let lang_id = submit_page.extract_lang_id(lang_name)?;
         let payload = hashmap!(
             "csrf_token" => csrf_token.as_str(),
             "data.TaskScreenName" => problem.url_name().as_str(),
@@ -284,7 +299,7 @@ impl Act for AtcoderActor<'_> {
         Self::validate_submit_response(&res, contest_id)
             .context("Submission rejected by service")?;
 
-        Ok(())
+        Ok(lang_name)
     }
 
     fn open_problem_url(

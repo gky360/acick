@@ -67,8 +67,8 @@ mod template;
 use crate::abs_path::AbsPathBuf;
 use crate::console::Console;
 use crate::model::{
-    Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
-    DEFAULT_CONTEST, DEFAULT_SERVICE,
+    Contest, ContestId, LangName, Problem, ProblemId, Service, ServiceKind, DEFAULT_CONTEST,
+    DEFAULT_SERVICE,
 };
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
@@ -420,7 +420,7 @@ impl Default for ServicesConfig {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
-    lang_name: LangName,
+    lang_names: Vec<LangName>,
     working_dir: TargetTempl,
     source_path: TargetTempl,
     compile: TargetTempl,
@@ -445,7 +445,7 @@ int main() {
     fn default_for(service_id: ServiceKind) -> Self {
         match service_id {
             ServiceKind::Atcoder => Self {
-                lang_name: "C++ (GCC 9.2.1)".into(),
+                lang_names: vec!["C++ (GCC 9.2.1)".into(), "C++14 (GCC 5.4.1)".into()],
                 working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
                 compile: "set -x && g++ -std=gnu++1y -O2 -o ./a.out ./Main.cpp".into(),
@@ -456,8 +456,8 @@ int main() {
         }
     }
 
-    pub fn lang_name(&self) -> LangNameRef {
-        &self.lang_name
+    pub fn lang_names(&self) -> &[LangName] {
+        &self.lang_names
     }
 }
 
