@@ -1,6 +1,6 @@
 [package]
 name = "acick"
-version = "0.1.0-alpha.0"
+version = "0.1.0"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -15,9 +15,9 @@ categories = ["command-line-utilities"]
 members = [".", "acick-util", "acick-dropbox", "acick-config", "acick-atcoder"]
 
 [dependencies]
-acick-atcoder = { version = "0.1.0-alpha.0", path = "./acick-atcoder" }
-acick-config = { version = "0.1.0-alpha.0", path = "./acick-config" }
-acick-util = { version = "0.1.0-alpha.0", path = "./acick-util" }
+acick-atcoder = { version = "0.1.0", path = "./acick-atcoder" }
+acick-config = { version = "0.1.0", path = "./acick-config" }
+acick-util = { version = "0.1.0", path = "./acick-util" }
 anyhow = "1.0.26"
 chrono = { version = "0.4.10", features = ["serde"] }
 console = "0.11.2"
