@@ -49,7 +49,7 @@ $ cargo install acick
 
 <!-- __ACICK_USAGE_BEGIN__ -->
 ```
-acick 0.1.0-alpha.0
+acick 0.1.0
 
 USAGE:
     acick [FLAGS] [OPTIONS] <SUBCOMMAND>
