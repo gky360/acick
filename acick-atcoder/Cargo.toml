@@ -1,6 +1,6 @@
 [package]
 name = "acick-atcoder"
-version = "0.0.9"
+version = "0.1.0-alpha.0"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -10,9 +10,9 @@ documentation = "https://docs.rs/acick-atcoder"
 readme = "README.md"
 
 [dependencies]
-acick-config = { version = "0.0.9", path = "../acick-config" }
-acick-dropbox = { version = "0.0.9", path = "../acick-dropbox" }
-acick-util = { version = "0.0.9", path = "../acick-util" }
+acick-config = { version = "0.1.0-alpha.0", path = "../acick-config" }
+acick-dropbox = { version = "0.1.0-alpha.0", path = "../acick-dropbox" }
+acick-util = { version = "0.1.0-alpha.0", path = "../acick-util" }
 anyhow = "1.0.26"
 humantime = "2.0.0"
 lazy_static = "1.4.0"

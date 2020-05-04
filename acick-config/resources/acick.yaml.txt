@@ -23,9 +23,13 @@ session:
 services:
   # Config for AtCoder (https://atcoder.jp)
   atcoder:
-    # Name of language as which your source code is submitted to the service.
+    # Names of language as which your source code is submitted to the service.
+    # The acick command will use the languages in the order specified in the list
+    # and use the first one that is available on the service.
     # See https://atcoder.jp/contests/practice/rules for full list of available language names.
-    lang_name: C++ (GCC 9.2.1)
+    lang_names:
+      - C++ (GCC 9.2.1)
+      - C++14 (GCC 5.4.1)
     # Directory where compile and run commands are executed. [t, s]
     working_dir: "{{{{ service }}}}/{{{{ contest }}}}/{{{{ problem | lower }}}}"
     # Path of your source code. [t, s]

@@ -89,5 +89,5 @@ pub trait ExtractCsrfToken: Scrape {
 }
 
 pub trait ExtractLangId {
-    fn extract_lang_id(&self, lang_name: LangNameRef) -> Result<LangId>;
+    fn extract_lang_id(&self, lang_name: LangNameRef) -> Option<LangId>;
 }

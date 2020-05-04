@@ -66,10 +66,7 @@ mod template;
 
 use crate::abs_path::AbsPathBuf;
 use crate::console::Console;
-use crate::model::{
-    Contest, ContestId, LangName, LangNameRef, Problem, ProblemId, Service, ServiceKind,
-    DEFAULT_CONTEST, DEFAULT_SERVICE,
-};
+use crate::model::{Contest, ContestId, LangName, Problem, ProblemId, Service, ServiceKind};
 pub use session_config::SessionConfig;
 use template::{Expand, ProblemTempl, Shell, TargetContext, TargetTempl};
 
@@ -78,12 +75,6 @@ pub type Result<T> = anyhow::Result<T>;
 
 lazy_static! {
     static ref VERSION: Version = Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
-}
-
-static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
-
-lazy_static! {
-    pub static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -271,8 +262,8 @@ impl Config {
         let body = ConfigBody::default_in_dir(&base_dir);
 
         Self {
-            service_id: DEFAULT_SERVICE.id(),
-            contest_id: DEFAULT_CONTEST.id().clone(),
+            service_id: ServiceKind::default(),
+            contest_id: Contest::default().id().clone(),
             base_dir,
             body,
         }
@@ -420,7 +411,7 @@ impl Default for ServicesConfig {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceConfig {
-    lang_name: LangName,
+    lang_names: Vec<LangName>,
     working_dir: TargetTempl,
     source_path: TargetTempl,
     compile: TargetTempl,
@@ -445,7 +436,7 @@ int main() {
     fn default_for(service_id: ServiceKind) -> Self {
         match service_id {
             ServiceKind::Atcoder => Self {
-                lang_name: "C++ (GCC 9.2.1)".into(),
+                lang_names: vec!["C++ (GCC 9.2.1)".into(), "C++14 (GCC 5.4.1)".into()],
                 working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
                 compile: "set -x && g++ -std=gnu++1y -O2 -o ./a.out ./Main.cpp".into(),
@@ -456,8 +447,8 @@ int main() {
         }
     }
 
-    pub fn lang_name(&self) -> LangNameRef {
-        &self.lang_name
+    pub fn lang_names(&self) -> &[LangName] {
+        &self.lang_names
     }
 }
 
@@ -494,7 +485,6 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
-    use crate::model::{DEFAULT_CONTEST, DEFAULT_PROBLEM, DEFAULT_SERVICE};
     use crate::template::TargetContext;
 
     #[test]
@@ -533,13 +523,11 @@ int main() {{
         )?;
 
         // exec compile command
+        let contest = Contest::default();
+        let problem = Problem::default();
         let shell = Shell::default();
         let compile = ServiceConfig::default_for(ServiceKind::Atcoder).compile;
-        let context = TargetContext::new(
-            DEFAULT_SERVICE.id(),
-            DEFAULT_CONTEST.id(),
-            DEFAULT_PROBLEM.id(),
-        );
+        let context = TargetContext::new(ServiceKind::default(), contest.id(), problem.id());
         let output = shell
             .exec_templ(&compile, &context)?
             .current_dir(test_dir.path())

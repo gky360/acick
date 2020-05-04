@@ -150,6 +150,8 @@ impl StatementElem<'_> {
             select!("span.lang > span.lang-ja > section > h3, span.lang > span.lang-ja > section > pre"),
             // practice contest (Japanese)
             select!("span.lang > span.lang-ja > div.part > h3, span.lang > span.lang-ja > div.part > section > pre"),
+            // kupc2015
+            select!("h3, pre"),
         ];
 
         for p in PS {

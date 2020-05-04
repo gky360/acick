@@ -7,25 +7,10 @@ use std::time::Duration;
 use std::vec::IntoIter;
 
 use getset::{CopyGetters, Getters, Setters};
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
 use crate::regex;
 use crate::Result;
-
-lazy_static! {
-    pub static ref DEFAULT_SERVICE: Service = Service::new(ServiceKind::default());
-    pub static ref DEFAULT_CONTEST: Contest = Contest::new("arc100", "AtCoder Regular Contest 100");
-    pub static ref DEFAULT_PROBLEM: Problem = Problem::new(
-        "C",
-        "Linear Approximation",
-        "arc100_a",
-        Duration::from_secs(2),
-        "1024 MB".parse().unwrap(),
-        Compare::Default,
-        vec![],
-    );
-}
 
 #[derive(Serialize, Deserialize, CopyGetters, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Service {
@@ -36,6 +21,12 @@ pub struct Service {
 impl Service {
     pub fn new(id: ServiceKind) -> Self {
         Self { id }
+    }
+}
+
+impl Default for Service {
+    fn default() -> Self {
+        Self::new(ServiceKind::default())
     }
 }
 
@@ -96,12 +87,26 @@ impl Contest {
     }
 }
 
+impl Default for Contest {
+    fn default() -> Self {
+        Self::new(DEFAULT_CONTEST_ID_STR, "AtCoder Regular Contest 100")
+    }
+}
+
+pub static DEFAULT_CONTEST_ID_STR: &str = "arc100";
+
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub struct ContestId(String);
 
 impl ContestId {
     pub fn normalize(&self) -> String {
         regex!(r"[-_]").replace_all(&self.0, "").to_lowercase()
+    }
+}
+
+impl Default for ContestId {
+    fn default() -> Self {
+        Self::from(DEFAULT_CONTEST_ID_STR)
     }
 }
 
@@ -234,6 +239,20 @@ impl Problem {
         } else {
             self.samples.into()
         }
+    }
+}
+
+impl Default for Problem {
+    fn default() -> Self {
+        Self::new(
+            "C",
+            "Linear Approximation",
+            "arc100_a",
+            Duration::from_secs(2),
+            "1024 MB".parse().unwrap(),
+            Compare::Default,
+            vec![],
+        )
     }
 }
 

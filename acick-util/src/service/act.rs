@@ -1,4 +1,4 @@
-use crate::model::{Contest, ContestId, LangNameRef, Problem, ProblemId};
+use crate::model::{Contest, ContestId, LangName, LangNameRef, Problem, ProblemId};
 use crate::{Console, Result};
 
 pub trait Act {
@@ -13,14 +13,14 @@ pub trait Act {
         cnsl: &mut Console,
     ) -> Result<(Contest, Vec<Problem>)>;
 
-    fn submit(
+    fn submit<'a>(
         &self,
         contest_id: &ContestId,
         problem: &Problem,
-        lang_name: LangNameRef,
+        lang_names: &'a [LangName],
         source: &str,
         cnsl: &mut Console,
-    ) -> Result<()>;
+    ) -> Result<LangNameRef<'a>>;
 
     fn open_problem_url(
         &self,

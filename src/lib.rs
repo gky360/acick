@@ -11,7 +11,7 @@ use strum::VariantNames;
 
 use acick_atcoder as atcoder;
 use acick_config as config;
-use acick_util::{abs_path, console, model, service};
+use acick_util::{abs_path, console, model, service, DATA_LOCAL_DIR};
 
 mod cmd;
 mod judge;

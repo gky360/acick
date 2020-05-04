@@ -75,16 +75,14 @@ impl HasHeader for SubmitPage<'_> {}
 impl ExtractCsrfToken for SubmitPage<'_> {}
 
 impl ExtractLangId for SubmitPage<'_> {
-    fn extract_lang_id(&self, lang_name: LangNameRef) -> Result<LangId> {
-        self.select_lang_options()
-            .find_map(|opt| {
-                if opt.extract_lang_name() == lang_name {
-                    opt.extract_lang_id().map(Into::into)
-                } else {
-                    None
-                }
-            })
-            .context(format!("Could not find language : {}", lang_name))
+    fn extract_lang_id(&self, lang_name: LangNameRef) -> Option<LangId> {
+        self.select_lang_options().find_map(|opt| {
+            if opt.extract_lang_name() == lang_name {
+                opt.extract_lang_id().map(Into::into)
+            } else {
+                None
+            }
+        })
     }
 }
 

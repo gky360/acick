@@ -2,15 +2,22 @@ use std::fmt;
 use std::io::Write as _;
 
 use anyhow::Context as _;
+use lazy_static::lazy_static;
 use serde::Serialize;
 use structopt::StructOpt;
 
+use crate::abs_path::AbsPathBuf;
 use crate::atcoder::AtcoderActor;
 use crate::cmd::{with_actor, Outcome};
-use crate::config::DBX_TOKEN_PATH;
 use crate::model::{Contest, Problem, ProblemId, Service, ServiceKind};
 use crate::service::Act;
-use crate::{Config, Console, Result};
+use crate::{Config, Console, Result, DATA_LOCAL_DIR};
+
+static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
+
+lazy_static! {
+    static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);
+}
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]

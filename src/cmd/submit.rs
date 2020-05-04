@@ -17,9 +17,9 @@ pub struct SubmitOpt {
     /// Id of the problem to be submitted
     #[structopt(name = "problem")]
     problem_id: ProblemId,
-    /// Overrides the language name specified in config file
+    /// Overrides the language names specified in config file
     #[structopt(long, short)]
-    lang_name: Option<LangName>,
+    lang_name: Option<Vec<LangName>>,
     /// Opens the submission status in browser
     #[structopt(name = "open", long, short)]
     need_open: bool,
@@ -59,11 +59,11 @@ impl SubmitOpt {
         }
 
         // submit
-        let lang_name = match &self.lang_name {
-            Some(lang_name) => lang_name,
-            None => conf.service().lang_name(),
+        let lang_names = match &self.lang_name {
+            Some(lang_names) => lang_names,
+            None => conf.service().lang_names(),
         };
-        actor.submit(&conf.contest_id, &problem, lang_name, &source, cnsl)?;
+        let lang_name = actor.submit(&conf.contest_id, &problem, lang_names, &source, cnsl)?;
 
         // open submissions in browser if needed
         if self.need_open {
@@ -141,7 +141,7 @@ mod tests {
 
         let opt = SubmitOpt {
             problem_id: "c".into(),
-            lang_name: Some("C++14 (GCC 5.4.1)".into()),
+            lang_name: None,
             need_open: false,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
