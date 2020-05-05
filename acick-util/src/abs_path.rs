@@ -302,7 +302,11 @@ mod tests {
             let mut tests = vec![
                 (prefix("/a/b"), PathBuf::from(prefix("/a/b"))),
                 ("~/a/b".into(), dirs::home_dir().unwrap().join("a/b")),
-                ("$HOME/a/b".into(), dirs::home_dir().unwrap().join("a/b")),
+                if cfg!(windows) {
+                    ("$APPDATA/a/b".into(), PathBuf::from(option_env!("APPDATA").unwrap()).join("a/b"))
+                } else {
+                    ("$HOME/a/b".into(), dirs::home_dir().unwrap().join("a/b"))
+                },
                 (prefix("/a//b"), PathBuf::from(prefix("/a/b"))),
                 (prefix("/a/./b"), PathBuf::from(prefix("/a/b"))),
                 (prefix("/a/b/"), PathBuf::from(prefix("/a/b"))),
@@ -360,7 +364,17 @@ mod tests {
 
     #[test]
     fn test_try_new_failure() -> anyhow::Result<()> {
-        let tests = ["~/a/b", "$HOME/a/b", "./a/b/", "a/b", "$ACICK_UNKNOWN_VAR"];
+        let tests = [
+            "~/a/b",
+            if cfg!(windows) {
+                "$APPDATA/a/b"
+            } else {
+                "$HOME/a/b"
+            },
+            "./a/b/",
+            "a/b",
+            "$ACICK_UNKNOWN_VAR",
+        ];
         for test in &tests {
             assert_matches!(AbsPathBuf::try_new(test), Err(_));
         }
