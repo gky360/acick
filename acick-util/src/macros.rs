@@ -27,7 +27,7 @@ macro_rules! select {
 
 /// Check if an expression matches a refutable pattern.
 ///
-/// Syntax: `matches!(` *expression* `,` *pattern* `)`
+/// Syntax: `matches!(` *expression* ` => ` *pattern* `)`
 ///
 /// Return a boolean, true if the expression matches the pattern, false otherwise.
 ///
@@ -44,11 +44,11 @@ macro_rules! select {
 ///
 /// impl<T> Foo<T> {
 ///     pub fn is_a(&self) -> bool {
-///         matches!(*self, Foo::A)
+///         matches!(*self => Foo::A)
 ///     }
 ///
 ///     pub fn is_b(&self) -> bool {
-///         matches!(*self, Foo::B(_))
+///         matches!(*self => Foo::B(_))
 ///     }
 /// }
 ///
@@ -56,17 +56,17 @@ macro_rules! select {
 /// ```
 #[macro_export]
 macro_rules! matches {
-    ($expression:expr, $($pattern:tt)+) => {
+    ($expression:expr => $pattern:pat) => {
         match $expression {
-            $($pattern)+ => true,
-            _ => false
+            $pattern => true,
+            _ => false,
         }
-    }
+    };
 }
 
 /// Assert that an expression matches a refutable pattern.
 ///
-/// Syntax: `assert_matches!(` *expression* `,` *pattern* `)`
+/// Syntax: `assert_matches!(` *expression* ` => ` *pattern* `)`
 ///
 /// Panic with a message that shows the expression if it does not match the
 /// pattern.
@@ -79,17 +79,21 @@ macro_rules! matches {
 ///
 /// fn main() {
 ///     let data = [1, 2, 3];
-///     assert_matches!(data.get(1), Some(_));
+///     assert_matches!(data.get(1) => Some(_));
 /// }
 /// ```
 #[macro_export]
 macro_rules! assert_matches {
-    ($expression:expr, $($pattern:tt)+) => {
+    ($expression:expr => $pattern:pat) => {
         match $expression {
-            $($pattern)+ => (),
-            ref e => panic!("assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+)),
+            $pattern => (),
+            ref e => panic!(
+                "assertion failed: `{:?}` does not match `{}`",
+                e,
+                stringify!($pattern)
+            ),
         }
-    }
+    };
 }
 
 #[cfg(test)]

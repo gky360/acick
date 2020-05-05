@@ -1,19 +1,12 @@
 use structopt::StructOpt;
 
-macro_rules! assert_match {
-    ($a:expr => $b:pat) => {
-        assert!(match $a {
-            $b => true,
-            _ => false,
-        });
-    };
-}
+use acick_util::assert_matches;
 
 #[test]
 fn run_with_no_args() {
     let args = ["acick"];
     let res = acick::Opt::from_iter_safe(&args);
-    assert_match!(res => Err(_));
+    assert_matches!(res => Err(_));
 }
 
 #[test]

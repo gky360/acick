@@ -377,7 +377,7 @@ mod tests {
             "$ACICK_UNKNOWN_VAR",
         ];
         for test in &tests {
-            assert_matches!(AbsPathBuf::try_new(test), Err(_));
+            assert_matches!(AbsPathBuf::try_new(test) => Err(_));
         }
         Ok(())
     }
@@ -394,7 +394,7 @@ mod tests {
     #[test]
     fn test_from_str_failure() -> anyhow::Result<()> {
         for test in SHELL_PATH_FAILURE_TESTS.iter() {
-            assert_matches!(AbsPathBuf::from_str(test), Err(_));
+            assert_matches!(AbsPathBuf::from_str(test) => Err(_));
         }
         Ok(())
     }
@@ -454,7 +454,7 @@ abs_path: {}"#,
         for test in SHELL_PATH_FAILURE_TESTS.iter() {
             let yaml_str = format!("abs_path: {}", test);
             let result = serde_yaml::from_str::<TestData>(&yaml_str);
-            assert_matches!(result, Err(_));
+            assert_matches!(result => Err(_));
         }
         Ok(())
     }
