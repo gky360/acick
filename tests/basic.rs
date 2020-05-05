@@ -10,7 +10,7 @@ fn run_with_no_args() {
 }
 
 #[test]
-fn check_readme_usage() {
+fn compare_readme_usage_with_help_message() {
     let args = ["acick", "--help"];
     let res = acick::Opt::from_iter_safe(&args);
     let err = res.unwrap_err();
@@ -34,3 +34,6 @@ fn check_readme_usage() {
     }
     assert_eq!(i, long_help_message.len());
 }
+
+#[test]
+fn test_basic_usage() {}

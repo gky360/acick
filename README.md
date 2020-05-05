@@ -61,7 +61,9 @@ FLAGS:
     -V, --version       Prints version information
 
 OPTIONS:
-        --output <output>    Format of output [default: default]  [possible values: default, debug, json, yaml]
+    -b, --base-dir <base-dir>    Sets path to the directory that contains a config file
+        --output <output>        Specifies the format of output [default: default]  [possible values: default, debug,
+                                 json, yaml]
 
 SUBCOMMANDS:
     fetch     Fetches problems from service [aliases: f, f]

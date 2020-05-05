@@ -89,9 +89,14 @@ impl Config {
     pub fn load(
         service_id: ServiceKind,
         contest_id: ContestId,
+        base_dir: Option<AbsPathBuf>,
         cnsl: &mut Console,
     ) -> Result<Self> {
-        let (body, base_dir) = ConfigBody::search(cnsl)?;
+        let base_dir = match base_dir {
+            Some(base_dir) => base_dir,
+            None => ConfigBody::search(cnsl)?,
+        };
+        let body = ConfigBody::load(&base_dir, cnsl)?;
         Ok(Self {
             service_id,
             contest_id,
@@ -331,7 +336,7 @@ impl ConfigBody {
         Self::DEFAULT_TESTCASES_DIR.into()
     }
 
-    fn search(cnsl: &mut Console) -> Result<(Self, AbsPathBuf)> {
+    fn search(cnsl: &mut Console) -> Result<AbsPathBuf> {
         let cwd = AbsPathBuf::cwd()?;
         let base_dir = cwd.search_dir_contains(Self::FILE_NAME).with_context(|| {
             format!(
@@ -342,7 +347,7 @@ impl ConfigBody {
             )
         })?;
         writeln!(cnsl, "Found config file in base_dir: {}", base_dir)?;
-        Ok((Self::load(&base_dir, cnsl)?, base_dir))
+        Ok(base_dir)
     }
 
     fn load(base_dir: &AbsPathBuf, cnsl: &mut Console) -> Result<Self> {
