@@ -238,7 +238,7 @@ impl AbsPathBuf {
 
     pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<fs::File> {
         if let Some(dir) = self.parent() {
-            fs::create_dir_all(dir.as_ref())?;
+            dir.create_dir_all()?
         }
         self.open(is_read, is_write)
     }
@@ -310,17 +310,32 @@ mod tests {
     use crate::assert_matches;
 
     lazy_static! {
-        static ref SHELL_PATH_SUCCESS_TESTS: [(&'static str, PathBuf); 7] = [
-            ("/a/b", PathBuf::from("/a/b")),
-            ("~/a/b", dirs::home_dir().unwrap().join("a/b")),
-            ("$HOME/a/b", dirs::home_dir().unwrap().join("a/b")),
-            ("/a//b", PathBuf::from("/a/b")),
-            ("/a/./b", PathBuf::from("/a/b")),
-            ("/a/b/", PathBuf::from("/a/b")),
-            ("/a/../b", PathBuf::from("/b")),
-        ];
-        static ref SHELL_PATH_FAILURE_TESTS: [&'static str; 3] =
-            ["./a/b/", "a/b", "$ACICK_UNKNOWN_VAR"];
+        static ref DRIVE: &'static str = option_env!("ACICK_TEST_DRIVE").unwrap_or("C");
+        static ref SHELL_PATH_SUCCESS_TESTS: Vec<(String, PathBuf)> = {
+            let mut tests = vec![
+                (prefix("/a/b"), PathBuf::from(prefix("/a/b"))),
+                ("~/a/b".into(), dirs::home_dir().unwrap().join("a/b")),
+                ("$HOME/a/b".into(), dirs::home_dir().unwrap().join("a/b")),
+                (prefix("/a//b"), PathBuf::from(prefix("/a/b"))),
+                (prefix("/a/./b"), PathBuf::from(prefix("/a/b"))),
+                (prefix("/a/b/"), PathBuf::from(prefix("/a/b"))),
+                (prefix("/a/../b"), PathBuf::from(prefix("/b"))),
+            ];
+            if cfg!(windows) {
+                tests.extend_from_slice(&[(
+                    format!("{}:\\a\\b", &*DRIVE),
+                    PathBuf::from(format!("{}:\\a\\b", &*DRIVE)),
+                )]);
+            }
+            tests
+        };
+        static ref SHELL_PATH_FAILURE_TESTS: Vec<&'static str> = {
+            let mut tests = vec!["./a/b/", "a/b", "$ACICK_UNKNOWN_VAR"];
+            if cfg!(windows) {
+                tests.extend_from_slice(&["%APPDATA%"]) // do not expand windows style env var
+            }
+            tests
+        };
     }
 
     #[derive(Serialize, Deserialize, Debug)]
@@ -328,14 +343,22 @@ mod tests {
         abs_path: AbsPathBuf,
     }
 
+    fn prefix(path: &str) -> String {
+        if cfg!(windows) {
+            format!("{}:{}", &*DRIVE, path)
+        } else {
+            path.to_string()
+        }
+    }
+
     #[test]
     fn test_try_new_success() -> anyhow::Result<()> {
         let tests = [
-            ("/a/b", "/a/b"),
-            ("/a//b", "/a/b"),
-            ("/a/./b", "/a/b"),
-            ("/a/b/", "/a/b"),
-            ("/a/../b", "/b"),
+            (prefix("/a/b"), prefix("/a/b")),
+            (prefix("/a//b"), prefix("/a/b")),
+            (prefix("/a/./b"), prefix("/a/b")),
+            (prefix("/a/b/"), prefix("/a/b")),
+            (prefix("/a/../b"), prefix("/b")),
         ];
         for (actual, expected) in &tests {
             let actual = AbsPathBuf::try_new(actual)?;
@@ -374,10 +397,23 @@ mod tests {
     #[test]
     fn test_serialize_success() -> anyhow::Result<()> {
         let test_data = TestData {
-            abs_path: AbsPathBuf::try_new("/a/b")?,
+            abs_path: AbsPathBuf::try_new(prefix("/a/b"))?,
         };
         let actual = serde_yaml::to_string(&test_data)?;
-        let expected = "---\nabs_path: /a/b";
+        let expected = format!("---\nabs_path: {}", prefix("/a/b"));
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_serialize_success_windows() -> anyhow::Result<()> {
+        let path = format!("{}:\\a\\b", &*DRIVE);
+        let test_data = TestData {
+            abs_path: AbsPathBuf::try_new(path)?,
+        };
+        let actual = serde_yaml::to_string(&test_data)?;
+        let expected = format!("---\nabs_path: {}", path);
         assert_eq!(actual, expected);
         Ok(())
     }
