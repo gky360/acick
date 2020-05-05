@@ -11,7 +11,8 @@ static ARC100_C_SOURCE: &str = r#"/*
 [arc100] C - Linear Approximation
 */
 
-#include <bits/stdc++.h>
+#include <algorithm>
+#include <iostream>
 using namespace std;
 typedef long long int ll;
 typedef pair<int, int> pii;
@@ -20,23 +21,29 @@ typedef pair<ll, int> pli;
 const int MAX_N = 200000;
 
 int N;
-int B[MAX_N];
+int A[MAX_N];
+
+ll solve() {
+    int b[MAX_N];
+    for (int i = 0; i < N; i++) {
+        b[i] = A[i] - i + 1;
+    }
+    sort(b, b + N);
+
+    ll ans = 0;
+    for (int i = 0; i < N; i++) {
+        ans += abs(b[i] - b[N / 2]);
+    }
+    return ans;
+}
 
 int main() {
     cin >> N;
     for (int i = 0; i < N; i++) {
-        int a;
-        cin >> a;
-        B[i] = a - i + 1;
+        cin >> A[i];
     }
-    sort(B, B + N);
 
-    int b = B[N / 2];
-    ll ans = 0;
-    for (int i = 0; i < N; i++) {
-        ans += abs(B[i] - b);
-    }
-    cout << ans << endl;
+    cout << solve() << endl;
 
     return 0;
 }
