@@ -332,7 +332,10 @@ mod tests {
         static ref SHELL_PATH_FAILURE_TESTS: Vec<&'static str> = {
             let mut tests = vec!["./a/b/", "a/b", "$ACICK_UNKNOWN_VAR"];
             if cfg!(windows) {
-                tests.extend_from_slice(&["%APPDATA%"]) // do not expand windows style env var
+                tests.extend_from_slice(&[
+                    "%APPDATA%", // do not expand windows style env var
+                    "/a/b", // do not considered to be absolute in windows
+                ]);
             }
             tests
         };
@@ -394,13 +397,14 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(windows))]
     #[test]
-    fn test_serialize_success() -> anyhow::Result<()> {
+    fn test_serialize_success_unix() -> anyhow::Result<()> {
         let test_data = TestData {
-            abs_path: AbsPathBuf::try_new(prefix("/a/b"))?,
+            abs_path: AbsPathBuf::try_new("/a/b")?,
         };
         let actual = serde_yaml::to_string(&test_data)?;
-        let expected = format!("---\nabs_path: {}", prefix("/a/b"));
+        let expected = format!("---\nabs_path: {}", "/a/b");
         assert_eq!(actual, expected);
         Ok(())
     }
@@ -408,13 +412,28 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn test_serialize_success_windows() -> anyhow::Result<()> {
-        let path = format!("{}:\\a\\b", &*DRIVE);
-        let test_data = TestData {
-            abs_path: AbsPathBuf::try_new(path)?,
-        };
-        let actual = serde_yaml::to_string(&test_data)?;
-        let expected = format!("---\nabs_path: {}", path);
-        assert_eq!(actual, expected);
+        let tests = [
+            (
+                format!(r#"{}:\a\b"#, &*DRIVE),
+                format!(r#""{}:\\a\\b""#, &*DRIVE),
+            ),
+            (
+                format!(r#"{}:/a/b"#, &*DRIVE),
+                format!(r#""{}:\\a\\b""#, &*DRIVE),
+            ),
+        ];
+        for (left, right) in &tests {
+            let test_data = TestData {
+                abs_path: AbsPathBuf::try_new(left)?,
+            };
+            let actual = serde_yaml::to_string(&test_data)?;
+            let expected = format!(
+                r#"---
+abs_path: {}"#,
+                right
+            );
+            assert_eq!(actual, expected);
+        }
         Ok(())
     }
 
