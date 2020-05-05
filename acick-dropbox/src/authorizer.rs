@@ -59,17 +59,23 @@ impl<'a> DbxAuthorizer<'a> {
 
     pub fn load_or_request(&self, cnsl: &mut dyn Write) -> Result<Dropbox> {
         let load_result = self.load_token(cnsl)?;
-        let token = match load_result {
-            Some(token) if Self::validate_token(&token)? => token,
-            _ => self.request_token(cnsl)?,
+        let (token, is_updated) = match load_result {
+            Some(token) if Self::validate_token(&token)? => (token, false),
+            _ => (self.request_token(cnsl)?, true),
         };
 
-        self.save_token(&token, cnsl)?;
+        if is_updated {
+            self.save_token(&token, cnsl)?;
+        }
 
         Ok(Dropbox::new(token))
     }
 
     fn load_token(&self, cnsl: &mut dyn Write) -> Result<Option<Token>> {
+        if let Ok(access_token) = std::env::var("ACICK_DBX_ACCESS_TOKEN") {
+            return Ok(Some(Token { access_token }));
+        }
+
         if !self.token_path.as_ref().exists() {
             return Ok(None);
         }
