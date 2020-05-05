@@ -297,7 +297,7 @@ mod tests {
     use crate::assert_matches;
 
     lazy_static! {
-        static ref DRIVE: &'static str = option_env!("ACICK_TEST_DRIVE").unwrap_or("C");
+        static ref DRIVE: String = std::env::var("ACICK_TEST_DRIVE").unwrap_or_else(|_| String::from("C"));
         static ref SHELL_PATH_SUCCESS_TESTS: Vec<(String, PathBuf)> = {
             let mut tests = vec![
                 (prefix("/a/b"), PathBuf::from(prefix("/a/b"))),
