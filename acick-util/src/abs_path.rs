@@ -303,6 +303,7 @@ mod tests {
                 (prefix("/a/b"), PathBuf::from(prefix("/a/b"))),
                 ("~/a/b".into(), dirs::home_dir().unwrap().join("a/b")),
                 if cfg!(windows) {
+                    #[allow(clippy::option_env_unwrap)]
                     ("$APPDATA/a/b".into(), PathBuf::from(option_env!("APPDATA").unwrap()).join("a/b"))
                 } else {
                     ("$HOME/a/b".into(), dirs::home_dir().unwrap().join("a/b"))
@@ -420,7 +421,7 @@ mod tests {
             ),
             (
                 format!(r#"{}:/a/b"#, &*DRIVE),
-                format!(r#""{}:\\a\\b""#, &*DRIVE),
+                format!(r#""{}:/a/b""#, &*DRIVE),
             ),
         ];
         for (left, right) in &tests {
@@ -461,7 +462,7 @@ abs_path: {}"#,
     #[test]
     fn test_display() -> anyhow::Result<()> {
         let actual: AbsPathBuf = "~/a".parse()?;
-        let expected = dirs::home_dir().unwrap().join("a");
+        let expected = PathBuf::from(format!("{}/a", dirs::home_dir().unwrap().display()));
         assert_eq!(actual.as_ref(), &expected);
         assert_eq!(format!("{}", actual), format!("{}", expected.display()));
         Ok(())
