@@ -2,7 +2,7 @@ use std::env::current_dir;
 use std::fmt;
 use std::fs;
 use std::io::{self, Seek as _, SeekFrom, Write};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use anyhow::{anyhow, Context as _};
@@ -41,24 +41,11 @@ impl AbsPathBuf {
     }
 
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
-        let mut ret = self.clone();
-        ret.push(path);
-        ret
+        Self(self.0.join(path))
     }
 
     fn push<P: AsRef<Path>>(&mut self, path: P) {
-        let buf = &mut self.0;
-        for component in path.as_ref().components() {
-            match component {
-                Component::Prefix(_) | Component::RootDir | Component::Normal(_) => {
-                    buf.push(component.as_os_str());
-                }
-                Component::CurDir => {}
-                Component::ParentDir => {
-                    buf.pop();
-                }
-            }
-        }
+        self.0.push(path)
     }
 
     pub fn parent(&self) -> Option<Self> {
