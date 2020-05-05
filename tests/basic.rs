@@ -98,7 +98,7 @@ fn test_basic_usage() -> anyhow::Result<()> {
     get_opt_common(&test_dir, &["init"])?.run()?;
 
     // TODO: change cookies path
-    // get_opt_common(&test_dir, &["login"])?.run()?;
+    get_opt_common(&test_dir, &["login"])?.run()?;
 
     get_opt_common(&test_dir, &["me"])?.run()?;
 
@@ -111,6 +111,8 @@ fn test_basic_usage() -> anyhow::Result<()> {
     if *ACICK_TEST_ENABLE_SUBMIT {
         get_opt_common(&test_dir, &["submit", "c"])?.run()?;
     }
+
+    get_opt_common(&test_dir, &["logout"])?.run()?;
 
     Ok(())
 }
