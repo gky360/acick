@@ -310,7 +310,7 @@ mod tests {
                 (prefix("/a//b"), PathBuf::from(prefix("/a/b"))),
                 (prefix("/a/./b"), PathBuf::from(prefix("/a/b"))),
                 (prefix("/a/b/"), PathBuf::from(prefix("/a/b"))),
-                (prefix("/a/../b"), PathBuf::from(prefix("/b"))),
+                (prefix("/a/../b"), PathBuf::from(prefix("/a/../b"))),
             ];
             if cfg!(windows) {
                 tests.extend_from_slice(&[(
@@ -325,7 +325,7 @@ mod tests {
             if cfg!(windows) {
                 tests.extend_from_slice(&[
                     "%APPDATA%", // do not expand windows style env var
-                    "/a/b", // do not considered to be absolute in windows
+                    "/a/b", // not absolute in windows
                 ]);
             }
             tests
@@ -352,7 +352,7 @@ mod tests {
             (prefix("/a//b"), prefix("/a/b")),
             (prefix("/a/./b"), prefix("/a/b")),
             (prefix("/a/b/"), prefix("/a/b")),
-            (prefix("/a/../b"), prefix("/b")),
+            (prefix("/a/../b"), prefix("/a/../b")),
         ];
         for (actual, expected) in &tests {
             let actual = AbsPathBuf::try_new(actual)?;
