@@ -109,7 +109,7 @@ fn test_basic_usage() -> anyhow::Result<()> {
 
     get_opt_common(&test_dir, &["me"])?.run()?;
 
-    get_opt_common(&test_dir, &["fetch", "--full"])?.run()?;
+    get_opt_common(&test_dir, &["fetch", "c", "--full"])?.run()?;
 
     let mut file = File::create(test_dir.path().join("atcoder/arc100/c/Main.cpp"))?;
     file.write_all(ARC100_C_SOURCE.as_bytes())?;
