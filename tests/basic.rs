@@ -1,18 +1,71 @@
+use std::fs::File;
+use std::io::Write as _;
+
+use lazy_static::lazy_static;
 use structopt::StructOpt;
+use tempfile::{tempdir, TempDir};
 
 use acick_util::assert_matches;
 
+static ARC100_C_SOURCE: &str = r#"/*
+[arc100] C - Linear Approximation
+*/
+
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long int ll;
+typedef pair<int, int> pii;
+typedef pair<ll, int> pli;
+
+const int MAX_N = 200000;
+
+int N;
+int B[MAX_N];
+
+int main() {
+    cin >> N;
+    for (int i = 0; i < N; i++) {
+        int a;
+        cin >> a;
+        B[i] = a - i + 1;
+    }
+    sort(B, B + N);
+
+    int b = B[N / 2];
+    ll ans = 0;
+    for (int i = 0; i < N; i++) {
+        ans += abs(B[i] - b);
+    }
+    cout << ans << endl;
+
+    return 0;
+}
+"#;
+
+lazy_static! {
+    static ref ACICK_TEST_ENABLE_SUBMIT: bool = std::env::var("ACICK_TEST_ENABLE_SUBMIT")
+        .map(|v| !(v.is_empty() || v == "false" || v == "0"))
+        .unwrap_or(false);
+}
+
+fn get_opt_common(test_dir: &TempDir, args: &[&str]) -> Result<acick::Opt, structopt::clap::Error> {
+    let base_dir = &test_dir.path().display().to_string();
+    let mut cmd = vec!["acick", "--quiet", "--assume-yes", "--base-dir", &base_dir];
+    cmd.extend_from_slice(args);
+    acick::Opt::from_iter_safe(&cmd)
+}
+
 #[test]
 fn run_with_no_args() {
-    let args = ["acick"];
-    let res = acick::Opt::from_iter_safe(&args);
+    let args = &["acick"];
+    let res = acick::Opt::from_iter_safe(args);
     assert_matches!(res => Err(_));
 }
 
 #[test]
 fn compare_readme_usage_with_help_message() {
-    let args = ["acick", "--help"];
-    let res = acick::Opt::from_iter_safe(&args);
+    let args = &["acick", "--help"];
+    let res = acick::Opt::from_iter_safe(args);
     let err = res.unwrap_err();
     let mut long_help_message = Vec::new();
     long_help_message.push("```");
@@ -36,4 +89,28 @@ fn compare_readme_usage_with_help_message() {
 }
 
 #[test]
-fn test_basic_usage() {}
+fn test_basic_usage() -> anyhow::Result<()> {
+    let test_dir = tempdir()?;
+
+    // config file is not created yet
+    assert_matches!(get_opt_common(&test_dir, &["show"])?.run() => Err(_));
+
+    get_opt_common(&test_dir, &["init"])?.run()?;
+
+    // TODO: change cookies path
+    // get_opt_common(&test_dir, &["login"])?.run()?;
+
+    get_opt_common(&test_dir, &["me"])?.run()?;
+
+    get_opt_common(&test_dir, &["fetch", "--full"])?.run()?;
+
+    let mut file = File::create(test_dir.path().join("atcoder/arc100/c/Main.cpp"))?;
+    file.write_all(ARC100_C_SOURCE.as_bytes())?;
+    get_opt_common(&test_dir, &["test", "c"])?.run()?;
+
+    if *ACICK_TEST_ENABLE_SUBMIT {
+        get_opt_common(&test_dir, &["submit", "c"])?.run()?;
+    }
+
+    Ok(())
+}
