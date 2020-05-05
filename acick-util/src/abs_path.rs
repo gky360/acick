@@ -303,8 +303,7 @@ mod tests {
                 (prefix("/a/b"), PathBuf::from(prefix("/a/b"))),
                 ("~/a/b".into(), dirs::home_dir().unwrap().join("a/b")),
                 if cfg!(windows) {
-                    #[allow(clippy::option_env_unwrap)]
-                    ("$APPDATA/a/b".into(), PathBuf::from(option_env!("APPDATA").unwrap()).join("a/b"))
+                    ("$APPDATA/a/b".into(), PathBuf::from(std::env::var("APPDATA").unwrap()).join("a/b"))
                 } else {
                     ("$HOME/a/b".into(), dirs::home_dir().unwrap().join("a/b"))
                 },
