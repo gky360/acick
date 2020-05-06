@@ -14,14 +14,16 @@ use crate::{Console, Result};
 /// # Examples
 ///
 /// ```
-/// # success
-/// assert_eq!(parse_zenkaku_digits("0123"), Ok(123 as i32));
-/// assert_eq!(parse_zenkaku_digits("０１２３"), Ok(123 as i32));
+/// use acick_util::service::scrape::parse_zenkaku_digits;
 ///
-/// # failure
-/// assert!(parse_zenkaku_digits("01x23").is_err());
-/// assert!(parse_zenkaku_digits("０１あ２３").is_err());
-/// assert!(parse_zenkaku_digits("01２３").is_err());
+/// /// success
+/// assert_eq!(parse_zenkaku_digits::<i32>("0123"), Ok(123));
+/// assert_eq!(parse_zenkaku_digits::<i32>("０１２３"), Ok(123));
+///
+/// /// failure
+/// assert!(parse_zenkaku_digits::<i32>("01x23").is_err());
+/// assert!(parse_zenkaku_digits::<i32>("０１あ２３").is_err());
+/// assert!(parse_zenkaku_digits::<i32>("01２３").is_err());
 /// ```
 pub fn parse_zenkaku_digits<T: FromStr>(s: &str) -> std::result::Result<T, T::Err> {
     s.parse().or_else(|err| {

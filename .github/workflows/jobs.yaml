@@ -57,7 +57,7 @@ jobs:
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.12.3'
-          args: '--verbose --forward --ignore-tests --timeout 300 --workspace --all-features'
+          args: '--verbose --forward --ignore-tests --run-types Tests Doctests Benchmarks Examples --timeout 300 --workspace --all-features'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1.0.2
