@@ -1,5 +1,5 @@
 use std::env;
-use std::io::{self, Write};
+use std::io::{self, BufRead as _, Write};
 
 use anyhow::Context as _;
 use console::{Style, Term};
@@ -17,7 +17,10 @@ static PB_PROGRESS_CHARS: &str = "#>-";
 #[derive(Debug)]
 enum Inner {
     Term(Term),
-    Buf(Vec<u8>),
+    Buf {
+        input: io::BufReader<io::Cursor<String>>,
+        output: Vec<u8>,
+    },
     Sink(io::Sink),
 }
 
@@ -48,7 +51,10 @@ impl Console {
 
     pub fn buf(conf: ConsoleConfig) -> Self {
         Self {
-            inner: Inner::Buf(Vec::new()),
+            inner: Inner::Buf {
+                input: io::BufReader::new(io::Cursor::new(String::new())),
+                output: Vec::new(),
+            },
             conf,
         }
     }
@@ -60,9 +66,16 @@ impl Console {
         }
     }
 
+    #[cfg(test)]
+    fn write_input(&mut self, s: &str) {
+        if let Inner::Buf { ref mut input, .. } = self.inner {
+            input.get_mut().get_mut().push_str(s)
+        }
+    }
+
     pub fn take_buf(self) -> Option<Vec<u8>> {
         match self.inner {
-            Inner::Buf(buf) => Some(buf),
+            Inner::Buf { output: buf, .. } => Some(buf),
             _ => None,
         }
     }
@@ -77,7 +90,9 @@ impl Console {
     fn as_mut_write(&mut self) -> &mut dyn Write {
         match self.inner {
             Inner::Term(ref mut w) => w,
-            Inner::Buf(ref mut w) => w,
+            Inner::Buf {
+                output: ref mut w, ..
+            } => w,
             Inner::Sink(ref mut w) => w,
         }
     }
@@ -120,15 +135,20 @@ impl Console {
     }
 
     fn read_user(&mut self, is_password: bool) -> io::Result<String> {
-        match &self.inner {
-            Inner::Term(term) => {
+        match self.inner {
+            Inner::Term(ref term) => {
                 if is_password {
                     term.read_secure_line()
                 } else {
                     term.read_line()
                 }
             }
-            _ => Ok(String::from("")),
+            Inner::Buf { ref mut input, .. } => {
+                let mut buf = String::new();
+                input.read_line(&mut buf)?;
+                Ok(buf)
+            }
+            Inner::Sink(_) => Ok(String::from("")),
         }
     }
 
@@ -221,31 +241,32 @@ mod tests {
         Ok(())
     }
 
-    // #[test]
-    // fn test_confirm() -> anyhow::Result<()> {
-    //     let tests = &[
-    //         (true, "", false, true),
-    //         (false, "y", false, true),
-    //         (false, "Y", false, true),
-    //         (false, "yes", false, true),
-    //         (false, "Yes", false, true),
-    //         (false, "n", true, false),
-    //         (false, "N", true, false),
-    //         (false, "no", true, false),
-    //         (false, "No", true, false),
-    //         (false, "hoge", true, true),
-    //         (false, "hoge", false, false),
-    //         (false, "", true, true),
-    //         (false, "", false, false),
-    //     ];
-    //     for (assume_yes, _input, default, expected) in tests {
-    //         let conf = ConsoleConfig {
-    //             assume_yes: *assume_yes,
-    //         };
-    //         let mut cnsl = Console::term(conf);
-    //         let actual = cnsl.confirm("message", *default).unwrap();
-    //         assert_eq!(actual, *expected);
-    //     }
-    //     Ok(())
-    // }
+    #[test]
+    fn test_confirm() -> anyhow::Result<()> {
+        let tests = &[
+            (true, "", false, true),
+            (false, "y", false, true),
+            (false, "Y", false, true),
+            (false, "yes", false, true),
+            (false, "Yes", false, true),
+            (false, "n", true, false),
+            (false, "N", true, false),
+            (false, "no", true, false),
+            (false, "No", true, false),
+            (false, "hoge", true, true),
+            (false, "hoge", false, false),
+            (false, "", true, true),
+            (false, "", false, false),
+        ];
+        for (assume_yes, input, default, expected) in tests {
+            let conf = ConsoleConfig {
+                assume_yes: *assume_yes,
+            };
+            let mut cnsl = Console::buf(conf);
+            cnsl.write_input(input);
+            let actual = cnsl.confirm("message", *default).unwrap();
+            assert_eq!(actual, *expected);
+        }
+        Ok(())
+    }
 }
