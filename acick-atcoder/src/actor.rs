@@ -16,7 +16,7 @@ use crate::page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
 };
-use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
+use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _};
 use crate::service::session::WithRetry as _;
 use crate::service::{Act, ResponseExt as _};
 use crate::web::open_in_browser;

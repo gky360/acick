@@ -9,25 +9,6 @@ use crate::abs_path::AbsPathBuf;
 use crate::service::CookieStorage;
 use crate::{Console, Error, Result};
 
-trait ExecSession {
-    fn exec_session(&self, cookies_path: &AbsPathBuf, request: Request) -> Result<Response>;
-}
-
-impl ExecSession for Client {
-    fn exec_session(&self, cookies_path: &AbsPathBuf, mut request: Request) -> Result<Response> {
-        let mut storage =
-            CookieStorage::open(cookies_path).context("Could not open cookie storage")?;
-        storage
-            .load_into(&mut request)
-            .context("Could not load cookies into request")?;
-        let response = self.execute(request)?;
-        storage
-            .store_from(&response)
-            .context("Could not store cookies from response")?;
-        Ok(response)
-    }
-}
-
 pub struct RetryRequestBuilder<'a> {
     inner: RequestBuilder,
     client: &'a Client,
@@ -38,30 +19,24 @@ pub struct RetryRequestBuilder<'a> {
 }
 
 impl<'a> RetryRequestBuilder<'a> {
-    pub fn send_pretty(&mut self) -> Result<Response> {
-        let Self { client, cnsl, .. } = self;
-        let req = self
-            .inner
-            .try_clone()
-            .ok_or_else(|| Error::msg("Could not build request"))?
-            .build()?;
-        write!(cnsl, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
-        let result = client
-            .exec_session(self.cookies_path, req)
-            .context("Could not send request");
-        match &result {
-            Ok(res) => writeln!(cnsl, "{}", res.status()),
-            Err(_) => writeln!(cnsl, "failed"),
-        }
-        .unwrap_or(());
-        result
+    pub fn retry_send(mut self) -> Result<Response> {
+        let retry_interval = self.retry_interval.as_millis() as u64;
+        let durations = delay::Fixed::from_millis(retry_interval).take(self.retry_limit);
+        retry(durations, || self.send()).map_err(|err| match err {
+            retry::Error::Operation { error, .. } => error,
+            retry::Error::Internal(msg) => Error::msg(msg),
+        })
     }
 
-    pub fn retry_send(&mut self) -> Result<Response> {
-        let retry_interval = self.retry_interval.as_millis() as u64;
-        let retry_limit = self.retry_limit;
-        let durations = delay::Fixed::from_millis(retry_interval).take(retry_limit);
-        retry(durations, || match self.send_pretty() {
+    fn send(&mut self) -> OperationResult<Response, Error> {
+        let result = self
+            .inner
+            .try_clone()
+            .ok_or_else(|| Error::msg("Could not create request"))
+            .and_then(|builder| Ok(builder.build()?))
+            .context("Could not build request")
+            .and_then(|req| self.exec_session_pretty(req));
+        match result {
             Ok(res) => {
                 if res.status().is_server_error() {
                     OperationResult::Retry(Error::msg("Received server error"))
@@ -70,11 +45,31 @@ impl<'a> RetryRequestBuilder<'a> {
                 }
             }
             Err(err) => OperationResult::Retry(err),
-        })
-        .map_err(|err| match err {
-            retry::Error::Operation { error, .. } => error,
-            retry::Error::Internal(msg) => Error::msg(msg),
-        })
+        }
+    }
+
+    fn exec_session_pretty(&mut self, req: Request) -> Result<Response> {
+        write!(self.cnsl, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
+        let result = self.exec_session(req).context("Could not send request");
+        match &result {
+            Ok(res) => writeln!(self.cnsl, "{}", res.status()),
+            Err(_) => writeln!(self.cnsl, "failed"),
+        }
+        .unwrap_or(());
+        result
+    }
+
+    fn exec_session(&self, mut request: Request) -> Result<Response> {
+        let mut storage =
+            CookieStorage::open(self.cookies_path).context("Could not open cookie storage")?;
+        storage
+            .load_into(&mut request)
+            .context("Could not load cookies into request")?;
+        let response = self.client.execute(request)?;
+        storage
+            .store_from(&response)
+            .context("Could not store cookies from response")?;
+        Ok(response)
     }
 }
 

@@ -6,7 +6,7 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::service::scrape::{ElementRefExt as _, Fetch, Scrape};
+use crate::service::scrape::{Fetch, Scrape};
 use crate::{Console, Error, Result};
 
 mod login;

@@ -11,7 +11,7 @@ use scraper::{ElementRef, Html, Selector};
 use crate::config::SessionConfig;
 use crate::model::{ContestId, ProblemId, Sample};
 use crate::page::{FetchRestricted, BASE_URL};
-use crate::service::scrape::{parse_zenkaku_digits, ElementRefExt as _, HasUrl, Scrape};
+use crate::service::scrape::{parse_zenkaku_digits, Fetch, Scrape};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,7 +37,7 @@ impl<'a> TasksPrintPageBuilder<'a> {
     }
 }
 
-impl HasUrl for TasksPrintPageBuilder<'_> {
+impl Fetch for TasksPrintPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
         let path = format!("/contests/{}/tasks_print", self.contest_id);
         BASE_URL
@@ -71,12 +71,6 @@ impl TasksPrintPage<'_> {
                 "#main-container > .row > .col-sm-12:not(.next-page)"
             ))
             .map(ProblemElem)
-    }
-}
-
-impl HasUrl for TasksPrintPage<'_> {
-    fn url(&self) -> Result<Url> {
-        self.builder.url()
     }
 }
 

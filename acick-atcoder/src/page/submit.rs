@@ -7,7 +7,7 @@ use scraper::{ElementRef, Html};
 use crate::config::SessionConfig;
 use crate::model::{ContestId, LangId, LangIdRef, LangName, LangNameRef};
 use crate::page::{FetchRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{ElementRefExt as _, ExtractCsrfToken, ExtractLangId, HasUrl, Scrape};
+use crate::service::scrape::{ExtractCsrfToken, ExtractLangId, Fetch, Scrape};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,7 +33,7 @@ impl<'a> SubmitPageBuilder<'a> {
     }
 }
 
-impl HasUrl for SubmitPageBuilder<'_> {
+impl Fetch for SubmitPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
         let path = format!("/contests/{}/submit", self.contest_id);
         BASE_URL
@@ -58,8 +58,8 @@ impl SubmitPage<'_> {
     }
 }
 
-impl HasUrl for SubmitPage<'_> {
-    fn url(&self) -> Result<Url> {
+impl SubmitPage<'_> {
+    pub fn url(&self) -> Result<Url> {
         self.builder.url()
     }
 }

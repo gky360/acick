@@ -8,7 +8,7 @@ use scraper::{ElementRef, Html};
 use crate::config::SessionConfig;
 use crate::model::{Compare, ContestId, Problem, ProblemId};
 use crate::page::{FetchRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{ElementRefExt as _, HasUrl, Scrape};
+use crate::service::scrape::{Fetch, Scrape};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,7 +34,7 @@ impl<'a> TasksPageBuilder<'a> {
     }
 }
 
-impl HasUrl for TasksPageBuilder<'_> {
+impl Fetch for TasksPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
         let path = format!("/contests/{}/tasks", self.contest_id);
         BASE_URL
@@ -62,12 +62,6 @@ impl TasksPage<'_> {
         self.content
             .select(select!("#main-container .panel table tbody tr"))
             .map(ProblemRowElem)
-    }
-}
-
-impl HasUrl for TasksPage<'_> {
-    fn url(&self) -> Result<Url> {
-        self.builder.url()
     }
 }
 
