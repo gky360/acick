@@ -6,8 +6,8 @@ use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
 use crate::model::{ContestId, LangId, LangIdRef, LangName, LangNameRef};
-use crate::page::{GetHtmlRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{ExtractCsrfToken, ExtractLangId, GetHtml, Scrape};
+use crate::page::{ExtractCsrfToken, ExtractLangId, GetHtmlRestricted, HasHeader, BASE_URL};
+use crate::service::scrape::{GetHtml, Scrape};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
