@@ -10,14 +10,21 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 
 use crate::{Error, Result};
 
+/// Wraps `shellexpand::full` method.
 fn expand<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
     Ok(shellexpand::full(&path.as_ref().to_string_lossy())?.parse()?)
 }
 
+/// An absolute (not necessarily canonicalized) path that may or may not exist.
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AbsPathBuf(PathBuf);
 
 impl AbsPathBuf {
+    /// Construct an absolute path.
+    ///
+    /// Returns error if `path` is not absolute.
+    ///
+    /// If path need to be shell-expanded, use `AbsPathBuf::from_shell_path` instead.
     pub fn try_new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
         if !path.is_absolute() {
@@ -28,26 +35,33 @@ impl AbsPathBuf {
         Ok(ret)
     }
 
-    fn from_shell_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+    /// Constructs an absolute path whilte expanding leading tilde and environment variables.
+    ///
+    /// Returns error if expanded `path` is not absolute.
+    pub fn from_shell_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::try_new(expand(path)?)
     }
 
+    /// Returns current directory as an absolute path.
     pub fn cwd() -> Result<Self> {
         Ok(Self(current_dir()?))
     }
 
-    pub fn join_expand<P: AsRef<Path>>(&self, path: P) -> Result<Self> {
-        Ok(self.join(expand(path)?))
-    }
-
+    /// Joins path.
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
         Self(self.0.join(path))
+    }
+
+    /// Joins path while expanding leading tilde and environment variables.
+    pub fn join_expand<P: AsRef<Path>>(&self, path: P) -> Result<Self> {
+        Ok(self.join(expand(path)?))
     }
 
     fn push<P: AsRef<Path>>(&mut self, path: P) {
         self.0.push(path)
     }
 
+    /// Returns parent path.
     pub fn parent(&self) -> Option<Self> {
         if let Some(parent) = self.0.parent() {
             Some(Self(parent.to_owned()))
@@ -347,14 +361,14 @@ mod tests {
 
     #[test]
     fn test_try_new_success() -> anyhow::Result<()> {
-        let tests = [
+        let tests = &[
             (prefix("/a/b"), prefix("/a/b")),
             (prefix("/a//b"), prefix("/a/b")),
             (prefix("/a/./b"), prefix("/a/b")),
             (prefix("/a/b/"), prefix("/a/b")),
             (prefix("/a/../b"), prefix("/a/../b")),
         ];
-        for (actual, expected) in &tests {
+        for (actual, expected) in tests {
             let actual = AbsPathBuf::try_new(actual)?;
             let expected = PathBuf::from(expected);
             assert_eq!(actual.as_ref(), &expected);
@@ -364,7 +378,7 @@ mod tests {
 
     #[test]
     fn test_try_new_failure() -> anyhow::Result<()> {
-        let tests = [
+        let tests = &[
             "~/a/b",
             if cfg!(windows) {
                 "$APPDATA/a/b"
@@ -375,8 +389,21 @@ mod tests {
             "a/b",
             "$ACICK_UNKNOWN_VAR",
         ];
-        for test in &tests {
+        for test in tests {
             assert_matches!(AbsPathBuf::try_new(test) => Err(_));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_parent() -> anyhow::Result<()> {
+        let tests = &[(prefix("/a/b"), Some(prefix("/a"))), (prefix("/"), None)];
+        for (left, right) in tests {
+            let actual = AbsPathBuf::try_new(left)?.parent();
+            let expected = right
+                .as_ref()
+                .map(|path| AbsPathBuf::try_new(path).unwrap());
+            assert_eq!(actual, expected);
         }
         Ok(())
     }
@@ -413,7 +440,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn test_serialize_success_windows() -> anyhow::Result<()> {
-        let tests = [
+        let tests = &[
             (
                 format!(r#"{}:\a\b"#, &*DRIVE),
                 format!(r#""{}:\\a\\b""#, &*DRIVE),
@@ -423,7 +450,7 @@ mod tests {
                 format!(r#""{}:/a/b""#, &*DRIVE),
             ),
         ];
-        for (left, right) in &tests {
+        for (left, right) in tests {
             let test_data = TestData {
                 abs_path: AbsPathBuf::try_new(left)?,
             };
