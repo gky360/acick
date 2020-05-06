@@ -51,8 +51,8 @@ pub trait GetHtml {
     ) -> Result<(StatusCode, Html)> {
         let res = client
             .get(self.url()?)
-            .with_retry(client, cookies_path, retry_limit, retry_interval, cnsl)
-            .retry_send()?;
+            .with_retry(client, cookies_path, retry_limit, retry_interval)
+            .retry_send(cnsl)?;
         let status = res.status();
         let html = res.text().map(|text| Html::parse_document(&text))?;
         Ok((status, html))

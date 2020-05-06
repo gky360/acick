@@ -15,27 +15,26 @@ pub struct RetryRequestBuilder<'a> {
     cookies_path: &'a AbsPathBuf,
     retry_limit: usize,
     retry_interval: Duration,
-    cnsl: &'a mut Console,
 }
 
 impl<'a> RetryRequestBuilder<'a> {
-    pub fn retry_send(mut self) -> Result<Response> {
+    pub fn retry_send(mut self, cnsl: &mut Console) -> Result<Response> {
         let retry_interval = self.retry_interval.as_millis() as u64;
         let durations = delay::Fixed::from_millis(retry_interval).take(self.retry_limit);
-        retry(durations, || self.send()).map_err(|err| match err {
+        retry(durations, || self.send(cnsl)).map_err(|err| match err {
             retry::Error::Operation { error, .. } => error,
             retry::Error::Internal(msg) => Error::msg(msg),
         })
     }
 
-    fn send(&mut self) -> OperationResult<Response, Error> {
+    fn send(&mut self, cnsl: &mut Console) -> OperationResult<Response, Error> {
         let result = self
             .inner
             .try_clone()
             .ok_or_else(|| Error::msg("Could not create request"))
             .and_then(|builder| Ok(builder.build()?))
             .context("Could not build request")
-            .and_then(|req| self.exec_session_pretty(req));
+            .and_then(|req| self.exec_session_pretty(req, cnsl));
         match result {
             Ok(res) => {
                 if res.status().is_server_error() {
@@ -48,12 +47,12 @@ impl<'a> RetryRequestBuilder<'a> {
         }
     }
 
-    fn exec_session_pretty(&mut self, req: Request) -> Result<Response> {
-        write!(self.cnsl, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
+    fn exec_session_pretty(&mut self, req: Request, cnsl: &mut Console) -> Result<Response> {
+        write!(cnsl, "{:7} {} ... ", req.method().as_str(), req.url()).unwrap_or(());
         let result = self.exec_session(req).context("Could not send request");
         match &result {
-            Ok(res) => writeln!(self.cnsl, "{}", res.status()),
-            Err(_) => writeln!(self.cnsl, "failed"),
+            Ok(res) => writeln!(cnsl, "{}", res.status()),
+            Err(_) => writeln!(cnsl, "failed"),
         }
         .unwrap_or(());
         result
@@ -80,7 +79,6 @@ pub trait WithRetry {
         cookies_path: &'a AbsPathBuf,
         retry_limit: usize,
         retry_interval: Duration,
-        cnsl: &'a mut Console,
     ) -> RetryRequestBuilder<'a>;
 }
 
@@ -91,7 +89,6 @@ impl WithRetry for RequestBuilder {
         cookies_path: &'a AbsPathBuf,
         retry_limit: usize,
         retry_interval: Duration,
-        cnsl: &'a mut Console,
     ) -> RetryRequestBuilder<'a> {
         RetryRequestBuilder {
             inner: self,
@@ -99,7 +96,6 @@ impl WithRetry for RequestBuilder {
             cookies_path,
             retry_limit,
             retry_interval,
-            cnsl,
         }
     }
 }

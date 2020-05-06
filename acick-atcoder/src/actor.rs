@@ -171,9 +171,8 @@ impl Act for AtcoderActor<'_> {
                 session.cookies_path(),
                 session.retry_limit(),
                 session.retry_interval(),
-                cnsl,
             )
-            .retry_send()?;
+            .retry_send(cnsl)?;
 
         // check if login succeeded
         Self::validate_login_response(&res).context("Login rejected by service")?;
@@ -291,9 +290,8 @@ impl Act for AtcoderActor<'_> {
                 session.cookies_path(),
                 session.retry_limit(),
                 session.retry_interval(),
-                cnsl,
             )
-            .retry_send()?;
+            .retry_send(cnsl)?;
 
         // check response
         Self::validate_submit_response(&res, contest_id)
