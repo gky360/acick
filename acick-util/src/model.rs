@@ -202,33 +202,6 @@ impl Problem {
         }
     }
 
-    pub fn n_samples(&self) -> usize {
-        self.samples.len()
-    }
-
-    pub fn max_sample_name_len(&self) -> usize {
-        self.samples
-            .iter()
-            .map(|sample| sample.name.len())
-            .max()
-            .unwrap_or(0)
-    }
-
-    pub fn iter_samples<'a>(
-        self,
-        sample_name: &'a Option<String>,
-    ) -> Box<dyn Iterator<Item = Result<Sample>> + 'a> {
-        let iter = self.samples.into_iter();
-        if let Some(sample_name) = sample_name {
-            Box::new(
-                iter.filter(move |sample| sample.name() == sample_name)
-                    .map(Ok),
-            )
-        } else {
-            Box::new(iter.map(Ok))
-        }
-    }
-
     pub fn take_samples(self, sample_name: &Option<String>) -> SampleIter {
         if let Some(sample_name) = sample_name {
             self.samples
