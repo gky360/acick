@@ -280,6 +280,9 @@ impl AsRef<PathBuf> for AbsPathBuf {
 impl FromStr for AbsPathBuf {
     type Err = Error;
 
+    /// Converts str to AbsPathBuf.
+    ///
+    /// Note that this method expands leading tilde and environment variables.
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         Self::from_shell_path(s)
     }

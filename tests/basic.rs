@@ -161,6 +161,7 @@ fn test_basic_usage() -> anyhow::Result<()> {
     file.write_all(ARC100_C_SOURCE.as_bytes())?;
 
     get_opt_common(&test_dir, &["test", "c"])?.run()?;
+    get_opt_common(&test_dir, &["test", "c", "--full"])?.run()?;
     if *ACICK_TEST_ENABLE_SUBMIT {
         get_opt_common(&test_dir, &["submit", "c"])?.run()?;
     }

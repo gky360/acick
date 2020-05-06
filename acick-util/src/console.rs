@@ -23,8 +23,10 @@ enum Inner {
     Sink(io::Sink),
 }
 
+/// Config for console.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ConsoleConfig {
+    /// If true, assumes yes and skips any confirmation.
     pub assume_yes: bool,
 }
 
