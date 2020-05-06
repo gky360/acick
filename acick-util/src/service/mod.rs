@@ -28,3 +28,24 @@ impl ResponseExt for Response {
             .context("Could not parse redirection url")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use reqwest::blocking::Client;
+    use reqwest::redirect::Policy;
+
+    use super::*;
+
+    #[test]
+    fn test_location_url() -> anyhow::Result<()> {
+        let client = Client::builder()
+            .redirect(Policy::none()) // redirects manually
+            .build()
+            .unwrap();
+        let res = client.get("https://mail.google.com").send()?;
+        let actual = res.location_url(&Url::parse("https://mail.google.com").unwrap())?;
+        let expected = Url::parse("https://mail.google.com/mail/").unwrap();
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+}
