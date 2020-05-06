@@ -274,7 +274,7 @@ mod tests {
         let mut cnsl = Console::buf(ConsoleConfig::default());
 
         let result = fetch_full(&dropbox, &contest_id, &problems[0..1], &conf, &mut cnsl);
-        let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
+        let output_str = cnsl.take_output()?;
         eprintln!("{}", output_str);
         result?;
 

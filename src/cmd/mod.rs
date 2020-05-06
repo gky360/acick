@@ -211,7 +211,7 @@ pub mod tests {
         let mut cnsl = Console::buf(ConsoleConfig { assume_yes: true });
         let result = run(&conf, &mut cnsl);
 
-        let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
+        let output_str = cnsl.take_output()?;
         eprintln!("{}", output_str);
         result
     }

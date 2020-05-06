@@ -1,6 +1,7 @@
 use std::env;
 use std::io::{self, Write};
 
+use anyhow::Context as _;
 use console::{Style, Term};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use lazy_static::lazy_static;
@@ -66,7 +67,13 @@ impl Console {
         }
     }
 
-    #[inline(always)]
+    pub fn take_output(self) -> crate::Result<String> {
+        self.take_buf()
+            .context("Could not take buf from console")
+            .and_then(|buf| Ok(String::from_utf8(buf)?))
+    }
+
+    #[inline]
     fn as_mut_write(&mut self) -> &mut dyn Write {
         match self.inner {
             Inner::Term(ref mut w) => w,
@@ -165,12 +172,12 @@ impl Console {
 }
 
 impl Write for Console {
-    #[inline(always)]
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.as_mut_write().write(buf)
     }
 
-    #[inline(always)]
+    #[inline]
     fn flush(&mut self) -> io::Result<()> {
         self.as_mut_write().flush()
     }
@@ -199,3 +206,46 @@ def_color!(sty_y_under, STY_Y_UNDER, Style::new().underlined().yellow());
 def_color!(sty_r_rev, STY_R_REV, Style::new().bold().reverse().red());
 def_color!(sty_g_rev, STY_G_REV, Style::new().bold().reverse().green());
 def_color!(sty_y_rev, STY_Y_REV, Style::new().bold().reverse().yellow());
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_warn() -> anyhow::Result<()> {
+        let conf = ConsoleConfig { assume_yes: true };
+        let mut cnsl = Console::buf(conf);
+        cnsl.warn("message")?;
+        let output_str = cnsl.take_output()?;
+        assert_eq!(output_str, "WARN: message\n");
+        Ok(())
+    }
+
+    // #[test]
+    // fn test_confirm() -> anyhow::Result<()> {
+    //     let tests = &[
+    //         (true, "", false, true),
+    //         (false, "y", false, true),
+    //         (false, "Y", false, true),
+    //         (false, "yes", false, true),
+    //         (false, "Yes", false, true),
+    //         (false, "n", true, false),
+    //         (false, "N", true, false),
+    //         (false, "no", true, false),
+    //         (false, "No", true, false),
+    //         (false, "hoge", true, true),
+    //         (false, "hoge", false, false),
+    //         (false, "", true, true),
+    //         (false, "", false, false),
+    //     ];
+    //     for (assume_yes, _input, default, expected) in tests {
+    //         let conf = ConsoleConfig {
+    //             assume_yes: *assume_yes,
+    //         };
+    //         let mut cnsl = Console::term(conf);
+    //         let actual = cnsl.confirm("message", *default).unwrap();
+    //         assert_eq!(actual, *expected);
+    //     }
+    //     Ok(())
+    // }
+}
