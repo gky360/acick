@@ -25,10 +25,10 @@ pub fn parse_zenkaku_digits<T: FromStr>(s: &str) -> std::result::Result<T, T::Er
     })
 }
 
-pub trait Fetch {
+pub trait GetHtml {
     fn url(&self) -> Result<Url>;
 
-    fn fetch(
+    fn get_html(
         &self,
         client: &Client,
         cookies_path: &AbsPathBuf,

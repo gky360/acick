@@ -7,8 +7,8 @@ use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
 use crate::model::{Compare, ContestId, Problem, ProblemId};
-use crate::page::{FetchRestricted, HasHeader, BASE_URL};
-use crate::service::scrape::{Fetch, Scrape};
+use crate::page::{GetHtmlRestricted, HasHeader, BASE_URL};
+use crate::service::scrape::{GetHtml, Scrape};
 use crate::{Console, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,7 +26,7 @@ impl<'a> TasksPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<TasksPage<'a>> {
-        self.fetch_restricted(client, self.session, cnsl)
+        self.get_html_restricted(client, self.session, cnsl)
             .map(|html| TasksPage {
                 builder: self,
                 content: html,
@@ -34,7 +34,7 @@ impl<'a> TasksPageBuilder<'a> {
     }
 }
 
-impl Fetch for TasksPageBuilder<'_> {
+impl GetHtml for TasksPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
         let path = format!("/contests/{}/tasks", self.contest_id);
         BASE_URL
@@ -43,7 +43,7 @@ impl Fetch for TasksPageBuilder<'_> {
     }
 }
 
-impl FetchRestricted for TasksPageBuilder<'_> {}
+impl GetHtmlRestricted for TasksPageBuilder<'_> {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TasksPage<'a> {

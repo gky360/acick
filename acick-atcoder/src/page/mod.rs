@@ -6,7 +6,7 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::service::scrape::{Fetch, Scrape};
+use crate::service::scrape::{GetHtml, Scrape};
 use crate::{Console, Error, Result};
 
 mod login;
@@ -64,14 +64,14 @@ pub trait HasHeader: Scrape {
     }
 }
 
-pub trait FetchRestricted: Fetch {
-    fn fetch_restricted(
+pub trait GetHtmlRestricted: GetHtml {
+    fn get_html_restricted(
         &self,
         client: &Client,
         session: &SessionConfig,
         cnsl: &mut Console,
     ) -> Result<Html> {
-        let (status, html) = self.fetch(
+        let (status, html) = self.get_html(
             client,
             session.cookies_path(),
             session.retry_limit(),
