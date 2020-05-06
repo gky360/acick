@@ -1,10 +1,11 @@
-use std::fs::File;
+use std::fs;
 use std::io::Write as _;
 
 use lazy_static::lazy_static;
 use structopt::StructOpt;
 use tempfile::{tempdir, TempDir};
 
+use acick_util::abs_path::AbsPathBuf;
 use acick_util::assert_matches;
 
 static ARC100_C_SOURCE: &str = r#"/*
@@ -62,6 +63,45 @@ fn get_opt_common(test_dir: &TempDir, args: &[&str]) -> Result<acick::Opt, struc
     acick::Opt::from_iter_safe(&cmd)
 }
 
+fn replace_cookies_path_in_conf(
+    test_dir: &TempDir,
+    cookies_path: &AbsPathBuf,
+) -> anyhow::Result<()> {
+    let conf_path = test_dir.path().join("acick.yaml");
+    let conf_str = fs::read_to_string(&conf_path)?;
+
+    // remove current cookies_path config
+    let conf_str: String = conf_str
+        .lines()
+        .map(|line| {
+            if line.starts_with("  cookies_path: ") {
+                ""
+            } else {
+                line
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // add new cookies_path config
+    let mut new_conf = String::new();
+    for line in conf_str.lines() {
+        if line == "session:" {
+            new_conf.push_str(line);
+            new_conf.push_str(&format!("\n  cookies_path: {}\n", cookies_path));
+        } else {
+            new_conf.push_str(line);
+            new_conf.push('\n');
+        }
+    }
+
+    // write new config to file
+    let mut file = fs::File::create(&conf_path)?;
+    file.write_all(new_conf.as_bytes())?;
+
+    Ok(())
+}
+
 #[test]
 fn run_with_no_args() {
     let args = &["acick"];
@@ -99,27 +139,35 @@ fn compare_readme_usage_with_help_message() {
 fn test_basic_usage() -> anyhow::Result<()> {
     let test_dir = tempdir()?;
 
-    // config file is not created yet
+    // check that config file is not created yet
     assert_matches!(get_opt_common(&test_dir, &["show"])?.run() => Err(_));
 
+    // create config file
     get_opt_common(&test_dir, &["init"])?.run()?;
 
-    // TODO: change cookies path
+    // set cookies_path to be under the test_dir
+    let cookies_path = AbsPathBuf::try_new(&test_dir)?.join("cookies.json");
+    replace_cookies_path_in_conf(&test_dir, &cookies_path)?;
+
+    // check that use is not logged in
+    assert_matches!(get_opt_common(&test_dir, &["me"])?.run() => Err(_));
+
     get_opt_common(&test_dir, &["login"])?.run()?;
-
     get_opt_common(&test_dir, &["me"])?.run()?;
-
     get_opt_common(&test_dir, &["fetch", "c", "--full"])?.run()?;
 
-    let mut file = File::create(test_dir.path().join("atcoder/arc100/c/Main.cpp"))?;
+    // write source to file
+    let mut file = fs::File::create(test_dir.path().join("atcoder/arc100/c/Main.cpp"))?;
     file.write_all(ARC100_C_SOURCE.as_bytes())?;
-    get_opt_common(&test_dir, &["test", "c"])?.run()?;
 
+    get_opt_common(&test_dir, &["test", "c"])?.run()?;
     if *ACICK_TEST_ENABLE_SUBMIT {
         get_opt_common(&test_dir, &["submit", "c"])?.run()?;
     }
-
     get_opt_common(&test_dir, &["logout"])?.run()?;
+
+    // check that use is logged out
+    assert_matches!(get_opt_common(&test_dir, &["me"])?.run() => Err(_));
 
     Ok(())
 }
