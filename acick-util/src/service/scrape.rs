@@ -90,6 +90,7 @@ mod tests {
     use scraper::Selector;
     use tempfile::tempdir;
 
+    use crate::assert_matches;
     use crate::console::ConsoleConfig;
 
     use super::*;
@@ -99,6 +100,16 @@ mod tests {
             .redirect(Policy::none()) // redirects manually
             .build()
             .unwrap()
+    }
+
+    #[test]
+    fn test_parse_zenkaku_digits() -> anyhow::Result<()> {
+        assert_eq!(parse_zenkaku_digits::<i32>("0123"), Ok(123));
+        assert_eq!(parse_zenkaku_digits::<i32>("０１２３"), Ok(123));
+        assert_matches!(parse_zenkaku_digits::<i32>("01x23") => Err(_));
+        assert_matches!(parse_zenkaku_digits::<i32>("０１あ２３") => Err(_));
+        assert_matches!(parse_zenkaku_digits::<i32>("01２３") => Err(_));
+        Ok(())
     }
 
     #[test]
