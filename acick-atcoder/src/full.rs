@@ -265,7 +265,7 @@ mod tests {
         let test_dir = tempdir()?;
 
         let dropbox = Dropbox::new(Token {
-            access_token: env!("ACICK_DBX_ACCESS_TOKEN").to_owned(),
+            access_token: std::env::var("ACICK_DBX_ACCESS_TOKEN").unwrap(),
         });
         let contest_id = ContestId::from("arc100");
         let problems = get_test_problems();

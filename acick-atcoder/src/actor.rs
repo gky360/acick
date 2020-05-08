@@ -109,6 +109,7 @@ impl AtcoderActor<'_> {
         contest_id: &ContestId,
         problems: &[Problem],
         token_path: &AbsPathBuf,
+        access_token: Option<String>,
         conf: &Config,
         cnsl: &mut Console,
     ) -> Result<()> {
@@ -119,6 +120,7 @@ impl AtcoderActor<'_> {
             DBX_REDIRECT_PORT,
             DBX_REDIRECT_PATH,
             &token_path,
+            access_token,
         )
         .load_or_request(cnsl)?;
 

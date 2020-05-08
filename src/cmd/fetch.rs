@@ -1,3 +1,4 @@
+use std::env;
 use std::fmt;
 use std::io::Write as _;
 
@@ -95,7 +96,15 @@ impl FetchOpt {
 
         if is_full {
             if conf.service_id == ServiceKind::Atcoder {
-                AtcoderActor::fetch_full(&conf.contest_id, &problems, &DBX_TOKEN_PATH, conf, cnsl)?;
+                let access_token = env::var("ACICK_DBX_ACCESS_TOKEN").ok();
+                AtcoderActor::fetch_full(
+                    &conf.contest_id,
+                    &problems,
+                    &DBX_TOKEN_PATH,
+                    access_token,
+                    conf,
+                    cnsl,
+                )?;
             } else {
                 cnsl.warn("\"--full\" option is only available for AtCoder")?;
             }

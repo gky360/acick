@@ -37,6 +37,7 @@ pub struct DbxAuthorizer<'a> {
     redirect_path: &'a str,
     redirect_uri: String,
     token_path: &'a AbsPathBuf,
+    access_token: Option<String>,
 }
 
 impl<'a> DbxAuthorizer<'a> {
@@ -46,6 +47,7 @@ impl<'a> DbxAuthorizer<'a> {
         redirect_port: u16,
         redirect_path: &'a str,
         token_path: &'a AbsPathBuf,
+        access_token: Option<String>,
     ) -> Self {
         Self {
             app_key,
@@ -54,6 +56,7 @@ impl<'a> DbxAuthorizer<'a> {
             redirect_path,
             redirect_uri: format!("http://localhost:{}{}", redirect_port, redirect_path),
             token_path,
+            access_token,
         }
     }
 
@@ -72,8 +75,10 @@ impl<'a> DbxAuthorizer<'a> {
     }
 
     fn load_token(&self, cnsl: &mut dyn Write) -> Result<Option<Token>> {
-        if let Ok(access_token) = std::env::var("ACICK_DBX_ACCESS_TOKEN") {
-            return Ok(Some(Token { access_token }));
+        if let Some(access_token) = &self.access_token {
+            return Ok(Some(Token {
+                access_token: access_token.to_owned(),
+            }));
         }
 
         if !self.token_path.as_ref().exists() {
@@ -239,4 +244,49 @@ async fn respond(
         respond_not_found()
     };
     Ok(res)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! map(
+        { $($key:expr => $value:expr),+ } => {
+            {
+                let mut m = ::std::collections::HashMap::new();
+                $(
+                    m.insert($key, $value);
+                )+
+                m
+            }
+         };
+    );
+
+    #[test]
+    fn test_gen_random_state() {
+        assert_eq!(gen_random_state().len(), STATE_LEN);
+        assert_ne!(gen_random_state(), gen_random_state());
+    }
+
+    #[test]
+    fn test_get_params() {
+        let tests = &[
+            (Uri::from_static("http://example.com/"), HashMap::new()),
+            (Uri::from_static("http://example.com/?"), HashMap::new()),
+            (
+                Uri::from_static("http://example.com/?hoge=fuga&foo=bar"),
+                map!(String::from("hoge") => String::from("fuga"), String::from("foo") => String::from("bar")),
+            ),
+        ];
+
+        for (left, expected) in tests {
+            let actual = get_params(left);
+            assert_eq!(&actual, expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_respond() {
+        // TODO: write test
+    }
 }
