@@ -154,7 +154,7 @@ fn test_basic_usage() -> anyhow::Result<()> {
 
     get_opt_common(&test_dir, &["login"])?.run()?;
     get_opt_common(&test_dir, &["me"])?.run()?;
-    get_opt_common(&test_dir, &["fetch", "c", "--full"])?.run()?;
+    get_opt_common(&test_dir, &["fetch", "c", "--full", "--open"])?.run()?;
 
     // write source to file
     let mut file = fs::File::create(test_dir.path().join("atcoder/arc100/c/Main.cpp"))?;
@@ -163,7 +163,7 @@ fn test_basic_usage() -> anyhow::Result<()> {
     get_opt_common(&test_dir, &["test", "c"])?.run()?;
     get_opt_common(&test_dir, &["test", "c", "--full"])?.run()?;
     if *ACICK_TEST_ENABLE_SUBMIT {
-        get_opt_common(&test_dir, &["submit", "c"])?.run()?;
+        get_opt_common(&test_dir, &["submit", "c", "--open"])?.run()?;
     }
     get_opt_common(&test_dir, &["logout"])?.run()?;
 
