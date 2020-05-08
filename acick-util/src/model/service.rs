@@ -62,3 +62,13 @@ impl fmt::Display for ServiceKind {
         f.write_str(self.into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_service_kind_default_display() {
+        assert_eq!(ServiceKind::default().to_string(), "atcoder");
+    }
+}

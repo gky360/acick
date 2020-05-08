@@ -78,3 +78,26 @@ impl From<Vec<Sample>> for SampleIter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sample_iter() {
+        let sample_iter: SampleIter = vec![
+            Sample::new("name 1", "5", "0"),
+            Sample::new("name long long", "5", "0"),
+            Sample::new("name hoge", "5", "0"),
+        ]
+        .into();
+        assert_eq!(sample_iter.len(), 3);
+        assert_eq!(sample_iter.max_name_len(), 14);
+        assert_eq!(sample_iter.is_empty(), false);
+
+        let sample_iter: SampleIter = Vec::new().into();
+        assert_eq!(sample_iter.len(), 0);
+        assert_eq!(sample_iter.max_name_len(), 0);
+        assert_eq!(sample_iter.is_empty(), true);
+    }
+}

@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::regex;
 
+pub static DEFAULT_CONTEST_ID_STR: &str = "arc100";
+static DEFAULT_CONTEST_NAME_STR: &str = "AtCoder Regular Contest 100";
+
 #[derive(Serialize, Deserialize, Getters, Debug, Clone, PartialEq, Eq, Hash)]
 #[get = "pub"]
 pub struct Contest {
@@ -27,11 +30,9 @@ impl Contest {
 
 impl Default for Contest {
     fn default() -> Self {
-        Self::new(DEFAULT_CONTEST_ID_STR, "AtCoder Regular Contest 100")
+        Self::new(DEFAULT_CONTEST_ID_STR, DEFAULT_CONTEST_NAME_STR)
     }
 }
-
-pub static DEFAULT_CONTEST_ID_STR: &str = "arc100";
 
 #[derive(Serialize, Deserialize, Debug, Clone, Eq)]
 pub struct ContestId(String);
@@ -108,7 +109,17 @@ mod tests {
         assert_eq!(ContestId::from("ARC100"), ContestId::from("arc100"));
         assert_eq!(
             ContestId::from("CodeFestival2017QualA"),
-            ContestId::from("code-festival-2017-quala")
+            ContestId::from("code-festival-2017-quala"),
+        );
+    }
+
+    #[test]
+    fn test_contest_id_display() {
+        assert_eq!(&ContestId::from("arc100").to_string(), "arc100");
+        assert_eq!(&ContestId::from("ARC100").to_string(), "ARC100");
+        assert_eq!(
+            &ContestId::from("code-festival-2017-quala").to_string(),
+            "code-festival-2017-quala"
         );
     }
 }
