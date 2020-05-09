@@ -91,7 +91,7 @@ impl FetchOpt {
             Self::open_urls(&*actor, &problems, conf, cnsl)
                 .context("Could not open a url in browser")
                 // coerce error
-                .unwrap_or_else(|err| writeln!(cnsl, "{:?}", err).unwrap_or(()));
+                .unwrap_or_else(|err| writeln!(cnsl, "{}", err).unwrap_or(()));
         }
 
         if is_full {

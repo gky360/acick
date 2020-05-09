@@ -116,9 +116,12 @@ impl<'a> DbxAuthorizer<'a> {
         .context("Could not validate access token")
     }
 
-    fn request_token(&self, cnsl: &mut dyn Write) -> Result<Token> {
+    #[tokio::main]
+    async fn request_token(&self, cnsl: &mut dyn Write) -> Result<Token> {
+        let state = gen_random_state();
         let code = self
-            .authorize(cnsl)
+            .authorize(state, cnsl)
+            .await
             .context("Could not authorize acick on Dropbox")?;
         let access_token = HyperClient::oauth2_token_from_authorization_code(
             self.app_key,
@@ -132,12 +135,8 @@ impl<'a> DbxAuthorizer<'a> {
         Ok(Token { access_token })
     }
 
-    #[tokio::main]
-    async fn authorize(&self, cnsl: &mut dyn Write) -> Result<String> {
+    async fn authorize(&self, state: String, cnsl: &mut dyn Write) -> Result<String> {
         let (tx, mut rx) = broadcast::channel::<String>(1);
-
-        // generate random state
-        let state = gen_random_state();
 
         // start local server
         let addr = SocketAddr::from(([127, 0, 0, 1], self.redirect_port));
@@ -158,7 +157,10 @@ impl<'a> DbxAuthorizer<'a> {
             .redirect_uri(&self.redirect_uri)
             .state(&state)
             .build();
-        open_in_browser(auth_url.as_str())?;
+        open_in_browser(auth_url.as_str())
+            .context("Could not open a url in browser")
+            // coerce error
+            .unwrap_or_else(|err| writeln!(cnsl, "{}", err).unwrap_or(()));
         writeln!(cnsl, "Authorize Dropbox in web browser.")?;
 
         // wait for code to arrive and shutdown server
@@ -241,7 +243,7 @@ async fn respond(
     if req.method() == Method::GET && req.uri().path() == redirect_path {
         return Ok(handle_callback(req, tx, &state));
     }
-    return Ok(respond_not_found());
+    Ok(respond_not_found())
 }
 
 #[cfg(test)]
@@ -259,6 +261,26 @@ mod tests {
             }
          };
     );
+
+    #[tokio::test]
+    async fn test_authorize() -> anyhow::Result<()> {
+        let token_path = AbsPathBuf::try_new("/tmp/dbx_token.json")?;
+        let authorizer =
+            DbxAuthorizer::new("test_key", "test_secret", 4100, "/path", &token_path, None);
+        let mut buf = Vec::<u8>::new();
+        let future = authorizer.authorize("test_state".to_string(), &mut buf);
+
+        tokio::spawn(async {
+            let client = hyper::Client::new();
+            let uri =
+                Uri::from_static("http://localhost:4100/path?code=test_code&state=test_state");
+            client.get(uri).await.unwrap();
+        });
+
+        let code = future.await?;
+        assert_eq!(code, "test_code");
+        Ok(())
+    }
 
     #[test]
     fn test_gen_random_state() {
@@ -284,7 +306,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_respond() {
+    async fn test_respond() -> anyhow::Result<()> {
         let tests = &[
             ("/path?code=test_code&state=test_state", StatusCode::OK),
             ("/path", StatusCode::BAD_REQUEST),
@@ -301,18 +323,16 @@ mod tests {
 
         for (left, expected) in tests {
             let (tx, mut rx) = broadcast::channel::<String>(2);
-            let req = Request::builder()
-                .uri(format!("http://localhost:4100{}", left))
-                .body(Body::empty())
-                .unwrap();
+            let req = Request::get(format!("http://localhost:4100{}", left)).body(Body::empty())?;
             let redirect_path = "/path".to_string();
             let state = "test_state".to_string();
-            let res = respond(req, redirect_path, state, tx).await.unwrap();
+            let res = respond(req, redirect_path, state, tx).await?;
             assert_eq!(res.status(), *expected);
             if res.status() == StatusCode::OK {
-                let code = rx.recv().await.unwrap();
+                let code = rx.recv().await?;
                 assert_eq!(code, "test_code");
             }
         }
+        Ok(())
     }
 }
