@@ -283,7 +283,7 @@ mod tests {
             };
             let mut buf = Vec::new();
 
-            let actual = authorizer.load_token(Some(access_token.clone()), &mut buf)?;
+            let actual = authorizer.load_token(Some(access_token), &mut buf)?;
             let expected = Some(token);
             assert_eq!(actual, expected);
 
@@ -293,7 +293,7 @@ mod tests {
             let mut file = std::fs::File::create(token_path)?;
             file.write_all(br#"{"access_token": "test_token"}"#)?;
 
-            let actual = authorizer.load_token(Some(access_token), &mut buf)?;
+            let actual = authorizer.load_token(None, &mut buf)?;
             assert_eq!(actual, expected);
 
             Ok(())
