@@ -238,12 +238,10 @@ async fn respond(
     state: String,
     tx: Sender<String>,
 ) -> std::result::Result<Response<Body>, Infallible> {
-    let res = if req.method() == Method::GET && req.uri().path() == redirect_path {
-        handle_callback(req, tx, &state)
-    } else {
-        respond_not_found()
-    };
-    Ok(res)
+    if req.method() == Method::GET && req.uri().path() == redirect_path {
+        return Ok(handle_callback(req, tx, &state));
+    }
+    return Ok(respond_not_found());
 }
 
 #[cfg(test)]
@@ -287,6 +285,34 @@ mod tests {
 
     #[tokio::test]
     async fn test_respond() {
-        // TODO: write test
+        let tests = &[
+            ("/path?code=test_code&state=test_state", StatusCode::OK),
+            ("/path", StatusCode::BAD_REQUEST),
+            ("/path?code=test_code", StatusCode::BAD_REQUEST),
+            (
+                "/path?code=test_code&state=invalid_state",
+                StatusCode::BAD_REQUEST,
+            ),
+            (
+                "/invalid_path?code=test_code&state=test_state",
+                StatusCode::NOT_FOUND,
+            ),
+        ];
+
+        for (left, expected) in tests {
+            let (tx, mut rx) = broadcast::channel::<String>(2);
+            let req = Request::builder()
+                .uri(format!("http://localhost:4100{}", left))
+                .body(Body::empty())
+                .unwrap();
+            let redirect_path = "/path".to_string();
+            let state = "test_state".to_string();
+            let res = respond(req, redirect_path, state, tx).await.unwrap();
+            assert_eq!(res.status(), *expected);
+            if res.status() == StatusCode::OK {
+                let code = rx.recv().await.unwrap();
+                assert_eq!(code, "test_code");
+            }
+        }
     }
 }
