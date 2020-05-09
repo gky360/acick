@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 //! Config for acick.
 //!
 //! ## Templates

@@ -1,3 +1,5 @@
+#![warn(clippy::all)]
+
 mod authorizer;
 mod dropbox;
 #[cfg_attr(tarpaulin, skip)]
