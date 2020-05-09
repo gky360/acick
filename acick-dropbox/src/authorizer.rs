@@ -251,6 +251,8 @@ async fn respond(
 
 #[cfg(test)]
 mod tests {
+    use tempfile::{tempdir, TempDir};
+
     use super::*;
 
     macro_rules! map(
@@ -265,18 +267,56 @@ mod tests {
          };
     );
 
-    fn prefix(path: &str) -> String {
-        if cfg!(windows) {
-            let drive = std::env::var("ACICK_TEST_DRIVE").unwrap_or_else(|_| String::from("C"));
-            format!("{}:{}", drive, path)
-        } else {
-            path.to_string()
-        }
+    fn run_test(f: fn(test_dir: &TempDir, authorizer: DbxAuthorizer) -> anyhow::Result<()>) {
+        let test_dir = tempdir().unwrap();
+        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.json")).unwrap();
+        let authorizer = DbxAuthorizer::new("test_key", "test_secret", 4100, "/path", &token_path);
+        f(&test_dir, authorizer).unwrap();
+    }
+
+    #[test]
+    fn test_load_token() {
+        run_test(|_, authorizer| {
+            let access_token = "test_token".to_string();
+            let token = Token {
+                access_token: access_token.clone(),
+            };
+            let mut buf = Vec::new();
+
+            let actual = authorizer.load_token(Some(access_token.clone()), &mut buf)?;
+            let expected = Some(token);
+            assert_eq!(actual, expected);
+
+            assert_eq!(authorizer.load_token(None, &mut buf)?, None);
+
+            let token_path = authorizer.token_path.as_ref();
+            let mut file = std::fs::File::create(token_path)?;
+            file.write_all(br#"{"access_token": "test_token"}"#)?;
+
+            let actual = authorizer.load_token(Some(access_token), &mut buf)?;
+            assert_eq!(actual, expected);
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_save_token() {
+        run_test(|_, authorizer| {
+            let access_token = "test_token".to_string();
+            let token = Token { access_token };
+            let mut buf = Vec::<u8>::new();
+            authorizer.save_token(&token, &mut buf)?;
+            let token_str = std::fs::read_to_string(authorizer.token_path.as_ref())?;
+            assert_eq!(token_str, r#"{"access_token":"test_token"}"#);
+            Ok(())
+        })
     }
 
     #[tokio::test]
     async fn test_authorize() -> anyhow::Result<()> {
-        let token_path = AbsPathBuf::try_new(prefix("/tmp/dbx_token.json"))?;
+        let test_dir = tempdir().unwrap();
+        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.json")).unwrap();
         let authorizer = DbxAuthorizer::new("test_key", "test_secret", 4100, "/path", &token_path);
         let mut buf = Vec::<u8>::new();
         let future = authorizer.authorize("test_state".to_string(), &mut buf);

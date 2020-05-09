@@ -9,6 +9,9 @@ repository = "https://github.com/gky360/acick/tree/master/acick-dropbox"
 documentation = "https://docs.rs/acick-dropbox"
 readme = "README.md"
 
+[dev-dependencies]
+tempfile = "3.1.0"
+
 [dependencies]
 acick-util = { version = "0.1.0", path = "../acick-util" }
 anyhow = "1.0.26"
