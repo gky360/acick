@@ -12,11 +12,11 @@ use crate::config::SessionConfig;
 use crate::dropbox::DbxAuthorizer;
 use crate::full::{fetch_full, TestcaseIter};
 use crate::model::{Contest, ContestId, LangName, LangNameRef, Problem, ProblemId};
+use crate::page::{ExtractCsrfToken as _, ExtractLangId as _};
 use crate::page::{
     HasHeader as _, LoginPageBuilder, SettingsPageBuilder, SubmitPageBuilder, TasksPageBuilder,
     TasksPrintPageBuilder, BASE_URL,
 };
-use crate::service::scrape::{ExtractCsrfToken as _, ExtractLangId as _, HasUrl as _};
 use crate::service::session::WithRetry as _;
 use crate::service::{Act, ResponseExt as _};
 use crate::web::open_in_browser;
@@ -109,6 +109,7 @@ impl AtcoderActor<'_> {
         contest_id: &ContestId,
         problems: &[Problem],
         token_path: &AbsPathBuf,
+        access_token: Option<String>,
         conf: &Config,
         cnsl: &mut Console,
     ) -> Result<()> {
@@ -120,7 +121,7 @@ impl AtcoderActor<'_> {
             DBX_REDIRECT_PATH,
             &token_path,
         )
-        .load_or_request(cnsl)?;
+        .load_or_request(access_token, cnsl)?;
 
         fetch_full(&dropbox, contest_id, problems, conf, cnsl)
     }
@@ -157,7 +158,7 @@ impl Act for AtcoderActor<'_> {
         // prepare payload
         let csrf_token = login_page.extract_csrf_token()?;
         let payload = hashmap!(
-            "csrf_token" => csrf_token.as_str(),
+            "csrf_token" => csrf_token,
             "username" => user.as_str(),
             "password" => pass.as_str(),
         );
@@ -171,9 +172,8 @@ impl Act for AtcoderActor<'_> {
                 session.cookies_path(),
                 session.retry_limit(),
                 session.retry_interval(),
-                cnsl,
             )
-            .retry_send()?;
+            .retry_send(cnsl)?;
 
         // check if login succeeded
         Self::validate_login_response(&res).context("Login rejected by service")?;
@@ -276,7 +276,7 @@ impl Act for AtcoderActor<'_> {
         // prepare payload
         let csrf_token = submit_page.extract_csrf_token()?;
         let payload = hashmap!(
-            "csrf_token" => csrf_token.as_str(),
+            "csrf_token" => csrf_token,
             "data.TaskScreenName" => problem.url_name().as_str(),
             "data.LanguageId" => lang_id.as_str(),
             "sourceCode" => source,
@@ -291,9 +291,8 @@ impl Act for AtcoderActor<'_> {
                 session.cookies_path(),
                 session.retry_limit(),
                 session.retry_interval(),
-                cnsl,
             )
-            .retry_send()?;
+            .retry_send(cnsl)?;
 
         // check response
         Self::validate_submit_response(&res, contest_id)

@@ -4,7 +4,7 @@ use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
 use crate::page::{HasHeader, BASE_URL};
-use crate::service::scrape::{Fetch as _, HasUrl, Scrape};
+use crate::service::scrape::{GetHtml, Scrape};
 use crate::{Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,7 +20,7 @@ impl<'a> SettingsPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<SettingsPage<'a>> {
-        let (status, html) = self.fetch(
+        let (status, html) = self.get_html(
             client,
             self.session.cookies_path(),
             self.session.retry_limit(),
@@ -38,7 +38,7 @@ impl<'a> SettingsPageBuilder<'a> {
     }
 }
 
-impl HasUrl for SettingsPageBuilder<'_> {
+impl GetHtml for SettingsPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
         // parsing static path will never fail
         Ok(BASE_URL.join(Self::PATH).unwrap())
@@ -49,12 +49,6 @@ impl HasUrl for SettingsPageBuilder<'_> {
 pub struct SettingsPage<'a> {
     builder: SettingsPageBuilder<'a>,
     content: Html,
-}
-
-impl HasUrl for SettingsPage<'_> {
-    fn url(&self) -> Result<Url> {
-        self.builder.url()
-    }
 }
 
 impl Scrape for SettingsPage<'_> {

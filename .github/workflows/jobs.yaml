@@ -17,6 +17,7 @@ env:
   ACICK_DBX_APP_KEY: ${{ secrets.ACICK_DBX_APP_KEY }}
   ACICK_DBX_APP_SECRET: ${{ secrets.ACICK_DBX_APP_SECRET }}
   ACICK_DBX_ACCESS_TOKEN: ${{ secrets.ACICK_DBX_ACCESS_TOKEN }}
+  ACICK_TEST_DRIVE: D
 
 jobs:
   rustfmt:
@@ -56,7 +57,7 @@ jobs:
         uses: actions-rs/tarpaulin@v0.1
         with:
           version: '0.12.3'
-          args: '--verbose --forward --ignore-tests --workspace --all-features'
+          args: '--verbose --forward --ignore-tests --run-types Tests Doctests Benchmarks Examples --timeout 300 --workspace --all-features'
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v1.0.2

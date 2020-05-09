@@ -70,7 +70,7 @@ impl SubmitOpt {
             actor
                 .open_submissions_url(&conf.contest_id, cnsl)
                 // coerce error
-                .unwrap_or_else(|err| writeln!(cnsl, "{:?}", err).unwrap_or(()));
+                .unwrap_or_else(|err| writeln!(cnsl, "{}", err).unwrap_or(()));
         }
 
         Ok(SubmitOutcome {

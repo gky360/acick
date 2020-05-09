@@ -9,6 +9,10 @@ repository = "https://github.com/gky360/acick/tree/master/acick-util"
 documentation = "https://docs.rs/acick-util"
 readme = "README.md"
 
+[dev-dependencies]
+serde_yaml = "0.8.11"
+tempfile = "3.1.0"
+
 [dependencies]
 anyhow = "1.0.26"
 bytefmt = "0.1.7"

@@ -6,7 +6,8 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::service::scrape::{ElementRefExt as _, Fetch, Scrape};
+use crate::model::{LangId, LangNameRef};
+use crate::service::scrape::{GetHtml, Scrape};
 use crate::{Console, Error, Result};
 
 mod login;
@@ -23,6 +24,26 @@ pub use tasks_print::{TasksPrintPage, TasksPrintPageBuilder};
 
 lazy_static! {
     pub static ref BASE_URL: Url = Url::parse("https://atcoder.jp").unwrap();
+}
+
+pub trait ExtractCsrfToken: Scrape {
+    fn extract_csrf_token(&self) -> Result<&str> {
+        let token = self
+            .find_first(select!("[name=\"csrf_token\"]"))
+            .context("Could not extract csrf token")?
+            .value()
+            .attr("value")
+            .context("Could not find csrf_token value attr")?;
+        if token.is_empty() {
+            Err(Error::msg("Found empty csrf token"))
+        } else {
+            Ok(token)
+        }
+    }
+}
+
+pub trait ExtractLangId {
+    fn extract_lang_id(&self, lang_name: LangNameRef) -> Option<LangId>;
 }
 
 pub trait HasHeader: Scrape {
@@ -64,14 +85,14 @@ pub trait HasHeader: Scrape {
     }
 }
 
-pub trait FetchRestricted: Fetch {
-    fn fetch_restricted(
+pub trait GetHtmlRestricted: GetHtml {
+    fn get_html_restricted(
         &self,
         client: &Client,
         session: &SessionConfig,
         cnsl: &mut Console,
     ) -> Result<Html> {
-        let (status, html) = self.fetch(
+        let (status, html) = self.get_html(
             client,
             session.cookies_path(),
             session.retry_limit(),

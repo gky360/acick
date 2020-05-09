@@ -4,6 +4,7 @@
 extern crate strum;
 
 use std::io::{self, Write};
+use std::path::PathBuf;
 
 use serde::Serialize;
 use structopt::StructOpt;
@@ -43,7 +44,10 @@ impl Default for OutputFormat {
 
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Opt {
-    /// Format of output
+    /// Sets path to the directory that contains a config file
+    #[structopt(long, short, global = true)]
+    base_dir: Option<PathBuf>,
+    /// Specifies the format of output
     #[structopt(
         long,
         global = true,
@@ -71,7 +75,11 @@ impl Opt {
             Console::term(cnsl_conf)
         };
 
-        self.cmd.run(&mut cnsl, |outcome, cnsl| {
+        let base_dir = match &self.base_dir {
+            Some(base_dir) => Some(abs_path::AbsPathBuf::cwd()?.join(base_dir)),
+            None => None,
+        };
+        self.cmd.run(base_dir, &mut cnsl, |outcome, cnsl| {
             self.finish(outcome, &mut io::stdout(), cnsl)
         })
     }

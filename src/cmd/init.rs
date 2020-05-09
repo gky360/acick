@@ -1,5 +1,4 @@
 use std::fmt;
-use std::path::PathBuf;
 
 use anyhow::{anyhow, Context as _};
 use serde::Serialize;
@@ -13,19 +12,16 @@ use crate::{Console, Result};
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct InitOpt {
-    base_dir: Option<PathBuf>,
+    /// Overwrites config file if exists
     #[structopt(long, short = "w")]
     overwrite: bool,
 }
 
 impl InitOpt {
-    pub fn run(&self, cnsl: &mut Console) -> Result<InitOutcome> {
+    pub fn run(&self, base_dir: Option<AbsPathBuf>, cnsl: &mut Console) -> Result<InitOutcome> {
         // decide base_dir
         let cwd = AbsPathBuf::cwd()?;
-        let base_dir = match &self.base_dir {
-            Some(path) => cwd.join(path),
-            None => cwd.clone(),
-        };
+        let base_dir = base_dir.unwrap_or_else(|| cwd.clone());
 
         // check if base_dir exists
         if !base_dir.as_ref().is_dir() {
@@ -79,11 +75,9 @@ mod tests {
         let cnsl = &mut Console::buf(ConsoleConfig::default());
 
         let test_dir = tempdir()?;
-        let opt = InitOpt {
-            base_dir: Some(test_dir.path().to_owned()),
-            overwrite: false,
-        };
-        opt.run(cnsl)?;
+        let opt = InitOpt { overwrite: false };
+        let base_dir = AbsPathBuf::try_new(test_dir.path())?;
+        opt.run(Some(base_dir), cnsl)?;
         Ok(())
     }
 }

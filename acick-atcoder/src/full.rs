@@ -265,7 +265,7 @@ mod tests {
         let test_dir = tempdir()?;
 
         let dropbox = Dropbox::new(Token {
-            access_token: env!("ACICK_DBX_ACCESS_TOKEN").to_owned(),
+            access_token: std::env::var("ACICK_DBX_ACCESS_TOKEN").unwrap(),
         });
         let contest_id = ContestId::from("arc100");
         let problems = get_test_problems();
@@ -274,7 +274,7 @@ mod tests {
         let mut cnsl = Console::buf(ConsoleConfig::default());
 
         let result = fetch_full(&dropbox, &contest_id, &problems[0..1], &conf, &mut cnsl);
-        let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
+        let output_str = cnsl.take_output()?;
         eprintln!("{}", output_str);
         result?;
 

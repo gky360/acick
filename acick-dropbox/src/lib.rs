@@ -1,5 +1,8 @@
+#![warn(clippy::all)]
+
 mod authorizer;
 mod dropbox;
+#[cfg_attr(tarpaulin, skip)]
 mod hyper_client;
 
 use acick_util::abs_path;

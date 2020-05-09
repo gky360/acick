@@ -5,6 +5,7 @@ use serde::Serialize;
 use structopt::StructOpt;
 use strum::VariantNames;
 
+use crate::abs_path::AbsPathBuf;
 use crate::config::SessionConfig;
 use crate::model::{ContestId, ServiceKind, DEFAULT_CONTEST_ID_STR};
 use crate::service::act::Act;
@@ -125,18 +126,20 @@ pub enum Cmd {
 impl Cmd {
     pub fn run(
         &self,
+        base_dir: Option<AbsPathBuf>,
         cnsl: &mut Console,
         finish: impl FnOnce(&dyn Outcome, &mut Console) -> Result<()>,
     ) -> Result<()> {
+        let b = base_dir;
         match self {
-            Self::Init(opt) => finish(&opt.run(cnsl)?, cnsl),
-            Self::Show { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?)?, cnsl),
-            Self::Me { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
-            Self::Login { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
-            Self::Logout { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
-            Self::Fetch { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
-            Self::Test { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
-            Self::Submit { sc, opt } => finish(&opt.run(&sc.load_config(cnsl)?, cnsl)?, cnsl),
+            Self::Init(opt) => finish(&opt.run(b, cnsl)?, cnsl),
+            Self::Show { sc, opt } => finish(&opt.run(&sc.load_config(b, cnsl)?)?, cnsl),
+            Self::Me { sc, opt } => finish(&opt.run(&sc.load_config(b, cnsl)?, cnsl)?, cnsl),
+            Self::Login { sc, opt } => finish(&opt.run(&sc.load_config(b, cnsl)?, cnsl)?, cnsl),
+            Self::Logout { sc, opt } => finish(&opt.run(&sc.load_config(b, cnsl)?, cnsl)?, cnsl),
+            Self::Fetch { sc, opt } => finish(&opt.run(&sc.load_config(b, cnsl)?, cnsl)?, cnsl),
+            Self::Test { sc, opt } => finish(&opt.run(&sc.load_config(b, cnsl)?, cnsl)?, cnsl),
+            Self::Submit { sc, opt } => finish(&opt.run(&sc.load_config(b, cnsl)?, cnsl)?, cnsl),
         }
     }
 }
@@ -165,8 +168,8 @@ pub struct ServiceContest {
 }
 
 impl ServiceContest {
-    fn load_config(&self, cnsl: &mut Console) -> Result<Config> {
-        Config::load(self.service_id, self.contest_id.clone(), cnsl)
+    fn load_config(&self, base_dir: Option<AbsPathBuf>, cnsl: &mut Console) -> Result<Config> {
+        Config::load(self.service_id, self.contest_id.clone(), base_dir, cnsl)
             .context("Could not load config file")
     }
 }
@@ -208,7 +211,7 @@ pub mod tests {
         let mut cnsl = Console::buf(ConsoleConfig { assume_yes: true });
         let result = run(&conf, &mut cnsl);
 
-        let output_str = String::from_utf8(cnsl.take_buf().unwrap())?;
+        let output_str = cnsl.take_output()?;
         eprintln!("{}", output_str);
         result
     }

@@ -10,38 +10,58 @@ use serde::{de, Deserialize, Deserializer, Serialize};
 
 use crate::{Error, Result};
 
+/// Wraps `shellexpand::full` method.
 fn expand<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
     Ok(shellexpand::full(&path.as_ref().to_string_lossy())?.parse()?)
 }
 
+/// An absolute (not necessarily canonicalized) path that may or may not exist.
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AbsPathBuf(PathBuf);
 
 impl AbsPathBuf {
-    pub fn try_new(path: PathBuf) -> Result<Self> {
-        if path.is_absolute() {
-            Ok(Self(path))
-        } else {
-            Err(anyhow!("Path is not absolute : {}", path.display()))
+    /// Construct an absolute path.
+    ///
+    /// Returns error if `path` is not absolute.
+    ///
+    /// If path need to be shell-expanded, use `AbsPathBuf::from_shell_path` instead.
+    pub fn try_new<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+        if !path.is_absolute() {
+            return Err(anyhow!("Path is not absolute : {}", path.display()));
         }
+        let mut ret = Self(PathBuf::new());
+        ret.push(path);
+        Ok(ret)
     }
 
-    fn from_shell_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+    /// Constructs an absolute path whilte expanding leading tilde and environment variables.
+    ///
+    /// Returns error if expanded `path` is not absolute.
+    pub fn from_shell_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::try_new(expand(path)?)
     }
 
+    /// Returns current directory as an absolute path.
     pub fn cwd() -> Result<Self> {
         Ok(Self(current_dir()?))
     }
 
+    /// Joins path.
+    pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
+        Self(self.0.join(path))
+    }
+
+    /// Joins path while expanding leading tilde and environment variables.
     pub fn join_expand<P: AsRef<Path>>(&self, path: P) -> Result<Self> {
         Ok(self.join(expand(path)?))
     }
 
-    pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
-        Self(self.0.join(path.as_ref().components().collect::<PathBuf>()))
+    fn push<P: AsRef<Path>>(&mut self, path: P) {
+        self.0.push(path)
     }
 
+    /// Returns parent path.
     pub fn parent(&self) -> Option<Self> {
         if let Some(parent) = self.0.parent() {
             Some(Self(parent.to_owned()))
@@ -219,7 +239,7 @@ impl AbsPathBuf {
 
     pub fn create_dir_all_and_open(&self, is_read: bool, is_write: bool) -> io::Result<fs::File> {
         if let Some(dir) = self.parent() {
-            fs::create_dir_all(dir.as_ref())?;
+            dir.create_dir_all()?
         }
         self.open(is_read, is_write)
     }
@@ -260,6 +280,9 @@ impl AsRef<PathBuf> for AbsPathBuf {
 impl FromStr for AbsPathBuf {
     type Err = Error;
 
+    /// Converts str to AbsPathBuf.
+    ///
+    /// Note that this method expands leading tilde and environment variables.
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         Self::from_shell_path(s)
     }
@@ -282,18 +305,195 @@ impl fmt::Display for AbsPathBuf {
     }
 }
 
-pub trait ToAbs {
-    fn to_abs_expand(&self, base: &AbsPathBuf) -> Result<AbsPathBuf>;
+#[cfg(test)]
+mod tests {
+    use lazy_static::lazy_static;
 
-    fn to_abs(&self, base: &AbsPathBuf) -> AbsPathBuf;
-}
+    use super::*;
 
-impl<T: AsRef<Path>> ToAbs for T {
-    fn to_abs_expand(&self, base: &AbsPathBuf) -> Result<AbsPathBuf> {
-        base.join_expand(self)
+    use crate::assert_matches;
+
+    lazy_static! {
+        static ref DRIVE: String = std::env::var("ACICK_TEST_DRIVE").unwrap_or_else(|_| String::from("C"));
+        static ref SHELL_PATH_SUCCESS_TESTS: Vec<(String, PathBuf)> = {
+            let mut tests = vec![
+                (prefix("/a/b"), PathBuf::from(prefix("/a/b"))),
+                ("~/a/b".into(), dirs::home_dir().unwrap().join("a/b")),
+                if cfg!(windows) {
+                    ("$APPDATA/a/b".into(), PathBuf::from(std::env::var("APPDATA").unwrap()).join("a/b"))
+                } else {
+                    ("$HOME/a/b".into(), dirs::home_dir().unwrap().join("a/b"))
+                },
+                (prefix("/a//b"), PathBuf::from(prefix("/a/b"))),
+                (prefix("/a/./b"), PathBuf::from(prefix("/a/b"))),
+                (prefix("/a/b/"), PathBuf::from(prefix("/a/b"))),
+                (prefix("/a/../b"), PathBuf::from(prefix("/a/../b"))),
+            ];
+            if cfg!(windows) {
+                tests.extend_from_slice(&[(
+                    format!("{}:\\a\\b", &*DRIVE),
+                    PathBuf::from(format!("{}:\\a\\b", &*DRIVE)),
+                )]);
+            }
+            tests
+        };
+        static ref SHELL_PATH_FAILURE_TESTS: Vec<&'static str> = {
+            let mut tests = vec!["./a/b/", "a/b", "$ACICK_UNKNOWN_VAR"];
+            if cfg!(windows) {
+                tests.extend_from_slice(&[
+                    "%APPDATA%", // do not expand windows style env var
+                    "/a/b", // not absolute in windows
+                ]);
+            }
+            tests
+        };
     }
 
-    fn to_abs(&self, base: &AbsPathBuf) -> AbsPathBuf {
-        base.join(self)
+    #[derive(Serialize, Deserialize, Debug)]
+    struct TestData {
+        abs_path: AbsPathBuf,
+    }
+
+    fn prefix(path: &str) -> String {
+        if cfg!(windows) {
+            format!("{}:{}", &*DRIVE, path)
+        } else {
+            path.to_string()
+        }
+    }
+
+    #[test]
+    fn test_try_new_success() -> anyhow::Result<()> {
+        let tests = &[
+            (prefix("/a/b"), prefix("/a/b")),
+            (prefix("/a//b"), prefix("/a/b")),
+            (prefix("/a/./b"), prefix("/a/b")),
+            (prefix("/a/b/"), prefix("/a/b")),
+            (prefix("/a/../b"), prefix("/a/../b")),
+        ];
+        for (actual, expected) in tests {
+            let actual = AbsPathBuf::try_new(actual)?;
+            let expected = PathBuf::from(expected);
+            assert_eq!(actual.as_ref(), &expected);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_try_new_failure() -> anyhow::Result<()> {
+        let tests = &[
+            "~/a/b",
+            if cfg!(windows) {
+                "$APPDATA/a/b"
+            } else {
+                "$HOME/a/b"
+            },
+            "./a/b/",
+            "a/b",
+            "$ACICK_UNKNOWN_VAR",
+        ];
+        for test in tests {
+            assert_matches!(AbsPathBuf::try_new(test) => Err(_));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_parent() -> anyhow::Result<()> {
+        let tests = &[(prefix("/a/b"), Some(prefix("/a"))), (prefix("/"), None)];
+        for (left, right) in tests {
+            let actual = AbsPathBuf::try_new(left)?.parent();
+            let expected = right
+                .as_ref()
+                .map(|path| AbsPathBuf::try_new(path).unwrap());
+            assert_eq!(actual, expected);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_str_success() -> anyhow::Result<()> {
+        for (actual, expected) in SHELL_PATH_SUCCESS_TESTS.iter() {
+            let actual: AbsPathBuf = actual.parse()?;
+            assert_eq!(actual.as_ref(), expected);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_str_failure() -> anyhow::Result<()> {
+        for test in SHELL_PATH_FAILURE_TESTS.iter() {
+            assert_matches!(AbsPathBuf::from_str(test) => Err(_));
+        }
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn test_serialize_success_unix() -> anyhow::Result<()> {
+        let test_data = TestData {
+            abs_path: AbsPathBuf::try_new("/a/b")?,
+        };
+        let actual = serde_yaml::to_string(&test_data)?;
+        let expected = format!("---\nabs_path: {}", "/a/b");
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_serialize_success_windows() -> anyhow::Result<()> {
+        let tests = &[
+            (
+                format!(r#"{}:\a\b"#, &*DRIVE),
+                format!(r#""{}:\\a\\b""#, &*DRIVE),
+            ),
+            (
+                format!(r#"{}:/a/b"#, &*DRIVE),
+                format!(r#""{}:/a/b""#, &*DRIVE),
+            ),
+        ];
+        for (left, right) in tests {
+            let test_data = TestData {
+                abs_path: AbsPathBuf::try_new(left)?,
+            };
+            let actual = serde_yaml::to_string(&test_data)?;
+            let expected = format!(
+                r#"---
+abs_path: {}"#,
+                right
+            );
+            assert_eq!(actual, expected);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_success() -> anyhow::Result<()> {
+        for (actual, expected) in SHELL_PATH_SUCCESS_TESTS.iter() {
+            let yaml_str = format!("---\nabs_path: {}", actual);
+            let test_data: TestData = serde_yaml::from_str(&yaml_str)?;
+            assert_eq!(test_data.abs_path.as_ref(), expected);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_deserialize_failure() -> anyhow::Result<()> {
+        for test in SHELL_PATH_FAILURE_TESTS.iter() {
+            let yaml_str = format!("abs_path: {}", test);
+            let result = serde_yaml::from_str::<TestData>(&yaml_str);
+            assert_matches!(result => Err(_));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_display() -> anyhow::Result<()> {
+        let actual: AbsPathBuf = "~/a".parse()?;
+        let expected = PathBuf::from(format!("{}/a", dirs::home_dir().unwrap().display()));
+        assert_eq!(actual.as_ref(), &expected);
+        assert_eq!(format!("{}", actual), format!("{}", expected.display()));
+        Ok(())
     }
 }

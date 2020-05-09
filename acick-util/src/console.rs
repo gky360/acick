@@ -1,9 +1,9 @@
 use std::env;
-use std::io::{self, Write};
+use std::io::{self, BufRead as _, Write};
 
-use console::{Style, Term};
+use anyhow::Context as _;
+use console::Term;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
-use lazy_static::lazy_static;
 
 static PB_TICK_INTERVAL_MS: u64 = 50;
 static PB_TEMPL_COUNT: &str =
@@ -16,12 +16,17 @@ static PB_PROGRESS_CHARS: &str = "#>-";
 #[derive(Debug)]
 enum Inner {
     Term(Term),
-    Buf(Vec<u8>),
+    Buf {
+        input: io::BufReader<io::Cursor<String>>,
+        output: Vec<u8>,
+    },
     Sink(io::Sink),
 }
 
+/// Config for console.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ConsoleConfig {
+    /// If true, assumes yes and skips any confirmation.
     pub assume_yes: bool,
 }
 
@@ -47,7 +52,10 @@ impl Console {
 
     pub fn buf(conf: ConsoleConfig) -> Self {
         Self {
-            inner: Inner::Buf(Vec::new()),
+            inner: Inner::Buf {
+                input: io::BufReader::new(io::Cursor::new(String::new())),
+                output: Vec::new(),
+            },
             conf,
         }
     }
@@ -59,18 +67,33 @@ impl Console {
         }
     }
 
+    #[cfg(test)]
+    fn write_input(&mut self, s: &str) {
+        if let Inner::Buf { ref mut input, .. } = self.inner {
+            input.get_mut().get_mut().push_str(s)
+        }
+    }
+
     pub fn take_buf(self) -> Option<Vec<u8>> {
         match self.inner {
-            Inner::Buf(buf) => Some(buf),
+            Inner::Buf { output: buf, .. } => Some(buf),
             _ => None,
         }
     }
 
-    #[inline(always)]
+    pub fn take_output(self) -> crate::Result<String> {
+        self.take_buf()
+            .context("Could not take buf from console")
+            .and_then(|buf| Ok(String::from_utf8(buf)?))
+    }
+
+    #[inline]
     fn as_mut_write(&mut self) -> &mut dyn Write {
         match self.inner {
             Inner::Term(ref mut w) => w,
-            Inner::Buf(ref mut w) => w,
+            Inner::Buf {
+                output: ref mut w, ..
+            } => w,
             Inner::Sink(ref mut w) => w,
         }
     }
@@ -113,15 +136,20 @@ impl Console {
     }
 
     fn read_user(&mut self, is_password: bool) -> io::Result<String> {
-        match &self.inner {
-            Inner::Term(term) => {
+        match self.inner {
+            Inner::Term(ref term) => {
                 if is_password {
                     term.read_secure_line()
                 } else {
                     term.read_line()
                 }
             }
-            _ => Ok(String::from("")),
+            Inner::Buf { ref mut input, .. } => {
+                let mut buf = String::new();
+                input.read_line(&mut buf)?;
+                Ok(buf)
+            }
+            Inner::Sink(_) => Ok(String::from("")),
         }
     }
 
@@ -165,12 +193,12 @@ impl Console {
 }
 
 impl Write for Console {
-    #[inline(always)]
+    #[inline]
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.as_mut_write().write(buf)
     }
 
-    #[inline(always)]
+    #[inline]
     fn flush(&mut self) -> io::Result<()> {
         self.as_mut_write().flush()
     }
@@ -178,24 +206,101 @@ impl Write for Console {
 
 macro_rules! def_color {
     ($name:ident, $name_upper:ident, $style:expr) => {
-        lazy_static! {
-            static ref $name_upper: Style = $style;
+        ::lazy_static::lazy_static! {
+            static ref $name_upper: ::console::Style = {
+                use ::console::Style;
+                $style
+            };
         }
 
-        pub fn $name<D>(val: D) -> console::StyledObject<D> {
-            crate::console::$name_upper.apply_to(val)
+        pub fn $name<D>(val: D) -> ::console::StyledObject<D> {
+            $name_upper.apply_to(val)
         }
     };
 }
 
-def_color!(sty_none, STY_NONE, Style::new());
-def_color!(sty_r, STY_R, Style::new().red());
-def_color!(sty_g, STY_G, Style::new().green());
-def_color!(sty_y, STY_Y, Style::new().yellow());
-def_color!(sty_dim, STY_DIM, Style::new().dim());
-def_color!(sty_r_under, STY_R_UNDER, Style::new().underlined().red());
-def_color!(sty_g_under, STY_G_UNDER, Style::new().underlined().green());
-def_color!(sty_y_under, STY_Y_UNDER, Style::new().underlined().yellow());
-def_color!(sty_r_rev, STY_R_REV, Style::new().bold().reverse().red());
-def_color!(sty_g_rev, STY_G_REV, Style::new().bold().reverse().green());
-def_color!(sty_y_rev, STY_Y_REV, Style::new().bold().reverse().yellow());
+pub use color_defs::*;
+
+#[cfg_attr(tarpaulin, skip)]
+mod color_defs {
+    def_color!(sty_none, STY_NONE, Style::new());
+    def_color!(sty_r, STY_R, Style::new().red());
+    def_color!(sty_g, STY_G, Style::new().green());
+    def_color!(sty_y, STY_Y, Style::new().yellow());
+    def_color!(sty_dim, STY_DIM, Style::new().dim());
+    def_color!(sty_r_under, STY_R_UNDER, Style::new().underlined().red());
+    def_color!(sty_g_under, STY_G_UNDER, Style::new().underlined().green());
+    def_color!(sty_y_under, STY_Y_UNDER, Style::new().underlined().yellow());
+    def_color!(sty_r_rev, STY_R_REV, Style::new().bold().reverse().red());
+    def_color!(sty_g_rev, STY_G_REV, Style::new().bold().reverse().green());
+    def_color!(sty_y_rev, STY_Y_REV, Style::new().bold().reverse().yellow());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_warn() -> anyhow::Result<()> {
+        let conf = ConsoleConfig { assume_yes: true };
+        let mut cnsl = Console::buf(conf);
+        cnsl.warn("message")?;
+        let output_str = cnsl.take_output()?;
+        assert_eq!(output_str, "WARN: message\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_confirm() -> anyhow::Result<()> {
+        let tests = &[
+            (true, "", false, true),
+            (false, "y", false, true),
+            (false, "Y", false, true),
+            (false, "yes", false, true),
+            (false, "Yes", false, true),
+            (false, "n", true, false),
+            (false, "N", true, false),
+            (false, "no", true, false),
+            (false, "No", true, false),
+            (false, "hoge", true, true),
+            (false, "hoge", false, false),
+            (false, "", true, true),
+            (false, "", false, false),
+        ];
+        for (assume_yes, input, default, expected) in tests {
+            let conf = ConsoleConfig {
+                assume_yes: *assume_yes,
+            };
+            let mut cnsl = Console::buf(conf);
+            cnsl.write_input(input);
+            let actual = cnsl.confirm("message", *default).unwrap();
+            assert_eq!(actual, *expected);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_env_or_prompt_and_read() -> anyhow::Result<()> {
+        let cnsl_term = Console::term(ConsoleConfig::default());
+        let cnsl_buf_0 = Console::buf(ConsoleConfig::default());
+        let mut cnsl_buf_1 = Console::buf(ConsoleConfig::default());
+        cnsl_buf_1.write_input("test_input");
+        let cnsl_sink_0 = Console::sink(ConsoleConfig::default());
+        let cnsl_sink_1 = Console::sink(ConsoleConfig::default());
+        let env_name_exists = if cfg!(windows) { "APPDATA" } else { "HOME" };
+        let env_val: &str = &env::var(env_name_exists).unwrap();
+        let tests = &mut [
+            (cnsl_term, env_name_exists, env_val),
+            (cnsl_buf_0, env_name_exists, env_val),
+            (cnsl_buf_1, "ACICK_TEST_UNKNOWN_VAR", "test_input"),
+            (cnsl_sink_0, env_name_exists, env_val),
+            (cnsl_sink_1, "ACICK_TEST_UNKNOWN_VAR", ""),
+        ];
+
+        for (ref mut cnsl, env_name, expected) in tests {
+            let actual = cnsl.get_env_or_prompt_and_read(env_name, "prompt >", true)?;
+            assert_eq!(&actual, expected);
+        }
+        Ok(())
+    }
+}

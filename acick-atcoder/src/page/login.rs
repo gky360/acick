@@ -3,8 +3,8 @@ use reqwest::{StatusCode, Url};
 use scraper::{ElementRef, Html};
 
 use crate::config::SessionConfig;
-use crate::page::{HasHeader, BASE_URL};
-use crate::service::scrape::{ExtractCsrfToken, Fetch as _, HasUrl, Scrape};
+use crate::page::{ExtractCsrfToken, HasHeader, BASE_URL};
+use crate::service::scrape::{GetHtml, Scrape};
 use crate::{Console, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,7 +20,7 @@ impl<'a> LoginPageBuilder<'a> {
     }
 
     pub fn build(self, client: &Client, cnsl: &mut Console) -> Result<LoginPage<'a>> {
-        let (status, html) = self.fetch(
+        let (status, html) = self.get_html(
             client,
             self.session.cookies_path(),
             self.session.retry_limit(),
@@ -37,7 +37,7 @@ impl<'a> LoginPageBuilder<'a> {
     }
 }
 
-impl HasUrl for LoginPageBuilder<'_> {
+impl GetHtml for LoginPageBuilder<'_> {
     fn url(&self) -> Result<Url> {
         // parsing static path will never fail
         Ok(BASE_URL.join(Self::PATH).unwrap())
@@ -50,8 +50,8 @@ pub struct LoginPage<'a> {
     content: Html,
 }
 
-impl HasUrl for LoginPage<'_> {
-    fn url(&self) -> Result<Url> {
+impl LoginPage<'_> {
+    pub fn url(&self) -> Result<Url> {
         self.builder.url()
     }
 }
