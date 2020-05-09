@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-#![cfg_attr(tarpaulin, skip)]
 
 //! Client for Dropbox API
 //!
