@@ -120,9 +120,8 @@ impl AtcoderActor<'_> {
             DBX_REDIRECT_PORT,
             DBX_REDIRECT_PATH,
             &token_path,
-            access_token,
         )
-        .load_or_request(cnsl)?;
+        .load_or_request(access_token, cnsl)?;
 
         fetch_full(&dropbox, contest_id, problems, conf, cnsl)
     }

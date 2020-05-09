@@ -37,7 +37,6 @@ pub struct DbxAuthorizer<'a> {
     redirect_path: &'a str,
     redirect_uri: String,
     token_path: &'a AbsPathBuf,
-    access_token: Option<String>,
 }
 
 impl<'a> DbxAuthorizer<'a> {
@@ -47,7 +46,6 @@ impl<'a> DbxAuthorizer<'a> {
         redirect_port: u16,
         redirect_path: &'a str,
         token_path: &'a AbsPathBuf,
-        access_token: Option<String>,
     ) -> Self {
         Self {
             app_key,
@@ -56,12 +54,15 @@ impl<'a> DbxAuthorizer<'a> {
             redirect_path,
             redirect_uri: format!("http://localhost:{}{}", redirect_port, redirect_path),
             token_path,
-            access_token,
         }
     }
 
-    pub fn load_or_request(&self, cnsl: &mut dyn Write) -> Result<Dropbox> {
-        let load_result = self.load_token(cnsl)?;
+    pub fn load_or_request(
+        &self,
+        access_token: Option<String>,
+        cnsl: &mut dyn Write,
+    ) -> Result<Dropbox> {
+        let load_result = self.load_token(access_token, cnsl)?;
         let (token, is_updated) = match load_result {
             Some(token) if Self::validate_token(&token)? => (token, false),
             _ => (self.request_token(cnsl)?, true),
@@ -74,11 +75,13 @@ impl<'a> DbxAuthorizer<'a> {
         Ok(Dropbox::new(token))
     }
 
-    fn load_token(&self, cnsl: &mut dyn Write) -> Result<Option<Token>> {
-        if let Some(access_token) = &self.access_token {
-            return Ok(Some(Token {
-                access_token: access_token.to_owned(),
-            }));
+    fn load_token(
+        &self,
+        access_token: Option<String>,
+        cnsl: &mut dyn Write,
+    ) -> Result<Option<Token>> {
+        if let Some(access_token) = access_token {
+            return Ok(Some(Token { access_token }));
         }
 
         if !self.token_path.as_ref().exists() {
@@ -274,8 +277,7 @@ mod tests {
     #[tokio::test]
     async fn test_authorize() -> anyhow::Result<()> {
         let token_path = AbsPathBuf::try_new(prefix("/tmp/dbx_token.json"))?;
-        let authorizer =
-            DbxAuthorizer::new("test_key", "test_secret", 4100, "/path", &token_path, None);
+        let authorizer = DbxAuthorizer::new("test_key", "test_secret", 4100, "/path", &token_path);
         let mut buf = Vec::<u8>::new();
         let future = authorizer.authorize("test_state".to_string(), &mut buf);
 
