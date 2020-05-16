@@ -22,9 +22,9 @@ pub struct Problem {
     url_name: String,
     #[serde(with = "humantime_serde")]
     #[get_copy = "pub"]
-    time_limit: Duration,
+    time_limit: Option<Duration>,
     #[get_copy = "pub"]
-    memory_limit: Byte,
+    memory_limit: Option<Byte>,
     #[get_copy = "pub"]
     compare: Compare,
     #[set = "pub"]
@@ -36,8 +36,8 @@ impl Problem {
         id: impl Into<ProblemId>,
         name: impl Into<String>,
         url_name: impl Into<String>,
-        time_limit: Duration,
-        memory_limit: Byte,
+        time_limit: Option<Duration>,
+        memory_limit: Option<Byte>,
         compare: Compare,
         samples: Vec<Sample>,
     ) -> Self {
@@ -71,8 +71,8 @@ impl Default for Problem {
             "C",
             "Linear Approximation",
             "arc100_a",
-            Duration::from_secs(2),
-            "1024 MB".parse().unwrap(),
+            Some(Duration::from_secs(2)),
+            Some("1024 MB".parse().unwrap()),
             Compare::Default,
             vec![],
         )
@@ -222,8 +222,8 @@ mod tests {
             id: "A".into(),
             name: "Problem A".into(),
             url_name: "test_contest_a".into(),
-            time_limit: Duration::from_secs(2),
-            memory_limit: "1024 KB".parse().unwrap(),
+            time_limit: Some(Duration::from_secs(2)),
+            memory_limit: Some("1024 KB".parse().unwrap()),
             compare: Compare::Default,
             samples: samples.clone(),
         };

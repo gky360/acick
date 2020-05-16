@@ -52,9 +52,9 @@ pub struct TasksPage<'a> {
 }
 
 impl TasksPage<'_> {
-    pub fn extract_problems(&self) -> Result<Vec<Problem>> {
+    pub fn extract_problems(&self, cnsl: &mut Console) -> Result<Vec<Problem>> {
         self.select_problem_rows()
-            .map(|elem| elem.extract_problem())
+            .map(|elem| elem.extract_problem(cnsl))
             .collect()
     }
 
@@ -77,7 +77,7 @@ impl HasHeader for TasksPage<'_> {}
 struct ProblemRowElem<'a>(ElementRef<'a>);
 
 impl ProblemRowElem<'_> {
-    fn extract_problem(&self) -> Result<Problem> {
+    fn extract_problem(&self, cnsl: &mut Console) -> Result<Problem> {
         let mut iter = self.0.select(select!("td"));
         let id = iter
             .next()
@@ -89,12 +89,16 @@ impl ProblemRowElem<'_> {
             .context("Could not find task name")?;
         let time_limit = iter
             .next()
-            .and_then(|td| parse_duration(td.inner_text().trim()).ok())
-            .context("Could not parse time limit")?;
+            .and_then(|td| parse_duration(td.inner_text().trim()).ok());
+        if time_limit.is_none() {
+            cnsl.warn("Could not parse time limit")?;
+        }
         let memory_limit = iter
             .next()
-            .and_then(|td| td.inner_text().trim().parse().ok())
-            .context("Could not parse memory limit")?;
+            .and_then(|td| td.inner_text().trim().parse().ok());
+        if memory_limit.is_none() {
+            cnsl.warn("Could not parse memory limit")?;
+        }
         let task_url = self
             .find_first(select!("a"))
             .context("Could not find link to a task")?

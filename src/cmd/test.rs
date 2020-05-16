@@ -13,6 +13,8 @@ use crate::judge::{Judge, StatusKind, TotalStatus};
 use crate::model::{AsSamples, ContestId, Problem, ProblemId, Service};
 use crate::{Config, Console, Result};
 
+static DEFAULT_TIME_LIMIT_SECS: u64 = 60;
+
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct TestOpt {
@@ -78,7 +80,9 @@ impl TestOpt {
         conf: &Config,
         cnsl: &mut Console,
     ) -> Result<(TotalStatus, Duration)> {
-        let time_limit = problem.time_limit();
+        let time_limit = problem
+            .time_limit()
+            .unwrap_or_else(|| Duration::from_secs(DEFAULT_TIME_LIMIT_SECS));
         let compare = problem.compare();
         let samples = self.load_samples(problem, conf)?;
         let n_samples = samples.len();
