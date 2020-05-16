@@ -139,6 +139,8 @@ fn compare_readme_usage_with_help_message() {
 fn test_basic_usage() -> anyhow::Result<()> {
     let test_dir = tempdir()?;
 
+    assert_matches!(get_opt_common(&test_dir, &["help"]) => Err(_));
+
     // check that config file is not created yet
     assert_matches!(get_opt_common(&test_dir, &["show"])?.run() => Err(_));
 
@@ -148,6 +150,7 @@ fn test_basic_usage() -> anyhow::Result<()> {
     // set cookies_path to be under the test_dir
     let cookies_path = AbsPathBuf::try_new(&test_dir)?.join("cookies.json");
     replace_cookies_path_in_conf(&test_dir, &cookies_path)?;
+    get_opt_common(&test_dir, &["show"])?.run()?;
 
     // check that use is not logged in
     assert_matches!(get_opt_common(&test_dir, &["me"])?.run() => Err(_));
