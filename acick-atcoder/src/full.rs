@@ -179,8 +179,13 @@ impl TestcaseIter {
     fn load_file(&self, inout: InOut, name: &str) -> Result<String> {
         let mut content = String::new();
         self.dir.join(inout.as_ref()).join(&name).load(|mut file| {
-            file.read_to_string(&mut content)
-                .with_context(|| format!("Could not load testcase {}put file", inout.as_ref()))
+            file.read_to_string(&mut content).with_context(|| {
+                format!(
+                    "Could not load testcase {}put file: {}",
+                    inout.as_ref(),
+                    name
+                )
+            })
         })?;
         Ok(content)
     }
