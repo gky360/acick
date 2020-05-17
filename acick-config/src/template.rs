@@ -305,7 +305,7 @@ impl Shell {
 impl Default for Shell {
     fn default() -> Self {
         let bash = Self::find_bash();
-        (&[bash.to_str().unwrap(), "-e", "-c", "{{ command }}"]).into()
+        (&[bash.to_str().unwrap(), "-eux", "-c", "{{ command }}"]).into()
     }
 }
 
