@@ -446,8 +446,9 @@ int main() {
                 lang_names: vec!["C++ (GCC 9.2.1)".into(), "C++14 (GCC 5.4.1)".into()],
                 working_dir: "{{ service }}/{{ contest }}/{{ problem | lower }}".into(),
                 source_path: "{{ service }}/{{ contest }}/{{ problem | lower }}/Main.cpp".into(),
-                compile: "g++ -std=gnu++17 -Wall -Wextra -O2 -o ./a.out ./Main.cpp".into(),
-                // compile: "g++ -std=gnu++17 -Wall -Wextra -O2 -DONLINE_JUDGE -I/opt/boost/gcc/include -L/opt/boost/gcc/lib -o ./a.out ./Main.cpp".into(),
+                compile: "set -x && g++ -std=gnu++17 -Wall -Wextra -O2 -o ./a.out ./Main.cpp"
+                    .into(),
+                // compile: "set -x && g++ -std=gnu++17 -Wall -Wextra -O2 -DONLINE_JUDGE -I/opt/boost/gcc/include -L/opt/boost/gcc/lib -o ./a.out ./Main.cpp".into(),
                 run: "./a.out".into(),
                 template: Some(Self::DEFAULT_TEMPLATE.into()),
             },
