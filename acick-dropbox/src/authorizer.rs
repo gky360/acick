@@ -5,7 +5,6 @@ use std::net::SocketAddr;
 
 use anyhow::Context as _;
 use dropbox_sdk::check::{self, EchoArg};
-use dropbox_sdk::ErrorKind;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
@@ -113,7 +112,7 @@ impl<'a> DbxAuthorizer<'a> {
         match check::user(&client, &EchoArg { query: "".into() }) {
             Ok(Ok(_)) => Ok(true),
             Ok(Err(())) => Ok(false),
-            Err(dropbox_sdk::Error(ErrorKind::InvalidToken(_), ..)) => Ok(false),
+            Err(dropbox_sdk::Error::InvalidToken(_)) => Ok(false),
             Err(err) => Err(convert_dbx_err(err)),
         }
         .context("Could not validate access token")

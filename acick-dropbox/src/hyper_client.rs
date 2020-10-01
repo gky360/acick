@@ -3,14 +3,14 @@
 //! Client for Dropbox API
 //!
 //! Basically, this module is a copy of
-//! https://github.com/dropbox/dropbox-sdk-rust/blob/v0.2.0/src/hyper_client.rs
+//! https://github.com/dropbox/dropbox-sdk-rust/blob/v0.6.0/src/hyper_client.rs
 //! , except that the tls client used in this module supports target linux-musl.
 
 use std::io::{self, Read};
 use std::str;
 
 use dropbox_sdk::client_trait::{Endpoint, HttpClient, HttpRequestResultRaw, Style};
-use dropbox_sdk::ErrorKind;
+use dropbox_sdk::Error;
 use hyper0_10::header::Headers;
 use hyper0_10::header::{
     Authorization, Bearer, ByteRangeSpec, Connection, ContentLength, ContentType, Range,
@@ -24,6 +24,42 @@ const USER_AGENT: &str = concat!("Dropbox-APIv2-Rust/", env!("CARGO_PKG_VERSION"
 pub struct HyperClient {
     client: hyper0_10::client::Client,
     token: String,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum HyperClientError {
+    #[error("Invalid UTF-8 string")]
+    Utf8(#[from] std::string::FromUtf8Error),
+
+    #[error("I/O error: {0}")]
+    IO(#[from] std::io::Error),
+
+    #[error(transparent)]
+    Hyper(#[from] hyper0_10::Error),
+}
+
+// Implement From for some errors so that they get wrapped in a HyperClientError and then
+// propogated via Error::HttpClient. Note that this only works for types that don't already have a
+// variant in the crate Error type, because doing so would produce a conflicting impl.
+// macro_rules! hyper_error {
+//     ($e:ty) => {
+//         impl From<$e> for dropbox_sdk::Error {
+//             fn from(e: $e) -> Self {
+//                 Self::HttpClient(Box::new(HyperClientError::from(e)))
+//             }
+//         }
+//     };
+// }
+
+// hyper_error!(std::io::Error);
+// hyper_error!(std::string::FromUtf8Error);
+// hyper_error!(hyper0_10::Error);
+
+fn to_dropbox_sdk_error<T>(error: T) -> dropbox_sdk::Error
+where
+    HyperClientError: From<T>,
+{
+    dropbox_sdk::Error::HttpClient(Box::new(HyperClientError::from(error)))
 }
 
 impl HyperClient {
@@ -71,31 +107,31 @@ impl HyperClient {
         {
             Ok(mut resp) => {
                 if !resp.status.is_success() {
-                    let (code, status) = {
-                        let &hyper0_10::http::RawStatus(ref code, ref status) = resp.status_raw();
-                        use std::ops::Deref;
-                        (*code, status.deref().to_owned())
-                    };
+                    let hyper0_10::http::RawStatus(code, status) = resp.status_raw().clone();
                     let mut body = String::new();
-                    resp.read_to_string(&mut body)?;
+                    resp.read_to_string(&mut body)
+                        .map_err(to_dropbox_sdk_error)?;
                     // debug!("error body: {}", body);
-                    Err(ErrorKind::GeneralHttpError(code, status, body).into())
+                    Err(Error::UnexpectedHttpError {
+                        code,
+                        status: status.into_owned(),
+                        json: body,
+                    })
                 } else {
                     let body = serde_json::from_reader(resp)?;
                     // debug!("response: {:?}", body);
                     match body {
                         serde_json::Value::Object(mut map) => match map.remove("access_token") {
                             Some(serde_json::Value::String(token)) => Ok(token),
-                            _ => Err("no access token in response!".into()),
+                            _ => Err(Error::UnexpectedResponse("no access token in response!")),
                         },
-                        _ => Err("invalid response from server".into()),
+                        _ => Err(Error::UnexpectedResponse("response is not a JSON object")),
                     }
                 }
             }
             Err(e) => {
                 // error!("error getting OAuth2 token: {}", e);
-                let msg = e.to_string();
-                Err(dropbox_sdk::Error::with_chain(e, ErrorKind::Msg(msg)))
+                Err(to_dropbox_sdk_error(e))
             }
         }
     }
@@ -185,27 +221,27 @@ impl HttpClient for HyperClient {
                 }
                 Err(other) => {
                     // error!("request failed: {}", other);
-                    let msg = other.to_string();
-                    return Err(dropbox_sdk::Error::with_chain(other, ErrorKind::Msg(msg)));
+                    return Err(to_dropbox_sdk_error(other));
                 }
             };
 
             if !resp.status.is_success() {
-                let (code, status) = {
-                    let &hyper0_10::http::RawStatus(ref code, ref status) = resp.status_raw();
-                    use std::ops::Deref;
-                    (*code, status.deref().to_owned())
-                };
+                let hyper0_10::http::RawStatus(code, status) = resp.status_raw().clone();
                 let mut json = String::new();
-                resp.read_to_string(&mut json)?;
-                return Err(ErrorKind::GeneralHttpError(code, status, json).into());
+                resp.read_to_string(&mut json)
+                    .map_err(to_dropbox_sdk_error)?;
+                return Err(Error::UnexpectedHttpError {
+                    code,
+                    status: status.into_owned(),
+                    json,
+                });
             }
 
             return match style {
                 Style::Rpc | Style::Upload => {
                     // Get the response from the body; return no body stream.
                     let mut s = String::new();
-                    resp.read_to_string(&mut s)?;
+                    resp.read_to_string(&mut s).map_err(to_dropbox_sdk_error)?;
                     Ok(HttpRequestResultRaw {
                         result_json: s,
                         content_length: None,
@@ -215,12 +251,13 @@ impl HttpClient for HyperClient {
                 Style::Download => {
                     // Get the response from a header; return the body stream.
                     let s = match resp.headers.get_raw("Dropbox-API-Result") {
-                        Some(values) => String::from_utf8(values[0].clone())?,
+                        Some(values) => {
+                            String::from_utf8(values[0].clone()).map_err(to_dropbox_sdk_error)?
+                        }
                         None => {
-                            return Err(ErrorKind::UnexpectedError(
+                            return Err(Error::UnexpectedResponse(
                                 "missing Dropbox-API-Result header",
-                            )
-                            .into());
+                            ));
                         }
                     };
 
