@@ -342,10 +342,10 @@ mod tests {
     #[test]
     fn test_get_testcase_name() {
         let fixture = &[
-            ("", Some("")),
+            ("", None),
             ("a", Some("a")),
             (".a", Some(".a")),
-            (".a.txt", Some("a.")),
+            (".a.txt", Some(".a")),
             ("a.txt", Some("a")),
         ];
 
