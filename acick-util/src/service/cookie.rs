@@ -31,10 +31,7 @@ impl CookieStorage {
 
     pub fn load_into(&self, request: &mut Request) -> Result<()> {
         let url = request.url();
-        let cookies = self
-            .store
-            .get_request_cookies(url)
-            .map(|rc| rc.encoded().to_string());
+        let cookies = self.store.get_request_cookies(url).map(|rc| rc.to_string());
         for cookie in cookies {
             request
                 .headers_mut()
