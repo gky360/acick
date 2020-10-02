@@ -2,7 +2,7 @@
 # It is not intended for manual editing.
 [[package]]
 name = "acick"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 dependencies = [
  "acick-atcoder",
  "acick-config",
@@ -25,7 +25,7 @@ dependencies = [
 
 [[package]]
 name = "acick-atcoder"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 dependencies = [
  "acick-config",
  "acick-dropbox",
@@ -45,7 +45,7 @@ dependencies = [
 
 [[package]]
 name = "acick-config"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 dependencies = [
  "acick-util",
  "anyhow",
@@ -64,7 +64,7 @@ dependencies = [
 
 [[package]]
 name = "acick-dropbox"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 dependencies = [
  "acick-util",
  "anyhow",
@@ -83,7 +83,7 @@ dependencies = [
 
 [[package]]
 name = "acick-util"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 dependencies = [
  "anyhow",
  "bytefmt",
