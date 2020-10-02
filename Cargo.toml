@@ -1,6 +1,6 @@
 [package]
 name = "acick"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -18,13 +18,13 @@ members = [".", "acick-util", "acick-dropbox", "acick-config", "acick-atcoder"]
 tempfile = "3.1.0"
 
 [dependencies]
-acick-atcoder = { version = "0.1.0", path = "./acick-atcoder" }
-acick-config = { version = "0.1.0", path = "./acick-config" }
-acick-util = { version = "0.1.0", path = "./acick-util" }
+acick-atcoder = { version = "0.1.1-alpha.0", path = "./acick-atcoder" }
+acick-config = { version = "0.1.1-alpha.0", path = "./acick-config" }
+acick-util = { version = "0.1.1-alpha.0", path = "./acick-util" }
 anyhow = "1.0.26"
 chrono = { version = "0.4.10", features = ["serde"] }
 console = "0.12.0"
-getset = "0.1.0"
+getset = "0.1.1-alpha.0"
 humantime-serde = "1.0.0"
 itertools = "0.9.0"
 lazy_static = "1.4.0"
