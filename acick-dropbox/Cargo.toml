@@ -1,6 +1,6 @@
 [package]
 name = "acick-dropbox"
-version = "0.1.1-alpha.0"
+version = "0.1.1"
 authors = ["gky360 <gky360@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -13,7 +13,7 @@ readme = "README.md"
 tempfile = "3.1.0"
 
 [dependencies]
-acick-util = { version = "0.1.1-alpha.0", path = "../acick-util" }
+acick-util = { version = "0.1.1", path = "../acick-util" }
 anyhow = "1.0.26"
 dropbox-sdk = { version = "0.6.0", default_features = false, features = ["dbx_check", "dbx_files", "dbx_sharing"] }
 hyper = "0.13.2"
