@@ -1,5 +1,6 @@
 use std::fs::read_dir;
 use std::io::{self, Read as _, Write as _};
+use std::path::Path;
 use std::vec::IntoIter;
 
 use anyhow::{anyhow, Context as _};
@@ -10,7 +11,7 @@ use tempfile::tempdir;
 use crate::abs_path::AbsPathBuf;
 use crate::dropbox::{Dropbox, FileMetadata};
 use crate::model::{AsSamples, ContestId, Problem, Sample};
-use crate::{Config, Console, Result};
+use crate::{Config, Console, Error, Result};
 
 static DBX_TESTCASES_URL: &str =
     "https://www.dropbox.com/sh/arnpe0ef5wds8cv/AAAk_SECQ2Nc6SVGii3rHX6Fa?dl=0";
@@ -66,6 +67,36 @@ pub fn fetch_full(
     })
 }
 
+static TESTCASE_EXT: &str = "txt";
+
+fn get_testcase_name(file_name: &str) -> Option<&str> {
+    let file_path = Path::new(file_name);
+    file_path
+        .file_stem()
+        .and_then(|file_stem| file_stem.to_str())
+}
+
+/// Validates the file name of testcase and returns testcase name.
+fn validate_testcase_file_name(file_name: &str) -> Option<&str> {
+    let file_path = Path::new(file_name);
+    let file_stem = file_path
+        .file_stem()
+        .and_then(|file_stem| file_stem.to_str());
+    let file_ext = file_path.extension().and_then(|file_ext| file_ext.to_str());
+
+    if file_ext != Some(TESTCASE_EXT) {
+        return None;
+    }
+    file_stem
+}
+
+fn get_testcase_file_name(testcase_name: &str) -> String {
+    let mut file_name = String::from(testcase_name);
+    file_name.push('.');
+    file_name.push_str(TESTCASE_EXT);
+    file_name
+}
+
 fn list_testcase_files(
     dropbox: &Dropbox,
     folder_name: &str,
@@ -119,7 +150,10 @@ fn fetch_problem_full(
                 file.name
             );
             let mut reader = dropbox.get_shared_link_file(DBX_TESTCASES_URL, dbx_path)?;
-            let abs_path = testcases_dir.join(inout.as_ref()).join(file.name);
+            let testcase_name = get_testcase_name(&file.name)
+                .ok_or_else(|| Error::msg("Failed to get testcase name from Dropbox file name"))?;
+            let file_name = get_testcase_file_name(testcase_name);
+            let abs_path = testcases_dir.join(inout.as_ref()).join(file_name);
             abs_path.save(
                 |mut file| {
                     io::copy(&mut reader, &mut file).context("Could not save testcase to file")?;
@@ -160,7 +194,12 @@ impl TestcaseIter {
                     // check if entry is file
                     entry.file_type().map(|t| t.is_file()).unwrap_or(false)
                 })
-                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .filter_map(|entry| {
+                    let file_name = entry.file_name();
+                    let file_name = file_name.to_string_lossy();
+                    let testcase_name = validate_testcase_file_name(&file_name).map(Into::into);
+                    testcase_name
+                })
                 .collect::<Vec<_>>();
             names.sort();
             names
@@ -176,12 +215,21 @@ impl TestcaseIter {
         })
     }
 
-    fn load_file(&self, inout: InOut, name: &str) -> Result<String> {
+    fn load_file(&self, inout: InOut, testcase_name: &str) -> Result<String> {
+        let file_name = get_testcase_file_name(testcase_name);
         let mut content = String::new();
-        self.dir.join(inout.as_ref()).join(&name).load(|mut file| {
-            file.read_to_string(&mut content)
-                .with_context(|| format!("Could not load testcase {}put file", inout.as_ref()))
-        })?;
+        self.dir
+            .join(inout.as_ref())
+            .join(&file_name)
+            .load(|mut file| {
+                file.read_to_string(&mut content).with_context(|| {
+                    format!(
+                        "Could not load testcase {}put file: {}",
+                        inout.as_ref(),
+                        file_name
+                    )
+                })
+            })?;
         Ok(content)
     }
 }
@@ -225,8 +273,8 @@ mod tests {
                 "C",
                 "Linear Approximation",
                 "arc100_a",
-                Duration::from_secs(2),
-                "1024 MB".parse().unwrap(),
+                Some(Duration::from_secs(2)),
+                Some("1024 MB".parse().unwrap()),
                 Compare::Default,
                 vec![],
             ),
@@ -234,8 +282,8 @@ mod tests {
                 "D",
                 "Equal Cut",
                 "arc100_b",
-                Duration::from_secs(2),
-                "1024 MB".parse().unwrap(),
+                Some(Duration::from_secs(2)),
+                Some("1024 MB".parse().unwrap()),
                 Compare::Default,
                 vec![],
             ),
@@ -243,8 +291,8 @@ mod tests {
                 "E",
                 "Or Plus Max",
                 "arc100_c",
-                Duration::from_secs(2),
-                "1024 MB".parse().unwrap(),
+                Some(Duration::from_secs(2)),
+                Some("1024 MB".parse().unwrap()),
                 Compare::Default,
                 vec![],
             ),
@@ -252,8 +300,8 @@ mod tests {
                 "F",
                 "Colorful Sequences",
                 "arc100_d",
-                Duration::from_secs(2),
-                "1024 MB".parse().unwrap(),
+                Some(Duration::from_secs(2)),
+                Some("1024 MB".parse().unwrap()),
                 Compare::Default,
                 vec![],
             ),
@@ -289,5 +337,43 @@ mod tests {
         }
 
         Ok(())
+    }
+
+    #[test]
+    fn test_get_testcase_name() {
+        let fixture = &[
+            ("", None),
+            ("a", Some("a")),
+            (".a", Some(".a")),
+            (".a.txt", Some(".a")),
+            ("a.txt", Some("a")),
+        ];
+
+        for (file_name, expected) in fixture {
+            assert_eq!(get_testcase_name(file_name), *expected);
+        }
+    }
+
+    #[test]
+    fn test_validate_testcase_file_name() {
+        let fixture = &[
+            ("", None),
+            ("a", None),
+            (".a", None),
+            (".a.txt", Some(".a")),
+            ("a.txt", Some("a")),
+        ];
+
+        for (file_name, expected) in fixture {
+            assert_eq!(validate_testcase_file_name(file_name), *expected);
+            if let Some(testcase_name) = expected {
+                assert_eq!(get_testcase_file_name(testcase_name), *file_name);
+            }
+        }
+    }
+
+    #[test]
+    fn test_get_testcase_file_name() {
+        assert_eq!(get_testcase_file_name("a"), "a.txt");
     }
 }

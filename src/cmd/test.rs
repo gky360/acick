@@ -13,6 +13,8 @@ use crate::judge::{Judge, StatusKind, TotalStatus};
 use crate::model::{AsSamples, ContestId, Problem, ProblemId, Service};
 use crate::{Config, Console, Result};
 
+static DEFAULT_TIME_LIMIT_MS: u64 = 60 * 1000;
+
 #[derive(StructOpt, Debug, Clone, PartialEq, Eq, Hash)]
 #[structopt(rename_all = "kebab")]
 pub struct TestOpt {
@@ -27,6 +29,9 @@ pub struct TestOpt {
     /// Outpus one line per one sample
     #[structopt(long)]
     one_line: bool,
+    /// Overrides time limit (in millisecs) of the problem
+    #[structopt(long)]
+    time_limit: Option<u64>,
 }
 
 fn testcase_or_sample(is_full: bool) -> &'static str {
@@ -78,7 +83,11 @@ impl TestOpt {
         conf: &Config,
         cnsl: &mut Console,
     ) -> Result<(TotalStatus, Duration)> {
-        let time_limit = problem.time_limit();
+        let time_limit = self
+            .time_limit
+            .map(Duration::from_millis)
+            .or_else(|| problem.time_limit())
+            .unwrap_or_else(|| Duration::from_millis(DEFAULT_TIME_LIMIT_MS));
         let compare = problem.compare();
         let samples = self.load_samples(problem, conf)?;
         let n_samples = samples.len();
@@ -195,6 +204,7 @@ mod tests {
             sample_name: None,
             is_full: false,
             one_line: false,
+            time_limit: None,
         };
         run_with(&test_dir, |conf, cnsl| opt.run(conf, cnsl))?;
         Ok(())

@@ -7,7 +7,7 @@
 # Version of acick that generated this config file.
 version: {version}
 # Shell used to compile the source code or to run the binary. [c]
-shell: [{bash}, "-e", "-c", "{{{{ command }}}}"]
+shell: [{bash}, "-eu", "-c", "{{{{ command }}}}"]
 # Path at which the problems fetched from service are saved. [t, s]
 problem_path: "{{{{ service }}}}/{{{{ contest }}}}/{{{{ problem | lower }}}}/problem.yaml"
 # Directory in which the testcase files downloaded from AtCoder are saved. [t, s]
@@ -35,7 +35,7 @@ services:
     # Path of your source code. [t, s]
     source_path: "{{{{ service }}}}/{{{{ contest }}}}/{{{{ problem | lower }}}}/Main.cpp"
     # Shell script to compile your source code. [t]
-    compile: set -x && g++ -std=gnu++1y -O2 -o ./a.out ./Main.cpp
+    compile: set -x && g++ -std=gnu++17 -Wall -Wextra -O2 -o ./a.out ./Main.cpp
     # Shell script to run the binary built with the compile script. [t]
     run: ./a.out
     # Template for source code. [p]

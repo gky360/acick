@@ -15,12 +15,13 @@ tempfile = "3.1.0"
 [dependencies]
 acick-util = { version = "0.1.0", path = "../acick-util" }
 anyhow = "1.0.26"
-dropbox-sdk = { version = "0.3.0", default_features = false, features = ["dbx_check", "dbx_files", "dbx_sharing"] }
+dropbox-sdk = { version = "0.6.0", default_features = false, features = ["dbx_check", "dbx_files", "dbx_sharing"] }
 hyper = "0.13.2"
 hyper0_10 = { version = "0.10", package = "hyper" }
 hyper-sync-rustls = "0.3.0-rc.6"
 rand = "0.7.3"
 serde = { version = "1.0.104", features = ["derive"] }
 serde_json = "1.0.44"
+thiserror = "1.0.20"
 tokio = { version = "0.2.11", features = ["rt-core", "process", "macros", "sync"] }
 url = "2.1.1"

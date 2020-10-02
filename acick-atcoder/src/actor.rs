@@ -201,7 +201,7 @@ impl Act for AtcoderActor<'_> {
             .extract_contest_name()
             .context("Could not extract contest name")?;
         let mut problems: Vec<Problem> = tasks_page
-            .extract_problems()?
+            .extract_problems(cnsl)?
             .into_iter()
             .filter(|problem| {
                 if let Some(problem_id) = problem_id {
