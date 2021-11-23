@@ -1,3 +1,4 @@
+use std::env;
 use std::fs;
 use std::io::Write as _;
 
@@ -137,6 +138,8 @@ fn compare_readme_usage_with_help_message() {
 
 #[test]
 fn test_basic_usage() -> anyhow::Result<()> {
+    env::set_var("ACICK_CONTEST", "arc100");
+
     let test_dir = tempdir()?;
 
     assert_matches!(get_opt_common(&test_dir, &["help"]) => Err(_));

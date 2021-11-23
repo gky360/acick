@@ -435,7 +435,7 @@ mod tests {
             abs_path: AbsPathBuf::try_new("/a/b")?,
         };
         let actual = serde_yaml::to_string(&test_data)?;
-        let expected = format!("---\nabs_path: {}", "/a/b");
+        let expected = format!("---\nabs_path: {}\n", "/a/b");
         assert_eq!(actual, expected);
         Ok(())
     }
