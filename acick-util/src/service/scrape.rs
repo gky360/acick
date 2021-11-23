@@ -27,7 +27,7 @@ use crate::{Console, Result};
 /// ```
 pub fn parse_zenkaku_digits<T: FromStr>(s: &str) -> std::result::Result<T, T::Err> {
     s.parse().or_else(|err| {
-        if s.chars().all(|c| '０' <= c && c <= '９') {
+        if s.chars().all(|c| ('０'..='９').contains(&c)) {
             s.chars()
                 .map(|c| char::from((u32::from(c) - u32::from('０') + u32::from('0')) as u8))
                 .collect::<String>()
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_get_html() -> anyhow::Result<()> {
-        struct GoogleComPageBuilder {};
+        struct GoogleComPageBuilder {}
         impl GetHtml for GoogleComPageBuilder {
             fn url(&self) -> Result<Url> {
                 Ok(Url::parse("http://google.com")?)

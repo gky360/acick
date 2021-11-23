@@ -167,7 +167,7 @@ impl StatementElem<'_> {
         let mut inputs = BTreeMap::<usize, _>::new();
         let mut outputs = BTreeMap::<usize, _>::new();
         let mut next = None;
-        for elem in self.0.select(&selector) {
+        for elem in self.0.select(selector) {
             let elem_name = elem.value().name();
             if elem_name == "h3" {
                 let text = elem.inner_text();

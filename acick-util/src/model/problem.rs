@@ -235,7 +235,7 @@ mod tests {
         for (sample_name, expected) in tests {
             let actual = &problem
                 .clone()
-                .take_samples(&sample_name)
+                .take_samples(sample_name)
                 .collect::<Vec<_>>();
             assert_eq!(actual.len(), expected.len());
             let is_all_equal = actual

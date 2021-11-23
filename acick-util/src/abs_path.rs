@@ -63,11 +63,7 @@ impl AbsPathBuf {
 
     /// Returns parent path.
     pub fn parent(&self) -> Option<Self> {
-        if let Some(parent) = self.0.parent() {
-            Some(Self(parent.to_owned()))
-        } else {
-            None
-        }
+        self.0.parent().map(|parent| Self(parent.to_owned()))
     }
 
     pub fn search_dir_contains(&self, file_name: &str) -> Option<Self> {
