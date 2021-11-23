@@ -66,15 +66,15 @@ OPTIONS:
                                  json, yaml]
 
 SUBCOMMANDS:
-    fetch     Fetches problems from service [aliases: f, f]
+    fetch     Fetches problems from service [aliases: f]
     help      Prints this message or the help of the given subcommand(s)
     init      Creates config file
-    login     Logs in to service [aliases: l, l]
+    login     Logs in to service [aliases: l]
     logout    Logs out from all services
     me        Gets info of user currently logged in to service
     show      Shows current config
-    submit    Submits source code to service [aliases: s, s]
-    test      Tests source code with sample inputs and outputs [aliases: t, t]
+    submit    Submits source code to service [aliases: s]
+    test      Tests source code with sample inputs and outputs [aliases: t]
 ```
 <!-- __ACICK_USAGE_END__ -->
 
