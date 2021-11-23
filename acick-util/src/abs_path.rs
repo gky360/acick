@@ -456,7 +456,8 @@ mod tests {
             let actual = serde_yaml::to_string(&test_data)?;
             let expected = format!(
                 r#"---
-abs_path: {}\n"#,
+abs_path: {}
+"#,
                 right
             );
             assert_eq!(actual, expected);
