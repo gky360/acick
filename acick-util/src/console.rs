@@ -24,16 +24,10 @@ enum Inner {
 }
 
 /// Config for console.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct ConsoleConfig {
     /// If true, assumes yes and skips any confirmation.
     pub assume_yes: bool,
-}
-
-impl Default for ConsoleConfig {
-    fn default() -> Self {
-        Self { assume_yes: false }
-    }
 }
 
 #[derive(Debug)]
