@@ -24,16 +24,10 @@ enum Inner {
 }
 
 /// Config for console.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct ConsoleConfig {
     /// If true, assumes yes and skips any confirmation.
     pub assume_yes: bool,
-}
-
-impl Default for ConsoleConfig {
-    fn default() -> Self {
-        Self { assume_yes: false }
-    }
 }
 
 #[derive(Debug)]
@@ -221,7 +215,7 @@ macro_rules! def_color {
 
 pub use color_defs::*;
 
-#[cfg_attr(tarpaulin, skip)]
+#[cfg_attr(tarpaulin, ignore)]
 mod color_defs {
     def_color!(sty_none, STY_NONE, Style::new());
     def_color!(sty_r, STY_R, Style::new().red());

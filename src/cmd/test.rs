@@ -126,7 +126,7 @@ impl TestOpt {
         Ok((total, elapsed))
     }
 
-    fn load_samples<'a>(&'a self, problem: Problem, conf: &Config) -> Result<Box<dyn AsSamples>> {
+    fn load_samples(&self, problem: Problem, conf: &Config) -> Result<Box<dyn AsSamples>> {
         if self.is_full {
             let testcases_dir = conf.testcases_abs_dir(problem.id())?;
             let testcases = AtcoderActor::load_testcases(testcases_dir, &self.sample_name)?;

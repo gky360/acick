@@ -1,3 +1,4 @@
+use std::env;
 use std::fs;
 use std::io::Write as _;
 
@@ -58,7 +59,7 @@ lazy_static! {
 
 fn get_opt_common(test_dir: &TempDir, args: &[&str]) -> Result<acick::Opt, structopt::clap::Error> {
     let base_dir = &test_dir.path().display().to_string();
-    let mut cmd = vec!["acick", "--quiet", "--assume-yes", "--base-dir", &base_dir];
+    let mut cmd = vec!["acick", "--quiet", "--assume-yes", "--base-dir", base_dir];
     cmd.extend_from_slice(args);
     acick::Opt::from_iter_safe(&cmd)
 }
@@ -86,11 +87,10 @@ fn replace_cookies_path_in_conf(
     // add new cookies_path config
     let mut new_conf = String::new();
     for line in conf_str.lines() {
+        new_conf.push_str(line);
         if line == "session:" {
-            new_conf.push_str(line);
             new_conf.push_str(&format!("\n  cookies_path: {}\n", cookies_path));
         } else {
-            new_conf.push_str(line);
             new_conf.push('\n');
         }
     }
@@ -114,8 +114,7 @@ fn compare_readme_usage_with_help_message() {
     let args = &["acick", "--help"];
     let res = acick::Opt::from_iter_safe(args);
     let err = res.unwrap_err();
-    let mut long_help_message = Vec::new();
-    long_help_message.push("```");
+    let mut long_help_message = vec!["```"];
     long_help_message.extend(err.message.lines());
     long_help_message.push("```");
 
@@ -137,6 +136,8 @@ fn compare_readme_usage_with_help_message() {
 
 #[test]
 fn test_basic_usage() -> anyhow::Result<()> {
+    env::set_var("ACICK_CONTEST", "arc100");
+
     let test_dir = tempdir()?;
 
     assert_matches!(get_opt_common(&test_dir, &["help"]) => Err(_));

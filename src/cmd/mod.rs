@@ -144,7 +144,7 @@ impl Cmd {
     }
 }
 
-#[derive(StructOpt, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Default, StructOpt, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ServiceContest {
     #[structopt(
         name = "service",
@@ -171,15 +171,6 @@ impl ServiceContest {
     fn load_config(&self, base_dir: Option<AbsPathBuf>, cnsl: &mut Console) -> Result<Config> {
         Config::load(self.service_id, self.contest_id.clone(), base_dir, cnsl)
             .context("Could not load config file")
-    }
-}
-
-impl Default for ServiceContest {
-    fn default() -> Self {
-        Self {
-            service_id: ServiceKind::default(),
-            contest_id: ContestId::default(),
-        }
     }
 }
 

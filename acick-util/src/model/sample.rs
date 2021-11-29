@@ -93,11 +93,11 @@ mod tests {
         .into();
         assert_eq!(sample_iter.len(), 3);
         assert_eq!(sample_iter.max_name_len(), 14);
-        assert_eq!(sample_iter.is_empty(), false);
+        assert!(!sample_iter.is_empty());
 
         let sample_iter: SampleIter = Vec::new().into();
         assert_eq!(sample_iter.len(), 0);
         assert_eq!(sample_iter.max_name_len(), 0);
-        assert_eq!(sample_iter.is_empty(), true);
+        assert!(sample_iter.is_empty());
     }
 }

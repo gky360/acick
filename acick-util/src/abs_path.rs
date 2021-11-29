@@ -63,11 +63,7 @@ impl AbsPathBuf {
 
     /// Returns parent path.
     pub fn parent(&self) -> Option<Self> {
-        if let Some(parent) = self.0.parent() {
-            Some(Self(parent.to_owned()))
-        } else {
-            None
-        }
+        self.0.parent().map(|parent| Self(parent.to_owned()))
     }
 
     pub fn search_dir_contains(&self, file_name: &str) -> Option<Self> {
@@ -435,7 +431,7 @@ mod tests {
             abs_path: AbsPathBuf::try_new("/a/b")?,
         };
         let actual = serde_yaml::to_string(&test_data)?;
-        let expected = format!("---\nabs_path: {}", "/a/b");
+        let expected = format!("---\nabs_path: {}\n", "/a/b");
         assert_eq!(actual, expected);
         Ok(())
     }
@@ -460,7 +456,8 @@ mod tests {
             let actual = serde_yaml::to_string(&test_data)?;
             let expected = format!(
                 r#"---
-abs_path: {}"#,
+abs_path: {}
+"#,
                 right
             );
             assert_eq!(actual, expected);

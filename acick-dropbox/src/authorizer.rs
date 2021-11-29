@@ -315,16 +315,10 @@ mod tests {
     #[test]
     fn test_validate_token() -> anyhow::Result<()> {
         let access_token = std::env::var("ACICK_DBX_ACCESS_TOKEN")?;
-        assert_eq!(
-            DbxAuthorizer::validate_token(&Token { access_token })?,
-            true
-        );
-        assert_eq!(
-            DbxAuthorizer::validate_token(&Token {
-                access_token: "test_token".into()
-            })?,
-            false
-        );
+        assert!(DbxAuthorizer::validate_token(&Token { access_token })?);
+        assert!(!DbxAuthorizer::validate_token(&Token {
+            access_token: "test_token".into()
+        })?);
         Ok(())
     }
 

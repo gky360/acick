@@ -119,7 +119,7 @@ impl AtcoderActor<'_> {
             &DBX_APP_SECRET,
             DBX_REDIRECT_PORT,
             DBX_REDIRECT_PATH,
-            &token_path,
+            token_path,
         )
         .load_or_request(access_token, cnsl)?;
 
@@ -231,7 +231,7 @@ impl Act for AtcoderActor<'_> {
             TasksPrintPageBuilder::new(contest_id, session).build(client, cnsl)?;
         let mut samples_map = tasks_print_page.extract_samples_map()?;
         for problem in problems.iter_mut() {
-            if let Some(samples) = samples_map.remove(&problem.id()) {
+            if let Some(samples) = samples_map.remove(problem.id()) {
                 problem.set_samples(samples);
             } else {
                 // found problem on TasksPage but not found on TasksPrintPage
@@ -262,9 +262,10 @@ impl Act for AtcoderActor<'_> {
         // extract lang id
         let (lang_id, lang_name) = lang_names
             .iter()
-            .find_map(|lang_name| match submit_page.extract_lang_id(lang_name) {
-                Some(lang_id) => Some((lang_id, lang_name)),
-                None => None,
+            .find_map(|lang_name| {
+                submit_page
+                    .extract_lang_id(lang_name)
+                    .map(|lang_id| (lang_id, lang_name))
             })
             .with_context(|| {
                 format!(
@@ -307,13 +308,13 @@ impl Act for AtcoderActor<'_> {
         problem: &Problem,
         cnsl: &mut Console,
     ) -> Result<()> {
-        open_in_browser(&Self::problem_url(contest_id, problem)?.as_str())?;
+        open_in_browser(Self::problem_url(contest_id, problem)?.as_str())?;
         writeln!(cnsl, "Opened problem page in web browser.")?;
         Ok(())
     }
 
     fn open_submissions_url(&self, contest_id: &ContestId, cnsl: &mut Console) -> Result<()> {
-        open_in_browser(&Self::submissions_url(contest_id)?.as_str())?;
+        open_in_browser(Self::submissions_url(contest_id)?.as_str())?;
         writeln!(cnsl, "Opened submissions page in web browser.")?;
         Ok(())
     }

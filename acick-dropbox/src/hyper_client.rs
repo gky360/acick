@@ -3,7 +3,7 @@
 //! Client for Dropbox API
 //!
 //! Basically, this module is a copy of
-//! https://github.com/dropbox/dropbox-sdk-rust/blob/v0.6.0/src/hyper_client.rs
+//! <https://github.com/dropbox/dropbox-sdk-rust/blob/v0.6.0/src/hyper_client.rs>
 //! , except that the tls client used in this module supports target linux-musl.
 
 use std::io::{self, Read};
