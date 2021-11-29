@@ -68,7 +68,7 @@ fn replace_cookies_path_in_conf(
     test_dir: &TempDir,
     cookies_path: &AbsPathBuf,
 ) -> anyhow::Result<()> {
-    let conf_path = test_dir.path().join("acick.yaml");
+    let conf_path = test_dir.path().join(".acick.yaml");
     let conf_str = fs::read_to_string(&conf_path)?;
 
     // remove current cookies_path config
