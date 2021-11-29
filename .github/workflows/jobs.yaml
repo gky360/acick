@@ -40,31 +40,6 @@ jobs:
           command: fmt
           args: --all -- --check
 
-  coverage:
-    name: Coverage
-    runs-on: ubuntu-latest
-    container:
-      image: xd009642/tarpaulin:develop-nightly
-      options: --security-opt seccomp=unconfined
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Generate code coverage
-        run: |
-          cargo +nightly tarpaulin --verbose --forward --ignore-tests --run-types Tests Doctests Benchmarks Examples --timeout 300 --workspace --all-features
-
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v2
-        with:
-          fail_ci_if_error: true
-
-      - name: Archive code coverage results
-        uses: actions/upload-artifact@v1
-        with:
-          name: code-coverage-report
-          path: cobertura.xml
-
   doc:
     strategy:
       fail-fast: true
