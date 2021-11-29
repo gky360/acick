@@ -215,7 +215,7 @@ macro_rules! def_color {
 
 pub use color_defs::*;
 
-#[cfg_attr(tarpaulin, ignore)]
+#[cfg_attr(coverage, no_coverage)]
 mod color_defs {
     def_color!(sty_none, STY_NONE, Style::new());
     def_color!(sty_r, STY_R, Style::new().red());
