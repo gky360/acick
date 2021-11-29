@@ -1,4 +1,5 @@
 #![warn(clippy::all)]
+#![cfg_attr(coverage, feature(no_coverage))]
 
 #[macro_use]
 extern crate strum;
