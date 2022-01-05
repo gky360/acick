@@ -3,8 +3,6 @@
 
 mod authorizer;
 mod dropbox;
-#[cfg_attr(coverage, no_coverage)]
-mod hyper_client;
 
 use acick_util::abs_path;
 use acick_util::web;

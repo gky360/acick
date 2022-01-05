@@ -9,7 +9,6 @@ use dropbox_sdk::sharing::{self, GetSharedLinkFileArg, Path};
 
 use crate::authorizer::Token;
 use crate::convert_dbx_err;
-use crate::hyper_client::HyperClient;
 use crate::Result;
 
 #[derive(Debug)]
