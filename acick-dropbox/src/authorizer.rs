@@ -5,6 +5,7 @@ use std::net::SocketAddr;
 
 use anyhow::Context as _;
 use dropbox_sdk::check::{self, EchoArg};
+use dropbox_sdk::oauth2::{AuthorizeUrlBuilder, Oauth2Type};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
@@ -154,7 +155,8 @@ impl<'a> DbxAuthorizer<'a> {
         let server = Server::bind(&addr).serve(make_service);
 
         // open auth url in browser
-        let auth_url = Oauth2AuthorizeUrlBuilder::new(self.app_key, Oauth2Type::AuthorizationCode)
+        let oauth2_flow = Oauth2Type::AuthorizationCode(self.app_secret.to_string());
+        let auth_url = AuthorizeUrlBuilder::new(&self.app_key, &oauth2_flow)
             .redirect_uri(&self.redirect_uri)
             .state(&state)
             .build();
