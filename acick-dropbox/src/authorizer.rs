@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 
 use anyhow::Context as _;
 use dropbox_sdk::check::{self, EchoArg};
-use dropbox_sdk::oauth2::{AuthorizeUrlBuilder, Oauth2Type};
+use dropbox_sdk::oauth2::{Authorization, AuthorizeUrlBuilder, Oauth2Type};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
@@ -118,23 +118,26 @@ impl<'a> DbxAuthorizer<'a> {
         .context("Could not validate access token")
     }
 
+    fn oauth2_flow(&self) -> Oauth2Type {
+        Oauth2Type::AuthorizationCode(self.app_secret.to_string())
+    }
+
     #[tokio::main]
-    async fn request_token(&self, cnsl: &mut dyn Write) -> Result<Token> {
+    async fn request_token(&self, cnsl: &mut dyn Write) -> Result<Authorization> {
         let state = gen_random_state();
-        let code = self
+        let auth_code = self
             .authorize(state, cnsl)
             .await
             .context("Could not authorize acick on Dropbox")?;
-        let access_token = HyperClient::oauth2_token_from_authorization_code(
-            self.app_key,
-            self.app_secret,
-            &code,
-            Some(&self.redirect_uri),
-        )
-        .map_err(convert_dbx_err)
-        .context("Could not get access token from Dropbox")?;
 
-        Ok(Token { access_token })
+        let authorization = Authorization::from_auth_code(
+            self.app_key.to_string(),
+            self.oauth2_flow(),
+            auth_code.trim().to_owned(),
+            Some(self.redirect_uri),
+        );
+
+        Ok(authorization)
     }
 
     async fn authorize(&self, state: String, cnsl: &mut dyn Write) -> Result<String> {
@@ -155,8 +158,7 @@ impl<'a> DbxAuthorizer<'a> {
         let server = Server::bind(&addr).serve(make_service);
 
         // open auth url in browser
-        let oauth2_flow = Oauth2Type::AuthorizationCode(self.app_secret.to_string());
-        let auth_url = AuthorizeUrlBuilder::new(&self.app_key, &oauth2_flow)
+        let auth_url = AuthorizeUrlBuilder::new(&self.app_key, &self.oauth2_flow())
             .redirect_uri(&self.redirect_uri)
             .state(&state)
             .build();
