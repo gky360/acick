@@ -15,7 +15,7 @@ tempfile = "3.1.0"
 [dependencies]
 acick-util = { version = "0.2.0", path = "../acick-util" }
 anyhow = "1.0.26"
-dropbox-sdk = { version = "0.6.0", default_features = false, features = ["dbx_check", "dbx_files", "dbx_sharing"] }
+dropbox-sdk = { version = "0.14.0", default_features = false, features = ["dbx_check", "dbx_files", "dbx_sharing", "default_client"] }
 hyper = "0.13.2"
 hyper0_10 = { version = "0.10", package = "hyper" }
 hyper-sync-rustls = "0.3.0-rc.6"
