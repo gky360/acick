@@ -264,7 +264,6 @@ mod tests {
 
     use super::*;
     use crate::console::ConsoleConfig;
-    use crate::dropbox::Token;
     use crate::model::Compare;
 
     fn get_test_problems() -> Vec<Problem> {
@@ -312,9 +311,7 @@ mod tests {
     fn test_fetch_full() -> Result<()> {
         let test_dir = tempdir()?;
 
-        let dropbox = Dropbox::new(Token {
-            access_token: std::env::var("ACICK_DBX_ACCESS_TOKEN").unwrap(),
-        });
+        let dropbox = Dropbox::from_access_token(std::env::var("ACICK_DBX_ACCESS_TOKEN").unwrap());
         let contest_id = ContestId::from("arc100");
         let problems = get_test_problems();
         let base_dir = AbsPathBuf::try_new(test_dir.path().to_owned()).unwrap();

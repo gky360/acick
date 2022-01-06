@@ -31,6 +31,10 @@ impl Dropbox {
         Self { client }
     }
 
+    pub fn from_access_token(access_token: String) -> Self {
+        Self::new(Authorization::from_access_token(access_token))
+    }
+
     pub fn list_all_folders<P: Into<PathROrId>>(
         &self,
         path: P,
