@@ -9,7 +9,6 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng as _};
-use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
@@ -20,11 +19,6 @@ use crate::{Dropbox, Result};
 static STATE_LEN: usize = 16;
 static DBX_CODE_PARAM: &str = "code";
 static DBX_STATE_PARAM: &str = "state";
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Token {
-    pub access_token: String,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DbxAuthorizer<'a> {
@@ -86,7 +80,7 @@ impl<'a> DbxAuthorizer<'a> {
         }
 
         let auth = self.token_path.load_pretty(
-            |file| {
+            |mut file| {
                 let mut buf = String::new();
                 file.read_to_string(&mut buf)
                     .context("Could not load token from json file")?;
@@ -101,7 +95,7 @@ impl<'a> DbxAuthorizer<'a> {
 
     fn save_token(&self, auth: &Authorization, cnsl: &mut dyn Write) -> Result<()> {
         self.token_path.save_pretty(
-            |file| {
+            |mut file| {
                 file.write_all(auth.save().unwrap_or_default().as_bytes())
                     .context("Could not save token as json file")
             },
@@ -129,7 +123,7 @@ impl<'a> DbxAuthorizer<'a> {
             self.app_key.to_string(),
             self.oauth2_flow(),
             auth_code.trim().to_owned(),
-            Some(self.redirect_uri),
+            Some(self.redirect_uri.to_owned()),
         );
 
         Ok(authorization)
@@ -153,7 +147,7 @@ impl<'a> DbxAuthorizer<'a> {
         let server = Server::bind(&addr).serve(make_service);
 
         // open auth url in browser
-        let auth_url = AuthorizeUrlBuilder::new(&self.app_key, &self.oauth2_flow())
+        let auth_url = AuthorizeUrlBuilder::new(self.app_key, &self.oauth2_flow())
             .redirect_uri(&self.redirect_uri)
             .state(&state)
             .build();
@@ -275,22 +269,24 @@ mod tests {
     fn test_load_token() {
         run_test(|_, authorizer| {
             let access_token = "test_token".to_string();
-            let token = Token {
-                access_token: access_token.clone(),
-            };
+            let auth = Authorization::from_access_token(access_token.to_owned());
             let mut buf = Vec::new();
 
-            let actual = authorizer.load_token(Some(access_token), &mut buf)?;
-            let expected = Some(token);
+            let actual = authorizer
+                .load_token(Some(access_token), &mut buf)?
+                .and_then(|auth| auth.save());
+            let expected = auth.save();
             assert_eq!(actual, expected);
 
-            assert_eq!(authorizer.load_token(None, &mut buf)?, None);
+            assert!(authorizer.load_token(None, &mut buf)?.is_none());
 
             let token_path = authorizer.token_path.as_ref();
             let mut file = std::fs::File::create(token_path)?;
             file.write_all(br#"{"access_token": "test_token"}"#)?;
 
-            let actual = authorizer.load_token(None, &mut buf)?;
+            let actual = authorizer
+                .load_token(None, &mut buf)?
+                .and_then(|auth| auth.save());
             assert_eq!(actual, expected);
 
             Ok(())

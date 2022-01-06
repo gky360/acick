@@ -9,7 +9,7 @@ use acick_util::web;
 
 pub use dropbox_sdk::files::FileMetadata;
 
-pub use authorizer::{DbxAuthorizer, Token};
+pub use authorizer::DbxAuthorizer;
 pub use dropbox::Dropbox;
 
 pub type Error = anyhow::Error;

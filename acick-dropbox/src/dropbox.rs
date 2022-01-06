@@ -73,7 +73,7 @@ impl Dropbox {
         let mut arg = ListFolderArg::new(path.into());
         if let Some(shared_link_url) = shared_link_url {
             let shared_link = SharedLink::new(shared_link_url.to_owned());
-            arg = arg.with_shared_link(Some(shared_link));
+            arg = arg.with_shared_link(shared_link);
         }
         let res = files::list_folder(&self.client, &arg).map_err(convert_dbx_err)??;
 
@@ -90,7 +90,7 @@ impl Dropbox {
         cursor: ListFolderCursor,
         folders: &mut Vec<Metadata>,
     ) -> Result<()> {
-        let arg = ListFolderContinueArg { cursor };
+        let arg = ListFolderContinueArg::new(cursor);
         let res = files::list_folder_continue(&self.client, &arg).map_err(convert_dbx_err)??;
         folders.extend(res.entries.into_iter());
         if res.has_more {
@@ -104,7 +104,7 @@ impl Dropbox {
         url: T,
         path: Path,
     ) -> Result<Box<dyn Read>> {
-        let arg = GetSharedLinkFileArg::new(url.into()).with_path(Some(path.clone()));
+        let arg = GetSharedLinkFileArg::new(url.into()).with_path(path.clone());
         let res = sharing::get_shared_link_file(&self.client, &arg, None, None)
             .map_err(convert_dbx_err)??;
 
