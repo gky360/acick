@@ -282,7 +282,7 @@ mod tests {
 
             let token_path = authorizer.token_path.as_ref();
             let mut file = std::fs::File::create(token_path)?;
-            file.write_all(br#"{"access_token": "test_token"}"#)?;
+            file.write_all(b"1&test_token")?;
 
             let actual = authorizer
                 .load_token(None, &mut buf)?
@@ -301,7 +301,7 @@ mod tests {
             let mut buf = Vec::<u8>::new();
             authorizer.save_token(&auth, &mut buf)?;
             let token_str = std::fs::read_to_string(authorizer.token_path.as_ref())?;
-            assert_eq!(token_str, r#"{"access_token":"test_token"}"#);
+            assert_eq!(token_str, "1&test_token");
             Ok(())
         })
     }
