@@ -1,24 +1,33 @@
+use std::fmt;
 use std::io::Read;
 
 use anyhow::anyhow;
+use dropbox_sdk::default_client::UserAuthDefaultClient;
 use dropbox_sdk::files::{
     self, FileMetadata, FolderMetadata, ListFolderArg, ListFolderContinueArg, ListFolderCursor,
     Metadata, PathROrId, SharedLink,
 };
+use dropbox_sdk::oauth2::Authorization;
 use dropbox_sdk::sharing::{self, GetSharedLinkFileArg, Path};
 
-use crate::authorizer::Token;
 use crate::convert_dbx_err;
 use crate::Result;
 
-#[derive(Debug)]
 pub struct Dropbox {
-    client: HyperClient,
+    client: UserAuthDefaultClient,
+}
+
+impl fmt::Debug for Dropbox {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Dropbox")
+            .field("client", &"client")
+            .finish()
+    }
 }
 
 impl Dropbox {
-    pub fn new(token: Token) -> Self {
-        let client = HyperClient::new(token.access_token);
+    pub fn new(auth: Authorization) -> Self {
+        let client = UserAuthDefaultClient::new(auth);
         Self { client }
     }
 
