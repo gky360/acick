@@ -4,7 +4,8 @@ use std::io::{Read, Write};
 use std::net::SocketAddr;
 
 use anyhow::Context as _;
-use dropbox_sdk::oauth2::{Authorization, AuthorizeUrlBuilder, Oauth2Type};
+use dropbox_sdk::default_client::NoauthDefaultClient;
+use dropbox_sdk::oauth2::{Authorization, AuthorizeUrlBuilder, Oauth2Type, PkceCode};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
@@ -20,7 +21,7 @@ static STATE_LEN: usize = 16;
 static DBX_CODE_PARAM: &str = "code";
 static DBX_STATE_PARAM: &str = "state";
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct DbxAuthorizer<'a> {
     app_key: &'a str,
     app_secret: &'a str,
@@ -28,6 +29,7 @@ pub struct DbxAuthorizer<'a> {
     redirect_path: &'a str,
     redirect_uri: String,
     token_path: &'a AbsPathBuf,
+    pkce_code: PkceCode,
 }
 
 impl<'a> DbxAuthorizer<'a> {
@@ -45,6 +47,7 @@ impl<'a> DbxAuthorizer<'a> {
             redirect_path,
             redirect_uri: format!("http://localhost:{}{}", redirect_port, redirect_path),
             token_path,
+            pkce_code: PkceCode::new(),
         }
     }
 
@@ -54,10 +57,14 @@ impl<'a> DbxAuthorizer<'a> {
         cnsl: &mut dyn Write,
     ) -> Result<Dropbox> {
         let load_result = self.load_token(access_token, cnsl)?;
-        let (auth, is_updated) = match load_result {
+        let (mut auth, is_updated) = match load_result {
             Some(auth) => (auth, false),
             _ => (self.request_token(cnsl)?, true),
         };
+
+        let client = NoauthDefaultClient::default();
+        auth.obtain_access_token(client)
+            .context("Failed to obtain dropbox access token")?;
 
         if is_updated {
             self.save_token(&auth, cnsl)?;
@@ -108,7 +115,7 @@ impl<'a> DbxAuthorizer<'a> {
     }
 
     fn oauth2_flow(&self) -> Oauth2Type {
-        Oauth2Type::AuthorizationCode(self.app_secret.to_string())
+        Oauth2Type::PKCE(self.pkce_code.clone())
     }
 
     #[tokio::main]
