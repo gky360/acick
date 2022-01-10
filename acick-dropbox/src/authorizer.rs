@@ -28,7 +28,7 @@ pub struct DbxAuthorizer<'a> {
     redirect_path: &'a str,
     redirect_uri: String,
     token_path: &'a AbsPathBuf,
-    pkce_code: PkceCode,
+    oauth2_flow: Oauth2Type,
 }
 
 impl<'a> DbxAuthorizer<'a> {
@@ -44,7 +44,7 @@ impl<'a> DbxAuthorizer<'a> {
             redirect_path,
             redirect_uri: format!("http://localhost:{}{}", redirect_port, redirect_path),
             token_path,
-            pkce_code: PkceCode::new(),
+            oauth2_flow: Oauth2Type::PKCE(PkceCode::new()),
         }
     }
 
@@ -111,10 +111,6 @@ impl<'a> DbxAuthorizer<'a> {
         Ok(())
     }
 
-    fn oauth2_flow(&self) -> Oauth2Type {
-        Oauth2Type::PKCE(self.pkce_code.clone())
-    }
-
     #[tokio::main]
     async fn request_token(&self, cnsl: &mut dyn Write) -> Result<Authorization> {
         let state = gen_random_state();
@@ -125,7 +121,7 @@ impl<'a> DbxAuthorizer<'a> {
 
         let authorization = Authorization::from_auth_code(
             self.client_id.to_string(),
-            self.oauth2_flow(),
+            self.oauth2_flow.clone(),
             auth_code.trim().to_owned(),
             Some(self.redirect_uri.to_owned()),
         );
@@ -151,7 +147,7 @@ impl<'a> DbxAuthorizer<'a> {
         let server = Server::bind(&addr).serve(make_service);
 
         // open auth url in browser
-        let auth_url = AuthorizeUrlBuilder::new(self.client_id, &self.oauth2_flow())
+        let auth_url = AuthorizeUrlBuilder::new(self.client_id, &self.oauth2_flow)
             .redirect_uri(&self.redirect_uri)
             .state(&state)
             .build();
