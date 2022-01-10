@@ -24,7 +24,6 @@ static DBX_STATE_PARAM: &str = "state";
 #[derive(Debug, Clone)]
 pub struct DbxAuthorizer<'a> {
     app_key: &'a str,
-    app_secret: &'a str,
     redirect_port: u16,
     redirect_path: &'a str,
     redirect_uri: String,
@@ -35,14 +34,12 @@ pub struct DbxAuthorizer<'a> {
 impl<'a> DbxAuthorizer<'a> {
     pub fn new(
         app_key: &'a str,
-        app_secret: &'a str,
         redirect_port: u16,
         redirect_path: &'a str,
         token_path: &'a AbsPathBuf,
     ) -> Self {
         Self {
             app_key,
-            app_secret,
             redirect_port,
             redirect_path,
             redirect_uri: format!("http://localhost:{}{}", redirect_port, redirect_path),

@@ -32,11 +32,6 @@ lazy_static! {
         #[allow(clippy::option_env_unwrap)]
         option_env!("ACICK_DBX_APP_KEY").unwrap()
     };
-    static ref DBX_APP_SECRET: &'static str = {
-        #[allow(clippy::unknown_clippy_lints)]
-        #[allow(clippy::option_env_unwrap)]
-        option_env!("ACICK_DBX_APP_SECRET").unwrap()
-    };
 }
 
 static USER_AGENT: &str = concat!(
@@ -116,7 +111,6 @@ impl AtcoderActor<'_> {
         // authorize Dropbox account
         let dropbox = DbxAuthorizer::new(
             &DBX_APP_KEY,
-            &DBX_APP_SECRET,
             DBX_REDIRECT_PORT,
             DBX_REDIRECT_PATH,
             token_path,
