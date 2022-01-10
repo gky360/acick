@@ -14,7 +14,7 @@ use crate::model::{Contest, Problem, ProblemId, Service, ServiceKind};
 use crate::service::Act;
 use crate::{Config, Console, Result, DATA_LOCAL_DIR};
 
-static DBX_TOKEN_FILE_NAME: &str = "dbx_token.json";
+static DBX_TOKEN_FILE_NAME: &str = "dbx_token.txt";
 
 lazy_static! {
     static ref DBX_TOKEN_PATH: AbsPathBuf = DATA_LOCAL_DIR.join(DBX_TOKEN_FILE_NAME);

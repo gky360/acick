@@ -1,26 +1,38 @@
+use std::fmt;
 use std::io::Read;
 
 use anyhow::anyhow;
+use dropbox_sdk::default_client::UserAuthDefaultClient;
 use dropbox_sdk::files::{
     self, FileMetadata, FolderMetadata, ListFolderArg, ListFolderContinueArg, ListFolderCursor,
     Metadata, PathROrId, SharedLink,
 };
+use dropbox_sdk::oauth2::Authorization;
 use dropbox_sdk::sharing::{self, GetSharedLinkFileArg, Path};
 
-use crate::authorizer::Token;
 use crate::convert_dbx_err;
-use crate::hyper_client::HyperClient;
 use crate::Result;
 
-#[derive(Debug)]
 pub struct Dropbox {
-    client: HyperClient,
+    client: UserAuthDefaultClient,
+}
+
+impl fmt::Debug for Dropbox {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Dropbox")
+            .field("client", &"client")
+            .finish()
+    }
 }
 
 impl Dropbox {
-    pub fn new(token: Token) -> Self {
-        let client = HyperClient::new(token.access_token);
+    pub fn new(auth: Authorization) -> Self {
+        let client = UserAuthDefaultClient::new(auth);
         Self { client }
+    }
+
+    pub fn from_access_token(access_token: String) -> Self {
+        Self::new(Authorization::from_access_token(access_token))
     }
 
     pub fn list_all_folders<P: Into<PathROrId>>(
@@ -65,7 +77,7 @@ impl Dropbox {
         let mut arg = ListFolderArg::new(path.into());
         if let Some(shared_link_url) = shared_link_url {
             let shared_link = SharedLink::new(shared_link_url.to_owned());
-            arg = arg.with_shared_link(Some(shared_link));
+            arg = arg.with_shared_link(shared_link);
         }
         let res = files::list_folder(&self.client, &arg).map_err(convert_dbx_err)??;
 
@@ -82,7 +94,7 @@ impl Dropbox {
         cursor: ListFolderCursor,
         folders: &mut Vec<Metadata>,
     ) -> Result<()> {
-        let arg = ListFolderContinueArg { cursor };
+        let arg = ListFolderContinueArg::new(cursor);
         let res = files::list_folder_continue(&self.client, &arg).map_err(convert_dbx_err)??;
         folders.extend(res.entries.into_iter());
         if res.has_more {
@@ -96,7 +108,7 @@ impl Dropbox {
         url: T,
         path: Path,
     ) -> Result<Box<dyn Read>> {
-        let arg = GetSharedLinkFileArg::new(url.into()).with_path(Some(path.clone()));
+        let arg = GetSharedLinkFileArg::new(url.into()).with_path(path.clone());
         let res = sharing::get_shared_link_file(&self.client, &arg, None, None)
             .map_err(convert_dbx_err)??;
 

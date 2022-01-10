@@ -1,58 +1,50 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::net::SocketAddr;
 
 use anyhow::Context as _;
-use dropbox_sdk::check::{self, EchoArg};
+use dropbox_sdk::default_client::NoauthDefaultClient;
+use dropbox_sdk::oauth2::{Authorization, AuthorizeUrlBuilder, Oauth2Type, PkceCode};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, Uri};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng as _};
-use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::{self, Sender};
 use url::form_urlencoded;
 
 use crate::abs_path::AbsPathBuf;
-use crate::hyper_client::{HyperClient, Oauth2AuthorizeUrlBuilder, Oauth2Type};
 use crate::web::open_in_browser;
-use crate::Result;
-use crate::{convert_dbx_err, Dropbox};
+use crate::{Dropbox, Result};
 
 static STATE_LEN: usize = 16;
 static DBX_CODE_PARAM: &str = "code";
 static DBX_STATE_PARAM: &str = "state";
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Token {
-    pub access_token: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct DbxAuthorizer<'a> {
-    app_key: &'a str,
-    app_secret: &'a str,
+    client_id: &'a str,
     redirect_port: u16,
     redirect_path: &'a str,
     redirect_uri: String,
     token_path: &'a AbsPathBuf,
+    oauth2_flow: Oauth2Type,
 }
 
 impl<'a> DbxAuthorizer<'a> {
     pub fn new(
-        app_key: &'a str,
-        app_secret: &'a str,
+        client_id: &'a str,
         redirect_port: u16,
         redirect_path: &'a str,
         token_path: &'a AbsPathBuf,
     ) -> Self {
         Self {
-            app_key,
-            app_secret,
+            client_id,
             redirect_port,
             redirect_path,
             redirect_uri: format!("http://localhost:{}{}", redirect_port, redirect_path),
             token_path,
+            oauth2_flow: Oauth2Type::PKCE(PkceCode::new()),
         }
     }
 
@@ -62,43 +54,55 @@ impl<'a> DbxAuthorizer<'a> {
         cnsl: &mut dyn Write,
     ) -> Result<Dropbox> {
         let load_result = self.load_token(access_token, cnsl)?;
-        let (token, is_updated) = match load_result {
-            Some(token) if Self::validate_token(&token)? => (token, false),
+        let (mut auth, is_updated) = match load_result {
+            Some(auth) => (auth, false),
             _ => (self.request_token(cnsl)?, true),
         };
 
+        let client = NoauthDefaultClient::default();
+        auth.obtain_access_token(client)
+            .context("Failed to obtain dropbox access token")?;
+
         if is_updated {
-            self.save_token(&token, cnsl)?;
+            self.save_token(&auth, cnsl)?;
         }
 
-        Ok(Dropbox::new(token))
+        Ok(Dropbox::new(auth))
     }
 
     fn load_token(
         &self,
         access_token: Option<String>,
         cnsl: &mut dyn Write,
-    ) -> Result<Option<Token>> {
+    ) -> Result<Option<Authorization>> {
         if let Some(access_token) = access_token {
-            return Ok(Some(Token { access_token }));
+            return Ok(Some(Authorization::from_access_token(access_token)));
         }
 
         if !self.token_path.as_ref().exists() {
             return Ok(None);
         }
 
-        let token = self.token_path.load_pretty(
-            |file| serde_json::from_reader(file).context("Could not load token from json file"),
+        let auth = self.token_path.load_pretty(
+            |mut file| {
+                let mut buf = String::new();
+                file.read_to_string(&mut buf)
+                    .context("Could not load token from file")?;
+                Ok(Authorization::load(self.client_id.to_string(), &buf))
+            },
             None,
             cnsl,
         )?;
 
-        Ok(Some(token))
+        Ok(auth)
     }
 
-    fn save_token(&self, token: &Token, cnsl: &mut dyn Write) -> Result<()> {
+    fn save_token(&self, auth: &Authorization, cnsl: &mut dyn Write) -> Result<()> {
         self.token_path.save_pretty(
-            |file| serde_json::to_writer(file, token).context("Could not save token as json file"),
+            |mut file| {
+                file.write_all(auth.save().unwrap_or_default().as_bytes())
+                    .context("Could not save token as file")
+            },
             true,
             None,
             cnsl,
@@ -107,34 +111,22 @@ impl<'a> DbxAuthorizer<'a> {
         Ok(())
     }
 
-    fn validate_token(token: &Token) -> Result<bool> {
-        let client = HyperClient::new(token.access_token.clone());
-        match check::user(&client, &EchoArg { query: "".into() }) {
-            Ok(Ok(_)) => Ok(true),
-            Ok(Err(())) => Ok(false),
-            Err(dropbox_sdk::Error::InvalidToken(_)) => Ok(false),
-            Err(err) => Err(convert_dbx_err(err)),
-        }
-        .context("Could not validate access token")
-    }
-
     #[tokio::main]
-    async fn request_token(&self, cnsl: &mut dyn Write) -> Result<Token> {
+    async fn request_token(&self, cnsl: &mut dyn Write) -> Result<Authorization> {
         let state = gen_random_state();
-        let code = self
+        let auth_code = self
             .authorize(state, cnsl)
             .await
             .context("Could not authorize acick on Dropbox")?;
-        let access_token = HyperClient::oauth2_token_from_authorization_code(
-            self.app_key,
-            self.app_secret,
-            &code,
-            Some(&self.redirect_uri),
-        )
-        .map_err(convert_dbx_err)
-        .context("Could not get access token from Dropbox")?;
 
-        Ok(Token { access_token })
+        let auth = Authorization::from_auth_code(
+            self.client_id.to_string(),
+            self.oauth2_flow.clone(),
+            auth_code.trim().to_owned(),
+            Some(self.redirect_uri.to_owned()),
+        );
+
+        Ok(auth)
     }
 
     async fn authorize(&self, state: String, cnsl: &mut dyn Write) -> Result<String> {
@@ -155,7 +147,7 @@ impl<'a> DbxAuthorizer<'a> {
         let server = Server::bind(&addr).serve(make_service);
 
         // open auth url in browser
-        let auth_url = Oauth2AuthorizeUrlBuilder::new(self.app_key, Oauth2Type::AuthorizationCode)
+        let auth_url = AuthorizeUrlBuilder::new(self.client_id, &self.oauth2_flow)
             .redirect_uri(&self.redirect_uri)
             .state(&state)
             .build();
@@ -268,8 +260,8 @@ mod tests {
 
     fn run_test(f: fn(test_dir: &TempDir, authorizer: DbxAuthorizer) -> anyhow::Result<()>) {
         let test_dir = tempdir().unwrap();
-        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.json")).unwrap();
-        let authorizer = DbxAuthorizer::new("test_key", "test_secret", 4100, "/path", &token_path);
+        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.txt")).unwrap();
+        let authorizer = DbxAuthorizer::new("test_id", 4100, "/path", &token_path);
         f(&test_dir, authorizer).unwrap();
     }
 
@@ -277,22 +269,24 @@ mod tests {
     fn test_load_token() {
         run_test(|_, authorizer| {
             let access_token = "test_token".to_string();
-            let token = Token {
-                access_token: access_token.clone(),
-            };
+            let auth = Authorization::from_access_token(access_token.to_owned());
             let mut buf = Vec::new();
 
-            let actual = authorizer.load_token(Some(access_token), &mut buf)?;
-            let expected = Some(token);
+            let actual = authorizer
+                .load_token(Some(access_token), &mut buf)?
+                .and_then(|auth| auth.save());
+            let expected = auth.save();
             assert_eq!(actual, expected);
 
-            assert_eq!(authorizer.load_token(None, &mut buf)?, None);
+            assert!(authorizer.load_token(None, &mut buf)?.is_none());
 
             let token_path = authorizer.token_path.as_ref();
             let mut file = std::fs::File::create(token_path)?;
-            file.write_all(br#"{"access_token": "test_token"}"#)?;
+            file.write_all(b"1&test_token")?;
 
-            let actual = authorizer.load_token(None, &mut buf)?;
+            let actual = authorizer
+                .load_token(None, &mut buf)?
+                .and_then(|auth| auth.save());
             assert_eq!(actual, expected);
 
             Ok(())
@@ -303,30 +297,20 @@ mod tests {
     fn test_save_token() {
         run_test(|_, authorizer| {
             let access_token = "test_token".to_string();
-            let token = Token { access_token };
+            let auth = Authorization::from_access_token(access_token);
             let mut buf = Vec::<u8>::new();
-            authorizer.save_token(&token, &mut buf)?;
+            authorizer.save_token(&auth, &mut buf)?;
             let token_str = std::fs::read_to_string(authorizer.token_path.as_ref())?;
-            assert_eq!(token_str, r#"{"access_token":"test_token"}"#);
+            assert_eq!(token_str, "1&test_token");
             Ok(())
         })
-    }
-
-    #[test]
-    fn test_validate_token() -> anyhow::Result<()> {
-        let access_token = std::env::var("ACICK_DBX_ACCESS_TOKEN")?;
-        assert!(DbxAuthorizer::validate_token(&Token { access_token })?);
-        assert!(!DbxAuthorizer::validate_token(&Token {
-            access_token: "test_token".into()
-        })?);
-        Ok(())
     }
 
     #[tokio::test]
     async fn test_authorize() -> anyhow::Result<()> {
         let test_dir = tempdir().unwrap();
-        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.json")).unwrap();
-        let authorizer = DbxAuthorizer::new("test_key", "test_secret", 4100, "/path", &token_path);
+        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.txt")).unwrap();
+        let authorizer = DbxAuthorizer::new("test_id", 4100, "/path", &token_path);
         let mut buf = Vec::<u8>::new();
         let future = authorizer.authorize("test_state".to_string(), &mut buf);
 
