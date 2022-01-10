@@ -23,7 +23,7 @@ static DBX_STATE_PARAM: &str = "state";
 
 #[derive(Debug, Clone)]
 pub struct DbxAuthorizer<'a> {
-    app_key: &'a str,
+    client_id: &'a str,
     redirect_port: u16,
     redirect_path: &'a str,
     redirect_uri: String,
@@ -33,13 +33,13 @@ pub struct DbxAuthorizer<'a> {
 
 impl<'a> DbxAuthorizer<'a> {
     pub fn new(
-        app_key: &'a str,
+        client_id: &'a str,
         redirect_port: u16,
         redirect_path: &'a str,
         token_path: &'a AbsPathBuf,
     ) -> Self {
         Self {
-            app_key,
+            client_id,
             redirect_port,
             redirect_path,
             redirect_uri: format!("http://localhost:{}{}", redirect_port, redirect_path),
@@ -88,7 +88,7 @@ impl<'a> DbxAuthorizer<'a> {
                 let mut buf = String::new();
                 file.read_to_string(&mut buf)
                     .context("Could not load token from json file")?;
-                Ok(Authorization::load(self.app_key.to_string(), &buf))
+                Ok(Authorization::load(self.client_id.to_string(), &buf))
             },
             None,
             cnsl,
@@ -124,7 +124,7 @@ impl<'a> DbxAuthorizer<'a> {
             .context("Could not authorize acick on Dropbox")?;
 
         let authorization = Authorization::from_auth_code(
-            self.app_key.to_string(),
+            self.client_id.to_string(),
             self.oauth2_flow(),
             auth_code.trim().to_owned(),
             Some(self.redirect_uri.to_owned()),
@@ -151,7 +151,7 @@ impl<'a> DbxAuthorizer<'a> {
         let server = Server::bind(&addr).serve(make_service);
 
         // open auth url in browser
-        let auth_url = AuthorizeUrlBuilder::new(self.app_key, &self.oauth2_flow())
+        let auth_url = AuthorizeUrlBuilder::new(self.client_id, &self.oauth2_flow())
             .redirect_uri(&self.redirect_uri)
             .state(&state)
             .build();
@@ -265,7 +265,7 @@ mod tests {
     fn run_test(f: fn(test_dir: &TempDir, authorizer: DbxAuthorizer) -> anyhow::Result<()>) {
         let test_dir = tempdir().unwrap();
         let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.json")).unwrap();
-        let authorizer = DbxAuthorizer::new("test_key", 4100, "/path", &token_path);
+        let authorizer = DbxAuthorizer::new("test_id", 4100, "/path", &token_path);
         f(&test_dir, authorizer).unwrap();
     }
 
@@ -314,7 +314,7 @@ mod tests {
     async fn test_authorize() -> anyhow::Result<()> {
         let test_dir = tempdir().unwrap();
         let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.json")).unwrap();
-        let authorizer = DbxAuthorizer::new("test_key", 4100, "/path", &token_path);
+        let authorizer = DbxAuthorizer::new("test_id", 4100, "/path", &token_path);
         let mut buf = Vec::<u8>::new();
         let future = authorizer.authorize("test_state".to_string(), &mut buf);
 
