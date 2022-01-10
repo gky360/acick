@@ -205,6 +205,14 @@ jobs:
         with:
           command: test
           args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }}
+        if: matrix.target_triple != 'aarch64-apple-darwin'
+
+      - name: '`cargo build`'
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }}
+        if: matrix.target_triple == 'aarch64-apple-darwin'
 
       - name: '`rustup component add clippy`'
         run: rustup component add clippy
