@@ -72,6 +72,7 @@ initArch() {
     fi
     case $ARCH in
         x86_64) ARCH="x86_64";;
+        arm64) ARCH="aarch64";;
         *) echo "Architecture ${ARCH} is not supported by this installation script"; exit 1;;
     esac
     echo "ARCH = $ARCH"
