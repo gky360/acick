@@ -87,7 +87,7 @@ impl<'a> DbxAuthorizer<'a> {
             |mut file| {
                 let mut buf = String::new();
                 file.read_to_string(&mut buf)
-                    .context("Could not load token from json file")?;
+                    .context("Could not load token from file")?;
                 Ok(Authorization::load(self.client_id.to_string(), &buf))
             },
             None,
@@ -101,7 +101,7 @@ impl<'a> DbxAuthorizer<'a> {
         self.token_path.save_pretty(
             |mut file| {
                 file.write_all(auth.save().unwrap_or_default().as_bytes())
-                    .context("Could not save token as json file")
+                    .context("Could not save token as file")
             },
             true,
             None,
@@ -264,7 +264,7 @@ mod tests {
 
     fn run_test(f: fn(test_dir: &TempDir, authorizer: DbxAuthorizer) -> anyhow::Result<()>) {
         let test_dir = tempdir().unwrap();
-        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.json")).unwrap();
+        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.txt")).unwrap();
         let authorizer = DbxAuthorizer::new("test_id", 4100, "/path", &token_path);
         f(&test_dir, authorizer).unwrap();
     }
@@ -313,7 +313,7 @@ mod tests {
     #[tokio::test]
     async fn test_authorize() -> anyhow::Result<()> {
         let test_dir = tempdir().unwrap();
-        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.json")).unwrap();
+        let token_path = AbsPathBuf::try_new(test_dir.path().join("dbx_token.txt")).unwrap();
         let authorizer = DbxAuthorizer::new("test_id", 4100, "/path", &token_path);
         let mut buf = Vec::<u8>::new();
         let future = authorizer.authorize("test_state".to_string(), &mut buf);
