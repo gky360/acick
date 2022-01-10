@@ -2,12 +2,12 @@ name: jobs
 
 on:
   schedule:
-    - cron: "43 21 * * *"
+    - cron: '43 21 * * *'
   push:
     branches:
-      - "**"
+      - '**'
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+**"
+      - 'v[0-9]+.[0-9]+.[0-9]+**'
   pull_request:
 
 env:
@@ -33,7 +33,7 @@ jobs:
           toolchain: stable-x86_64-unknown-linux-gnu
           default: true
 
-      - name: "`cargo fmt -- --check`"
+      - name: '`cargo fmt -- --check`'
         uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -100,7 +100,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: "`apt-get install`"
+      - name: '`apt-get install`'
         run: sudo apt-get install musl-tools
         if: matrix.target_triple == 'x86_64-unknown-linux-musl'
 
@@ -111,7 +111,7 @@ jobs:
           target: ${{ matrix.target_triple }}
           default: true
 
-      - name: "`cargo doc`"
+      - name: '`cargo doc`'
         uses: actions-rs/cargo@v1
         env:
           RUSTDOCFLAGS: -D warnings
@@ -169,7 +169,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: "`apt-get install`"
+      - name: '`apt-get install`'
         run: sudo apt-get install musl-tools
         if: matrix.target_triple == 'x86_64-unknown-linux-musl'
 
@@ -190,16 +190,16 @@ jobs:
           fi
         shell: bash
 
-      - name: "`cargo test`"
+      - name: '`cargo test`'
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --no-fail-fast --all-features ${{ steps.cargo_test_targets.outputs.targets }} --target ${{ matrix.target_triple }}
 
-      - name: "`rustup component add clippy`"
+      - name: '`rustup component add clippy`'
         run: rustup component add clippy
 
-      - name: "`cargo clippy`"
+      - name: '`cargo clippy`'
         uses: actions-rs/cargo@v1
         with:
           command: clippy
@@ -241,7 +241,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: "`apt-get install`"
+      - name: '`apt-get install`'
         run: sudo apt-get install musl-tools
         if: matrix.target_triple == 'x86_64-unknown-linux-musl'
 
@@ -252,7 +252,7 @@ jobs:
           target: ${{ matrix.target_triple }}
           default: true
 
-      - name: "`cargo build --release`"
+      - name: '`cargo build --release`'
         uses: actions-rs/cargo@v1
         with:
           command: build
@@ -304,23 +304,23 @@ jobs:
           toolchain: stable-x86_64-unknown-linux-gnu
           default: true
 
-      - name: "`cargo publish` (acick-util)"
-        run: "cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 120"
-        working-directory: "./acick-util"
+      - name: '`cargo publish` (acick-util)'
+        run: 'cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 120'
+        working-directory: './acick-util'
         continue-on-error: true
-      - name: "`cargo publish` (acick-dropbox)"
-        run: "cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 120"
-        working-directory: "./acick-dropbox"
+      - name: '`cargo publish` (acick-dropbox)'
+        run: 'cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 120'
+        working-directory: './acick-dropbox'
         continue-on-error: true
-      - name: "`cargo publish` (acick-config)"
-        run: "cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 120"
-        working-directory: "./acick-config"
+      - name: '`cargo publish` (acick-config)'
+        run: 'cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 120'
+        working-directory: './acick-config'
         continue-on-error: true
-      - name: "`cargo publish` (acick-atcoder)"
-        run: "cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 120"
-        working-directory: "./acick-atcoder"
+      - name: '`cargo publish` (acick-atcoder)'
+        run: 'cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }} && sleep 120'
+        working-directory: './acick-atcoder'
         continue-on-error: true
 
-      - name: "`cargo publish` (acick)"
+      - name: '`cargo publish` (acick)'
         run: cargo publish --all-features --verbose --token ${{ secrets.CRATES_IO_TOKEN }}
-        working-directory: "."
+        working-directory: '.'
