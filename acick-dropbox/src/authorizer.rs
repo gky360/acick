@@ -119,14 +119,14 @@ impl<'a> DbxAuthorizer<'a> {
             .await
             .context("Could not authorize acick on Dropbox")?;
 
-        let authorization = Authorization::from_auth_code(
+        let auth = Authorization::from_auth_code(
             self.client_id.to_string(),
             self.oauth2_flow.clone(),
             auth_code.trim().to_owned(),
             Some(self.redirect_uri.to_owned()),
         );
 
-        Ok(authorization)
+        Ok(auth)
     }
 
     async fn authorize(&self, state: String, cnsl: &mut dyn Write) -> Result<String> {
