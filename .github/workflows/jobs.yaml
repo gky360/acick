@@ -88,7 +88,7 @@ jobs:
             host_triple: x86_64-apple-darwin
             os: macos-latest
           - target_triple: aarch64-apple-darwin
-            host_triple: aarch64-apple-darwin
+            host_triple: x86_64-apple-darwin
             os: macos-latest
           - target_triple: x86_64-unknown-linux-gnu
             host_triple: x86_64-unknown-linux-gnu
@@ -154,7 +154,7 @@ jobs:
           - name: stable-aarch64-apple-darwin
             channel: stable
             target_triple: aarch64-apple-darwin
-            host_triple: aarch64-apple-darwin
+            host_triple: x86_64-apple-darwin
             os: macos-latest
           - name: stable-x86_64-unknown-linux-gnu
             channel: stable
@@ -237,7 +237,7 @@ jobs:
             host_triple: x86_64-apple-darwin
             os: macos-latest
           - target_triple: aarch64-apple-darwin
-            host_triple: aarch64-apple-darwin
+            host_triple: x86_64-apple-darwin
             os: macos-latest
           - target_triple: x86_64-unknown-linux-gnu
             host_triple: x86_64-unknown-linux-gnu
