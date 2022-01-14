@@ -259,6 +259,7 @@ impl AsSamples for TestcaseIter {
 mod tests {
     use std::time::Duration;
 
+    use ntest::timeout;
     use tempfile::tempdir;
 
     use super::*;
@@ -307,6 +308,7 @@ mod tests {
     }
 
     #[test]
+    #[timeout(120_000)]
     fn test_fetch_full() -> Result<()> {
         let test_dir = tempdir()?;
 

@@ -9,6 +9,9 @@ repository = "https://github.com/gky360/acick/tree/master/acick-atcoder"
 documentation = "https://docs.rs/acick-atcoder"
 readme = "README.md"
 
+[dev-dependencies]
+ntest = "0.7.3"
+
 [dependencies]
 acick-config = { version = "0.2.0", path = "../acick-config" }
 acick-dropbox = { version = "0.2.0", path = "../acick-dropbox" }

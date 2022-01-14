@@ -15,6 +15,7 @@ categories = ["command-line-utilities"]
 members = [".", "acick-util", "acick-dropbox", "acick-config", "acick-atcoder"]
 
 [dev-dependencies]
+ntest = "0.7.3"
 tempfile = "3.1.0"
 
 [dependencies]
