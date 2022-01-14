@@ -16,7 +16,7 @@ tempfile = "3.1.0"
 acick-util = { version = "0.2.0", path = "../acick-util" }
 anyhow = "1.0.26"
 dropbox-sdk = { version = "0.14.0", default_features = false, features = ["dbx_check", "dbx_files", "dbx_sharing", "default_client"] }
-hyper = "0.13.2"
+hyper = "0.14.16"
 rand = "0.7.3"
-tokio = { version = "0.2.11", features = ["rt-core", "process", "macros", "sync"] }
+tokio = { version = "1.15.0", features = ["rt", "process", "macros", "sync"] }
 url = "2.1.1"
