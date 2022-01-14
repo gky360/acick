@@ -55,7 +55,7 @@ pub fn fetch_full(
         // setup temp dir
         let tmp_testcases_dir =
             tempdir().context("Could not create temp dir for downloading testcase files")?;
-        let tmp_testcases_abs_dir = AbsPathBuf::try_new(tmp_testcases_dir.path().to_owned())?;
+        let tmp_testcases_abs_dir = AbsPathBuf::try_new(tmp_testcases_dir.path())?;
 
         // download testcase files for the problem
         fetch_problem_full(dropbox, &folder.name, problem, &tmp_testcases_abs_dir, cnsl)?;
@@ -118,8 +118,7 @@ fn list_testcase_files(
     // flatten testcase files metadata
     let files: Vec<(InOut, FileMetadata)> = files_arr
         .into_iter()
-        .map(|(inout, files)| files.into_iter().map(move |file| (inout, file)))
-        .flatten()
+        .flat_map(|(inout, files)| files.into_iter().map(move |file| (inout, file)))
         .collect();
     Ok(files)
 }
@@ -314,7 +313,7 @@ mod tests {
         let dropbox = Dropbox::from_access_token(std::env::var("ACICK_DBX_ACCESS_TOKEN").unwrap());
         let contest_id = ContestId::from("arc100");
         let problems = get_test_problems();
-        let base_dir = AbsPathBuf::try_new(test_dir.path().to_owned()).unwrap();
+        let base_dir = AbsPathBuf::try_new(test_dir.path()).unwrap();
         let conf = Config::default_in_dir(base_dir);
         let mut cnsl = Console::buf(ConsoleConfig::default());
 
