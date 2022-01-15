@@ -48,6 +48,7 @@ impl AbsPathBuf {
     }
 
     /// Joins path.
+    #[must_use]
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
         Self(self.0.join(path))
     }
@@ -253,9 +254,8 @@ impl AbsPathBuf {
     }
 
     pub fn strip_prefix(&self, base: &AbsPathBuf) -> &Path {
-        self.0
-            .strip_prefix(&base.0)
-            .unwrap_or_else(|_| self.0.as_path())
+        #[allow(clippy::or_fun_call)] // without this, clippy makes a warning in non-beta chanel
+        self.0.strip_prefix(&base.0).unwrap_or(self.0.as_path())
     }
 
     fn strip_prefix_if(&self, base: Option<&AbsPathBuf>) -> &Path {

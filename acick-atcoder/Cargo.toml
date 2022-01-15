@@ -9,6 +9,9 @@ repository = "https://github.com/gky360/acick/tree/master/acick-atcoder"
 documentation = "https://docs.rs/acick-atcoder"
 readme = "README.md"
 
+[dev-dependencies]
+ntest = "0.7.3"
+
 [dependencies]
 acick-config = { version = "0.2.0", path = "../acick-config" }
 acick-dropbox = { version = "0.2.0", path = "../acick-dropbox" }
@@ -20,7 +23,7 @@ maplit = "1.0.2"
 once_cell = "1.3.1"
 rayon = "1.3.0"
 regex = "1.3.3"
-reqwest = { version = "0.10.1", default_features = false, features = ["rustls-tls", "blocking"] }
+reqwest = { version = "0.11.9", default_features = false, features = ["rustls-tls", "blocking"] }
 scraper = "0.12.0"
 strum = { version = "0.19.2", features = ["derive"] }
 tempfile = "3.1.0"

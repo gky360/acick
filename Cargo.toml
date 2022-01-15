@@ -15,6 +15,7 @@ categories = ["command-line-utilities"]
 members = [".", "acick-util", "acick-dropbox", "acick-config", "acick-atcoder"]
 
 [dev-dependencies]
+ntest = "0.7.3"
 tempfile = "3.1.0"
 
 [dependencies]
@@ -33,4 +34,4 @@ serde_json = "1.0.44"
 serde_yaml = "0.8.11"
 structopt = "0.3.7"
 strum = { version = "0.19.2", features = ["derive"] }
-tokio = { version = "0.2.11", features = ["rt-core", "time", "macros"] }
+tokio = { version = "1.15.0", features = ["rt", "time", "macros"] }
